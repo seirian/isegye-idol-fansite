@@ -36,7 +36,9 @@ jobs:
           /tmp/archive-browser-tests/bin/pip install playwright==1.56.0
           /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
       - name: Browser smoke tests and screenshots
-        run: /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+        run: |
+          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+          /tmp/archive-browser-tests/bin/python tests/offline_smoke.py
       - name: Check public preview delivery without changing hosting
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/develop'
         continue-on-error: true
@@ -65,7 +67,7 @@ jobs:
       - name: Review summary
         run: |
           echo '## 1차 검토 빌드' >> "$GITHUB_STEP_SUMMARY"
-          echo '- 정적 사이트 빌드 및 데이터·브라우저 테스트를 완료했습니다.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 정적 사이트 빌드 및 데이터·브라우저·오프라인 검토 테스트를 완료했습니다.' >> "$GITHUB_STEP_SUMMARY"
           echo '- site-review 아티팩트의 review.html은 다운로드 후 브라우저에서 바로 열 수 있습니다.' >> "$GITHUB_STEP_SUMMARY"
           echo '- 이 작업은 운영 main 병합 또는 운영 도메인 배포를 수행하지 않습니다.' >> "$GITHUB_STEP_SUMMARY"
           echo '- Pages: Settings > Pages에서 GitHub Actions를 선택하고 ENABLE_PAGES_PREVIEW=true 설정 후 develop에 커밋하면 검토판을 배포합니다.' >> "$GITHUB_STEP_SUMMARY"

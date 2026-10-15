@@ -1,5 +1,5 @@
-"""Read-only public preview reachability check. Does not change Pages, DNS, or production.
-A failed external preview is reported, not promoted as a successful deployment.
+"""Read-only public preview check. No Pages, DNS, server, or production modifications.
+Only the hosting service's explicit Open the page notice is acknowledged for our own public code.
 """
 import json
 import os
@@ -7,7 +7,6 @@ import re
 import socket
 from pathlib import Path
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError
 from playwright.sync_api import sync_playwright
 
 out = Path('test-results')
@@ -46,16 +45,32 @@ with sync_playwright() as pw:
         row = {'url': url}
         try:
             response = page.goto(url, wait_until='domcontentloaded', timeout=30000)
-            page.wait_for_timeout(2500)
+            page.wait_for_timeout(1000)
+            row['externalNoticeShown'] = 'External Content Notice' in page.title()
+            if row['externalNoticeShown']:
+                # Explicitly open only this known repository's own preview, no credentials supplied.
+                opener = page.get_by_role('button', name='Open the page', exact=True)
+                if opener.count() == 0:
+                    opener = page.get_by_role('link', name='Open the page', exact=True)
+                opener.click(timeout=5000)
+            page.locator('#main h1').wait_for(timeout=15000)
             row['status'] = response.status if response else None
             row['title'] = page.title()
-            row['visibleText'] = page.locator('body').inner_text()[:1600]
             row['appLoaded'] = page.locator('#main h1').count() == 1
             row['menuCount'] = page.locator('.nav a').count()
+            page.screenshot(path=str(out/f'public-preview-{i}.png'), full_page=True)
+            page.evaluate("location.hash='#/search?q=ㅇㅇㄴ'")
+            page.wait_for_timeout(250)
+            row['initialSearchResults'] = page.locator('.result-row h3').all_text_contents()
             row['errors'] = errors
-            page.screenshot(path=str(out / f'public-preview-{i}.png'), full_page=True)
+            row['passed'] = row['menuCount'] == 8 and '아이네' in row['initialSearchResults'] and not errors
         except Exception as error:
-            row.update(error=str(error), appLoaded=False)
+            row.update(error=str(error), appLoaded=False, passed=False)
+            try:
+                row['visibleText'] = page.locator('body').inner_text()[:1600]
+                page.screenshot(path=str(out/f'public-preview-{i}-error.png'), full_page=True)
+            except Exception:
+                pass
         report['browser'].append(row)
         context.close()
     browser.close()
