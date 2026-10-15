@@ -1,0 +1,80 @@
+name: Validate, test and preview
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: archive-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build:
+    name: Content, unit and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Validate content and run unit tests
+        run: npm test
+      - name: Build static review site
+        run: npm run build
+      - name: Install isolated browser-test dependencies
+        run: |
+          python -m venv /tmp/archive-browser-tests
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0
+          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+      - name: Browser smoke tests and screenshots
+        run: /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+      - name: Upload review package
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: site-review-${{ github.sha }}
+          path: dist/
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-review-${{ github.sha }}
+          path: test-results/
+          retention-days: 14
+      - name: Upload Pages package when explicitly enabled
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+      - name: Review summary
+        run: |
+          echo '## 1차 검토 빌드' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 정적 사이트 빌드 및 데이터·브라우저 테스트를 완료했습니다.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 이 작업은 운영 main 병합 또는 운영 도메인 배포를 수행하지 않습니다.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Pages: Settings > Pages에서 GitHub Actions를 선택하고 ENABLE_PAGES_PREVIEW=true 설정 후 develop에 커밋하면 검토판을 배포합니다.' >> "$GITHUB_STEP_SUMMARY"
+  pages-preview:
+    name: Develop only - GitHub Pages preview
+    needs: test-build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy develop review build
+        id: deployment
+        uses: actions/deploy-pages@v4

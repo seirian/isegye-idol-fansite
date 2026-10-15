@@ -1,0 +1,34 @@
+name: 정보 제보·정정
+about: 공개된 출처를 근거로 아카이브 내용을 제안합니다.
+description: 공개된 출처를 근거로 아카이브 내용을 제안합니다.
+title: '[정보 제보] '
+body:
+  - type: markdown
+    attributes:
+      value: '공개 이슈입니다. 개인정보, 사생활, 비공개 정보, 비밀키, 권리 증빙 원본을 올리지 마세요. 검수 전에는 사이트에 자동 반영되지 않습니다.'
+  - type: input
+    id: target
+    attributes:
+      label: 대상 문서 또는 항목
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 공개 근거 주소
+      placeholder: https://
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: 현재 내용과 수정 제안
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: 공개 범위 확인
+      options:
+        - label: 개인정보 및 비공개 자료를 포함하지 않았습니다.
+          required: true
