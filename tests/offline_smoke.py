@@ -7,7 +7,7 @@ out = root / 'test-results'
 out.mkdir(exist_ok=True)
 with sync_playwright() as pw:
     browser = pw.chromium.launch(headless=True)
-    context = browser.new_context(viewport={'width':1440,'height':1100}, locale='ko-KR', color_scheme='light')
+    context = browser.new_context(viewport={'width':1440,'height':1100}, locale='ko-KR', color_scheme='light', reduced_motion='reduce')
     page = context.new_page()
     errors = []
     requests = []
@@ -34,7 +34,9 @@ with sync_playwright() as pw:
     page.evaluate("location.hash='#/home'")
     page.wait_for_timeout(100)
     page.set_viewport_size({'width':390,'height':844})
+    page.wait_for_timeout(100)
     assert page.evaluate('document.documentElement.scrollWidth') <= 390
+    assert page.locator('#sidebar').evaluate('(node) => node.getBoundingClientRect().right') <= 0
     page.screenshot(path=str(out/'offline-mobile.png'), full_page=True)
     assert not errors, errors
     assert not [url for url in requests if url.startswith(('http:', 'https:'))], 'Offline review must not load external assets'

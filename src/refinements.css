@@ -7,6 +7,8 @@
 .orbital>.orbit-dot:nth-child(9){bottom:40px;left:-2px;background:#c5dfef}
 .orbital>.orbit-dot:nth-child(10){top:39px;left:0;background:#cee0c6}
 .sidebar{overflow-y:auto}
+/* Route changes focus the document region for screen readers, not an interactive control. */
+#main:focus{outline:none}
 [data-theme=dark] .button:not(.secondary):not(.subtle){color:#241b3d}
 [data-theme=dark] .hero .button{color:#fff}
 [data-theme=dark] .filter-button.active{color:#241b3d}
