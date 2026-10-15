@@ -1,0 +1,17 @@
+/* Review refinements: use child position, not element-type position, for the six orbit nodes. */
+.orbital>.orbit-dot:nth-child(n){top:auto;right:auto;bottom:auto;left:auto;background:transparent}
+.orbital>.orbit-dot:nth-child(5){top:-6px;left:96px;background:#d7c7f0}
+.orbital>.orbit-dot:nth-child(6){top:40px;right:0;background:#f5d8bc}
+.orbital>.orbit-dot:nth-child(7){bottom:38px;right:-1px;background:#c6c6e9}
+.orbital>.orbit-dot:nth-child(8){bottom:-5px;left:99px;background:#f0c9d9}
+.orbital>.orbit-dot:nth-child(9){bottom:40px;left:-2px;background:#c5dfef}
+.orbital>.orbit-dot:nth-child(10){top:39px;left:0;background:#cee0c6}
+.sidebar{overflow-y:auto}
+/* Route changes focus the document region for screen readers, not an interactive control. */
+#main:focus{outline:none}
+[data-theme=dark] .button:not(.secondary):not(.subtle){color:#241b3d}
+[data-theme=dark] .hero .button{color:#fff}
+[data-theme=dark] .filter-button.active{color:#241b3d}
+@media(max-width:1250px){.orbital>.orbit-dot:nth-child(5),.orbital>.orbit-dot:nth-child(8){left:77px}}
+@media(max-width:1060px){.orbital>.orbit-dot:nth-child(5),.orbital>.orbit-dot:nth-child(8){left:94px}}
+@media(max-width:760px){.orbital>.orbit-dot:nth-child(5),.orbital>.orbit-dot:nth-child(8){left:73px}}

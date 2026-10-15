@@ -1,0 +1,16 @@
+{
+  "name": "isegye-idol-fansite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Source-backed, non-commercial, unofficial ISEGYE IDOL fan archive",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "preview": "node scripts/serve.mjs --dist",
+    "check": "node --check src/app.js && node --check src/data.js && node --check src/lib.js && node scripts/validate.mjs",
+    "test": "npm run check && node --test tests/*.test.js",
+    "build": "node scripts/build.mjs",
+    "test:browser": "python tests/browser_smoke.py"
+  }
+}

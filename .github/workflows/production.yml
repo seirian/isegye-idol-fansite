@@ -1,0 +1,44 @@
+name: Production - gated inour deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inour-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && vars.PRODUCTION_ENABLED == 'true'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm test
+      - run: npm run build
+        env:
+          DEPLOY_ENV: production
+      - name: Browser check before any upload
+        run: |
+          python -m venv /tmp/archive-browser-tests
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0
+          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+      - name: Upload to dedicated inour release directory
+        run: bash scripts/deploy-inour.sh
+        env:
+          INOUR_SSH_HOST: ${{ secrets.INOUR_SSH_HOST }}
+          INOUR_SSH_PORT: ${{ secrets.INOUR_SSH_PORT }}
+          INOUR_SSH_USER: ${{ secrets.INOUR_SSH_USER }}
+          INOUR_SSH_PRIVATE_KEY: ${{ secrets.INOUR_SSH_PRIVATE_KEY }}
+          INOUR_SSH_KNOWN_HOSTS: ${{ secrets.INOUR_SSH_KNOWN_HOSTS }}
+          INOUR_DEPLOY_ROOT: ${{ secrets.INOUR_DEPLOY_ROOT }}
