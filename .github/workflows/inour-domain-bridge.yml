@@ -1,0 +1,46 @@
+name: Configure ISEGYE host-only routing
+on:
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/inour-domain-bridge.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  host-bridge:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/develop'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Ensure local routing test server
+        run: |
+          if ! command -v apache2 >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq apache2
+          fi
+      - name: Verify routing and isolation without credentials
+        run: python3 tests/domain_bridge_local.py
+      - name: Install pinned SFTP client
+        run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
+      - name: Back up and apply authorized ISEGYE host rule with rollback
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          ISEGYE_ALLOW_SHARED_ROUTER_APPEND: 'true'
+        run: python scripts/inour_domain_bridge.py
+      - name: Save sanitized results only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: inour-domain-bridge-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            inour-domain-bridge.json
+            test-results/domain-bridge-local.json
+          if-no-files-found: warn
+          retention-days: 30
