@@ -1,0 +1,60 @@
+name: Production - isolated inour SFTP deployment
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://isegye-idol.kr/
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Respect production pause control
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+        run: test "$PRODUCTION_PAUSED" != 'true'
+      - name: Validate content, isolation and release rollback
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build main production bundle
+        run: npm run build
+        env:
+          DEPLOY_ENV: production
+      - name: Browser check before any upload
+        run: |
+          python -m venv /tmp/archive-browser-tests
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0
+          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+      - name: Deploy isolated release and verify live site with rollback
+        run: /tmp/archive-browser-tests/bin/python scripts/production_release.py
+        env:
+          # Owner approved main promotion and production activation on 2026-10-21.
+          PRODUCTION_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Save credential-free deployment result and browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            inour-report.json
+            test-results/
+          if-no-files-found: warn
+          retention-days: 30

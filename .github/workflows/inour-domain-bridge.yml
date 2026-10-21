@@ -1,0 +1,74 @@
+name: Configure ISEGYE host-only routing
+on:
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/inour-domain-bridge.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  host-bridge:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/develop'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Inspect canonical public endpoints without credentials
+        run: |
+          python - <<'PY'
+          import hashlib, json, sys, urllib.request, urllib.error
+          from pathlib import Path
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args): return None
+          urls = ('https://mir.yeop.net/', 'https://mir.yeop.net/band/', 'https://mir.yeop.net/songbook', 'https://yeop.net/', 'https://mir.yeop.net/band')
+          report = {'remote_writes': 0, 'endpoints': {}}
+          opener = urllib.request.build_opener(NoRedirect)
+          for url in urls:
+              try:
+                  req = urllib.request.Request(url, headers={'User-Agent':'IsegyeIsolatedDeploy/1.0', 'Cache-Control':'no-cache'})
+                  try: res = opener.open(req, timeout=20)
+                  except urllib.error.HTTPError as exc: res = exc
+                  with res:
+                      body = res.read(9 * 1024 * 1024)
+                      report['endpoints'][url] = {'status': res.status, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body), 'location': res.headers.get('Location','')}
+              except Exception as exc:
+                  report['endpoints'][url] = {'error_type': type(exc).__name__}
+          Path('public-endpoints.json').write_text(json.dumps(report, indent=2)+'\n')
+          print(json.dumps(report, indent=2))
+          ok = all(report['endpoints'][url].get('status') == 200 for url in urls[:-1])
+          redirect = report['endpoints'][urls[-1]]
+          ok = ok and redirect.get('status') == 301 and redirect.get('location') == 'https://mir.yeop.net/band/'
+          sys.exit(0 if ok else 1)
+          PY
+      - name: Ensure local routing test server
+        run: |
+          if ! command -v apache2 >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq apache2
+          fi
+      - name: Verify routing and isolation without credentials
+        run: python3 tests/domain_bridge_local.py
+      - name: Install pinned SFTP client
+        run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
+      - name: Back up and apply authorized ISEGYE host rule with rollback
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          ISEGYE_ALLOW_SHARED_ROUTER_APPEND: 'true'
+        run: python scripts/inour_domain_bridge.py
+      - name: Save sanitized results only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: inour-domain-bridge-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            inour-domain-bridge.json
+            public-endpoints.json
+            test-results/domain-bridge-local.json
+          if-no-files-found: warn
+          retention-days: 30

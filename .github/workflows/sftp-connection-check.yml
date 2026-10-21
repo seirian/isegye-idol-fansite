@@ -1,0 +1,117 @@
+name: SFTP connection check - read only
+on:
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/sftp-connection-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-sftp-connection-check
+  cancel-in-progress: false
+jobs:
+  connection-check:
+    name: Check production environment secret without deployment
+    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Install SFTP client
+        run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
+      - name: Authenticate and inspect fixed paths only
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, os, socket, stat, sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import paramiko
+
+          password = os.environ.pop('ISEGYE_SFTP_PASSWORD', '')
+          report = {
+              'checked_at': datetime.now(timezone.utc).isoformat(),
+              'environment': 'production', 'secret_name': 'ISEGYE_SFTP_PASSWORD',
+              'secret_available': bool(password),
+              'host': 'seirian.inour.net', 'port': 1922,
+              'host_key_verified': False, 'authenticated': False,
+              'sftp_opened': False, 'remote_writes': 0,
+              'commit': os.environ.get('GITHUB_SHA'),
+              'status': 'failed', 'paths': {},
+          }
+          transport = client = sock = None
+          stage = 'secret_availability'
+          try:
+              if not password:
+                  raise RuntimeError('Required secret is unavailable')
+              stage = 'tcp_connection'
+              sock = socket.create_connection((report['host'], report['port']), timeout=15)
+              transport = paramiko.Transport(sock)
+              transport.banner_timeout = 15
+              transport.auth_timeout = 20
+              transport.get_security_options().key_types = ('ssh-ed25519',)
+              stage = 'host_key_verification'
+              transport.start_client(timeout=15)
+              key = transport.get_remote_server_key()
+              fingerprint = 'SHA256:' + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip('=')
+              expected = 'SHA256:aAMSU6UVE9lIpzE/XifPGYrEGcHO7HQDTMURgfrinRc'
+              if key.get_name() != 'ssh-ed25519' or fingerprint != expected:
+                  raise RuntimeError('Host key mismatch; credentials were not sent')
+              report['host_key_verified'] = True
+              stage = 'authentication'
+              transport.auth_password('seirian', password, fallback=True)
+              password = None
+              if not transport.is_authenticated():
+                  raise RuntimeError('Authentication did not complete')
+              report['authenticated'] = True
+              stage = 'sftp_open'
+              client = paramiko.SFTPClient.from_transport(transport)
+              client.get_channel().settimeout(15)
+              report['sftp_opened'] = True
+              stage = 'read_only_path_check'
+              for path in ['/web', '/web/_mir_site', '/web/_isegye_idol']:
+                  try:
+                      info = client.lstat(path)
+                      item = {'exists': True, 'directory': stat.S_ISDIR(info.st_mode),
+                              'symlink': stat.S_ISLNK(info.st_mode),
+                              'mode': oct(stat.S_IMODE(info.st_mode)), 'owner_uid': info.st_uid}
+                      if item['directory'] and not item['symlink']:
+                          item['canonical_path'] = client.normalize(path)
+                      report['paths'][path] = item
+                  except FileNotFoundError:
+                      report['paths'][path] = {'exists': False}
+              root = report['paths']['/web']
+              if not root.get('directory'):
+                  raise RuntimeError('Expected web root is unavailable')
+              mir = report['paths']['/web/_mir_site'].get('canonical_path')
+              isegye = report['paths']['/web/_isegye_idol'].get('canonical_path')
+              report['distinct_site_paths_confirmed'] = bool(mir and isegye and mir != isegye)
+              report['status'] = 'passed'
+          except Exception as exc:
+              # Never log exception text, credentials, environment dumps or remote file content.
+              report['failed_stage'] = stage
+              report['error_type'] = type(exc).__name__
+          finally:
+              password = None
+              for resource in (client, transport, sock):
+                  if resource is not None:
+                      try:
+                          resource.close()
+                      except Exception:
+                          pass
+              payload = json.dumps(report, ensure_ascii=False, indent=2)
+              Path('sftp-connection-check.json').write_text(payload + '\n', encoding='utf-8')
+              print(payload)
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+                  summary.write('## Read-only SFTP connection check\n\nNo upload, mkdir, chmod, rename, deletion or deployment was attempted.\n\n```json\n' + payload + '\n```\n')
+          sys.exit(0 if report['status'] == 'passed' else 1)
+          PY
+      - name: Save sanitized connection result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sftp-connection-check-${{ github.run_id }}
+          path: sftp-connection-check.json
+          retention-days: 7
+          if-no-files-found: warn

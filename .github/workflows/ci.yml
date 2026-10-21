@@ -1,0 +1,95 @@
+name: Validate, test and preview
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: archive-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-build:
+    name: Content, unit and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate content and deployment boundaries
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build static site and offline review
+        run: |
+          npm run build
+          node scripts/standalone.mjs
+      - name: Install isolated browser-test dependencies
+        run: |
+          python -m venv /tmp/archive-browser-tests
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0
+          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+      - name: Browser and offline smoke tests
+        run: |
+          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
+          /tmp/archive-browser-tests/bin/python tests/offline_smoke.py
+      - name: Upload review package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: site-review-${{ github.sha }}
+          path: dist/
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-review-${{ github.sha }}
+          path: test-results/
+          retention-days: 14
+      - name: Upload develop Pages package
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+  pages-preview:
+    name: Develop only - GitHub Pages preview
+    needs: test-build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy develop review build
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install live browser verifier
+        run: |
+          python -m venv /tmp/pages-verifier
+          /tmp/pages-verifier/bin/pip install playwright==1.56.0
+          /tmp/pages-verifier/bin/python -m playwright install --with-deps chromium
+      - name: Verify deployed commit, search and mobile layout
+        run: /tmp/pages-verifier/bin/python tests/pages_live.py
+      - name: Save live Pages verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pages-live-${{ github.sha }}
+          path: test-results/pages/
+          retention-days: 14

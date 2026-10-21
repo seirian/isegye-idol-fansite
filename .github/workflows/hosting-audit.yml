@@ -1,0 +1,112 @@
+name: Read-only hosting and isolation audit
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/hosting-audit.yml'
+      - 'scripts/inour_sftp.py'
+      - 'docs/DEPLOYMENT.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-hosting-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Install SFTP client for read-only checks
+        run: python -m pip install --disable-pip-version-check paramiko==5.0.0
+      - name: Audit public endpoints and repository-scope credentials
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD || secrets.YEOP_SFTP_PASSWORD }}
+          PAGES_ENABLED: ${{ vars.ENABLE_PAGES_PREVIEW }}
+          PRODUCTION_ENABLED: ${{ vars.PRODUCTION_ENABLED }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, os, re, socket, ssl, stat, urllib.request, urllib.error
+          from datetime import datetime, timezone
+          from pathlib import Path
+          report = {'checked_at': datetime.now(timezone.utc).isoformat(), 'remote_writes': 0,
+                    'repository_secret_available': bool(os.environ.get('ISEGYE_SFTP_PASSWORD')),
+                    'environment_secrets_checked': False,
+                    'pages_preview_enabled': os.environ.get('PAGES_ENABLED') == 'true',
+                    'production_enabled': os.environ.get('PRODUCTION_ENABLED') == 'true',
+                    'planned_isegye_root': '/web/_isegye_idol', 'mir_root_from_main': '/web/_mir_site'}
+          report['dns'] = {}
+          for host in ['isegye-idol.kr', 'mir.yeop.net', 'yeop.net', 'seirian.inour.net']:
+              try:
+                  report['dns'][host] = sorted({x[4][0] for x in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)})
+              except Exception as exc:
+                  report['dns'][host] = {'error_type': type(exc).__name__}
+          report['http'] = {}
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args): return None
+          opener = urllib.request.build_opener(NoRedirect)
+          for url in ['https://isegye-idol.kr/', 'http://isegye-idol.kr/', 'https://mir.yeop.net/', 'https://yeop.net/', 'https://seirian.github.io/isegye-idol-fansite/']:
+              try:
+                  request = urllib.request.Request(url, headers={'User-Agent': 'IsegyeReadOnlyAudit/1.0'})
+                  try: response = opener.open(request, timeout=15)
+                  except urllib.error.HTTPError as exc: response = exc
+                  with response:
+                      body = response.read(2097152)
+                      marker = re.search(rb'name=[\"\x27]yeop-release[\"\x27]\s+content=[\"\x27]([^\"\x27]+)', body)
+                      location = response.headers.get('Location', '').split('?')[0].split('#')[0]
+                      report['http'][url] = {'status': response.status, 'sha256': hashlib.sha256(body).hexdigest(),
+                         'location_without_query': location,
+                         'isegye_title': '이세돌 아카이브'.encode() in body,
+                         'mir_release': marker.group(1).decode() if marker else None}
+              except Exception as exc:
+                  reason = getattr(exc, 'reason', None)
+                  report['http'][url] = {'error_type': type(exc).__name__, 'reason_type': type(reason).__name__}
+          report['sftp'] = {'status': 'skipped_missing_repository_secret'}
+          password = os.environ.get('ISEGYE_SFTP_PASSWORD', '')
+          if password:
+              import paramiko
+              transport = None
+              client = None
+              try:
+                  transport = paramiko.Transport(socket.create_connection(('seirian.inour.net', 1922), timeout=15))
+                  transport.get_security_options().key_types = ('ssh-ed25519',)
+                  transport.start_client(timeout=15)
+                  key = transport.get_remote_server_key()
+                  fingerprint = 'SHA256:' + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip('=')
+                  if fingerprint != 'SHA256:aAMSU6UVE9lIpzE/XifPGYrEGcHO7HQDTMURgfrinRc':
+                      raise RuntimeError('Host fingerprint mismatch; authentication blocked')
+                  transport.auth_password('seirian', password)
+                  client = paramiko.SFTPClient.from_transport(transport)
+                  client.get_channel().settimeout(15)
+                  paths = {}
+                  for path in ['/web', '/web/_mir_site', '/web/mir', '/web/_isegye_idol', '/web/.htaccess', '/web/_mir_site/.htaccess']:
+                      try:
+                          info = client.lstat(path)
+                          item = {'exists': True, 'directory': stat.S_ISDIR(info.st_mode), 'symlink': stat.S_ISLNK(info.st_mode),
+                                  'mode': oct(stat.S_IMODE(info.st_mode)), 'owner_uid': info.st_uid,
+                                  'canonical_path': client.normalize(path)}
+                          if path.endswith('/.htaccess') and stat.S_ISREG(info.st_mode) and info.st_size < 131072:
+                              with client.open(path, 'rb') as handle: data = handle.read(131072)
+                              item['sha256'] = hashlib.sha256(data).hexdigest()
+                              item['mir_bridge_marker'] = b'# MIR-SUBDOMAIN-BRIDGE-V1' in data
+                              item['isegye_host_rule_present'] = b'isegye' in data.lower()
+                          paths[path] = item
+                      except FileNotFoundError: paths[path] = {'exists': False}
+                  report['sftp'] = {'status': 'read_only_complete', 'paths': paths}
+              except Exception as exc:
+                  report['sftp'] = {'status': 'failed', 'error_type': type(exc).__name__}
+              finally:
+                  password = None
+                  if client: client.close()
+                  if transport: transport.close()
+          Path('hosting-audit.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('## Read-only hosting audit\n\nNo remote files, routing rules, credentials or DNS were modified.\n\n```json\n' + json.dumps(report, ensure_ascii=False, indent=2) + '\n```\n')
+          PY
+      - name: Save read-only audit report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hosting-audit-${{ github.run_id }}
+          path: hosting-audit.json
+          retention-days: 14
