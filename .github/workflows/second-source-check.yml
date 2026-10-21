@@ -9,52 +9,59 @@ jobs:
   sources:
     if: github.ref == 'refs/heads/feature/second'
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Export current source for local design work
-        run: git archive --format=zip --output=second-base-source.zip HEAD
-      - name: Install public page inspection tools
+      - name: Inspect public mirror (NamuWiki live returned 403; do not bypass)
         run: |
-          python -m pip install --disable-pip-version-check beautifulsoup4==4.13.4 playwright==1.56.0
-          python -m playwright install --with-deps chromium
-      - name: Inspect only the requested six public member pages
-        run: |
+          python -m pip install --disable-pip-version-check beautifulsoup4==4.13.4 pillow==11.3.0
           python - <<'PY'
-          import json, urllib.parse, urllib.request, urllib.error
+          import json, urllib.parse, urllib.request, urllib.error, io
           from pathlib import Path
-          from playwright.sync_api import sync_playwright
-          out=Path('source-audit'); out.mkdir()
+          from bs4 import BeautifulSoup
+          from PIL import Image
+          out=Path('source-audit'); out.mkdir(exist_ok=True)
           report=[]
-          members=[('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]
-          with sync_playwright() as p:
-              browser=p.chromium.launch()
-              page=browser.new_page(viewport={'width':1440,'height':1000},locale='ko-KR')
-              for slug,name in members:
-                  url='https://namu.wiki/w/'+urllib.parse.quote(name)
-                  item={'member':name,'url':url}
+          def fetch(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=18) as r:
+                  return r.read(6*1024*1024),r.status
+          for slug,name in [('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]:
+              item={'member':name,'slug':slug,'original':'https://namu.wiki/w/'+urllib.parse.quote(name),'liveNamuVerified':False,'candidates':[]}
+              for domain in ['namu.moe','d.namu.moe']:
+                  url='https://'+domain+'/w/'+urllib.parse.quote(name)
                   try:
-                      response=page.goto(url,wait_until='domcontentloaded',timeout=25000)
-                      page.wait_for_timeout(1200)
-                      item.update(status=response.status,title=page.title(),final_url=page.url)
-                      item['images']=page.locator('img').evaluate_all('(els)=>els.slice(0,50).map(e=>({alt:e.alt,src:e.currentSrc||e.src,dataSrc:e.dataset.src,width:e.naturalWidth,height:e.naturalHeight}))')
-                      item['text_excerpt']=page.locator('body').inner_text()[:1500]
-                      page.screenshot(path=str(out/(slug+'.png')))
-                      (out/(slug+'.html')).write_text(page.content(),encoding='utf-8')
-                  except Exception as exc:
-                      item['error']=type(exc).__name__
-                  report.append(item)
-              browser.close()
-          (out/'result.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+                      data,status=fetch(url); soup=BeautifulSoup(data,'html.parser'); item.update(mirror=url,status=status)
+                      candidates=[]; seen=set()
+                      for img in soup.find_all('img'):
+                          alt=img.get('alt','')
+                          if name not in alt or any(x in alt for x in ['서명','미니','이모티콘','마크','로고','길드','아바타','유튜브']): continue
+                          src=img.get('data-src') or img.get('src')
+                          if not src or src.startswith('data:'):continue
+                          src=urllib.parse.urljoin(url,src)
+                          if src in seen:continue
+                          seen.add(src)
+                          candidates.append({'alt':alt,'url':src})
+                      item['named_images']=candidates[:20]
+                      priority=sorted(candidates,key=lambda x:0 if any(w in x['alt'] for w in ['지니','프로필']) else 1)
+                      for cand in priority[:3]:
+                          try:
+                              body,_=fetch(cand['url']);im=Image.open(io.BytesIO(body))
+                              if min(im.size)<200:continue
+                              filename=slug+'-'+str(len(item['candidates']))+'.webp'
+                              im.thumbnail((1000,1000));im.save(out/filename,'WEBP',quality=90)
+                              item['candidates'].append({**cand,'file':filename,'dimensions':im.size})
+                          except Exception as exc:cand['download_error']=type(exc).__name__
+                      if item['candidates']:break
+                  except Exception as exc:item[domain+'_error']=type(exc).__name__
+              report.append(item)
+          (out/'mirror-result.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: second-source-check-${{ github.run_id }}
-          path: |
-            second-base-source.zip
-            source-audit/
+          name: second-profile-candidates-${{ github.run_id }}
+          path: source-audit/
           retention-days: 14
