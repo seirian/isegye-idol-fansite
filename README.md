@@ -2,6 +2,8 @@
 
 이세계아이돌의 **공개 정보와 출처를 연결**하는 비상업적·비공식 팬사이트입니다. 패러블/아티스트의 승인·후원·협찬과 관계없습니다.
 
+**개발 검토 사이트:** https://seirian.github.io/isegye-idol-fansite/
+
 ## 1차 검토 구현
 
 - 8개 상위 메뉴: 오늘의 이세돌 / 입문·멤버 / 소식·일정 / 음악 / 방송·영상 / 이세돌 사전 / 활동 기록 / 팬 가이드
@@ -17,14 +19,14 @@
 
 ## 기술 구성
 
-HTML + CSS + native ES modules, Node.js 22 빌드·테스트. 앱 런타임 및 npm 의존성 0개. 일반 정적 호스팅에서 실행되며 운영 서버에 Node가 필요하지 않습니다. 해시 라우팅으로 하위 경로 새로고침에 서버 rewrite가 필요 없습니다. 개별 문서 SEO/SSR은 후속 단계입니다.
+HTML + CSS + native ES modules, Node.js 22 빌드·테스트. 앱 런타임 및 npm 의존성 0개. 일반 정적 호스팅에서 실행되며 운영 서버에 Node가 필요하지 않습니다. 해시 라우팅을 사용합니다. 개별 문서 SEO/SSR은 후속 단계입니다.
 
 ```bash
 # Node.js 22 이상. npm install 불필요.
 npm test
+python -m unittest discover -s tests -p test_deployment.py -v
 npm run build
 npm run preview  # http://127.0.0.1:4173
-# 소스 직접 실행
 npm run dev
 ```
 
@@ -32,7 +34,6 @@ npm run dev
 
 ```bash
 python -m venv .venv
-# Linux/macOS. Windows에서는 .venv/Scripts/activate
 . .venv/bin/activate
 pip install playwright==1.56.0
 python -m playwright install chromium
@@ -51,24 +52,27 @@ src/lib.js                 검색·날짜·검증 순수 함수
 src/app.js                 라우팅·화면·이벤트
 src/styles.css             반응형 자체 디자인
 scripts/build.mjs          검증 후 dist/ 생성
-scripts/deploy-inour.sh    비활성 상태의 운영 SSH 배포 준비 코드
-tests/                     Node 단위·Python Playwright 브라우저 테스트
+scripts/inour_sftp.py       경로가 고정된 인아워넷 SFTP 배포 및 롤백
+scripts/deploy-inour.sh     위 SFTP 스크립트에 위임하는 호환 진입점
+tests/                     콘텐츠·브라우저·배포 경계·Apache 격리·실제 Pages 검사
 docs/                      배포·콘텐츠 운영 안내
 .github/workflows/         develop 검토 및 main 운영 게이트
 ```
 
 ## 브랜치와 배포
 
-- `develop`: 1차 구현 및 검토. push/PR마다 검증, 단위·브라우저 테스트, 검토 패키지와 스크린샷 생성.
-- `main`: 사용자 검토 승인 후 PR로 승격. **초기 main에는 부트스트랩 README만 있으며 사이트 코드는 병합하지 않았습니다.**
-- GitHub Pages 검토 배포: 관리자 1회 설정 후 `ENABLE_PAGES_PREVIEW=true`. develop만 배포. 운영용 커스텀 도메인을 Pages에 연결하지 않습니다.
-- inour 운영 배포: `PRODUCTION_ENABLED=true` 및 production 환경·SSH 설정이 모두 준비되어야 실행. 지금은 비활성입니다.
-- 초기 검토판은 `noindex,nofollow`/robots Disallow. 이는 접근 제어가 아니며 검토판과 공개 저장소는 누구나 접근할 수 있습니다.
+- `develop`: push/PR마다 검증·테스트. push 성공 후 GitHub Pages 검토 배포와 실제 URL 검증.
+- `main`: 사용자 검토 후 PR로 승격. 현재 사이트 코드는 main에 병합하지 않았습니다.
+- GitHub Pages: `ENABLE_PAGES_PREVIEW=true` 설정 및 2026-10-21 최초 배포 성공. 운영 도메인을 Pages에 연결하지 않습니다.
+- 인아워넷: 기존 미르 `/web/_mir_site`와 별도로 이세돌 `/web/_isegye_idol`을 사용하도록 고정합니다.
+- SFTP 비밀값·전용 문서 루트·운영 승인·`PRODUCTION_ENABLED=true`가 준비되기 전 운영은 비활성입니다.
+- `/web/.htaccess`, 개인 사이트, 미르 경로를 이 저장소의 배포 코드가 수정하지 않습니다.
+- 검토판은 `noindex,nofollow`입니다. 이는 접근 제어가 아니며 공개 저장소·검토판은 누구나 접근할 수 있습니다.
 
-자세한 설정과 아직 확인할 사항은 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), 편집 원칙은 [docs/CONTENT.md](docs/CONTENT.md)를 참고하세요.
+자세한 설정과 미확인 사항은 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), 편집 원칙은 [docs/CONTENT.md](docs/CONTENT.md)를 참고하세요.
 
 ## 권리·연락
 
-권리 침해 우려가 있는 자료는 공개 이슈에 민감한 증빙 없이 대상 항목 ID와 공개 요청만 남겨주세요. 운영 전 별도 비공개 연락처가 필요합니다. 정보 삭제 시 공개 번들·검색·연관 링크에서 함께 제거하고, Git 기록 및 임시 CDN 캐시는 별도 조치가 필요할 수 있습니다.
+권리 침해 우려가 있는 자료는 공개 이슈에 민감한 증빙 없이 대상 항목 ID와 공개 요청만 남겨주세요. 운영 전 별도 비공개 연락처가 필요합니다. 정보 삭제 시 공개 번들·검색·연관 링크에서 함께 제거하고, Git 기록 및 이전 임시 CDN 캐시는 별도 조치가 필요할 수 있습니다.
 
 이 저장소는 아티스트·제3자 콘텐츠에 대한 라이선스를 부여하지 않습니다. 사이트 그래픽과 공식 앨범 커버를 혼동하지 마세요.
