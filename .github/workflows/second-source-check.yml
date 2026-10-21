@@ -9,57 +9,27 @@ jobs:
   sources:
     if: github.ref == 'refs/heads/feature/second'
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 4
     steps:
-      - name: Download public portrait candidates only; no site or repository writes
+      - name: Retrieve the six profile images listed on PARABLE creator network
         run: |
-          python -m pip install --disable-pip-version-check beautifulsoup4==4.13.4 pillow==11.3.0
+          python -m pip install --disable-pip-version-check pillow==11.3.0
           python - <<'PY'
-          import json, urllib.request, urllib.parse,io
+          import json,urllib.request,urllib.parse,hashlib,io
           from pathlib import Path
-          from bs4 import BeautifulSoup
           from PIL import Image
-          out=Path('portrait-candidates');out.mkdir()
-          report=[]
-          def get(url):
-              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=25) as r:return r.read(12*1024*1024)
-          members=[('ine','아이네','INE'),('jingburger','징버거','Jingburger'),('lilpa','릴파','Lilpa'),('jururu','주르르','Jururu'),('gosegu','고세구','Gosegu'),('viichan','비챤','Viichan')]
-          official='https://parable-asia.com/creator-network/'
-          try:
-              data=get(official);soup=BeautifulSoup(data,'html.parser');(out/'parable.html').write_bytes(data)
-              for slug,name,en in members:
-                  candidates=[]
-                  for el in soup.find_all(['h2','h3','h4','h5','h6']):
-                      if el.get_text(strip=True)!=name:continue
-                      node=el
-                      for _ in range(5):
-                          node=node.parent
-                          ims=node.find_all('img')
-                          if ims:
-                              candidates += [im.get('data-src') or im.get('src') for im in ims];break
-                  report.append({'slug':slug,'name':name,'page':official,'urls':list(dict.fromkeys(x for x in candidates if x))})
-          except Exception as exc:report.append({'official_error':type(exc).__name__})
-          for slug,name,en in members:
-              page='https://kpopping.com/profiles/idol/'+en
-              try:
-                  data=get(page);soup=BeautifulSoup(data,'html.parser');meta=soup.find('meta',property='og:image')
-                  urls=[meta['content']] if meta else []
-                  urls += [x.get('src') for x in soup.find_all('img') if x.get('alt','').lower()==en.lower() and x.get('src')]
-                  report.append({'slug':slug,'name':name,'page':page,'urls':list(dict.fromkeys(urls))})
-              except Exception as exc:report.append({'slug':slug,'page':page,'error':type(exc).__name__})
-          for item in report:
-              for n,url in enumerate(item.get('urls',[])[:2]):
-                  try:
-                      url=urllib.parse.urljoin(item['page'],url);body=get(url);im=Image.open(io.BytesIO(body))
-                      if min(im.size)<150:continue
-                      im.thumbnail((900,1100));fn=item['slug']+'-'+('official' if 'parable' in item['page'] else 'profile')+'-'+str(n)+'.webp';im.save(out/fn,'WEBP',quality=89)
-                      item.setdefault('downloaded',[]).append({'file':fn,'url':url,'dimensions':im.size})
-                  except Exception as exc:item.setdefault('image_errors',[]).append(type(exc).__name__)
-          (out/'result.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False,indent=2))
+          out=Path('official-portraits');out.mkdir()
+          records=[]
+          for slug,name,filename in [('ine','아이네','아이네-프로필.webp'),('jingburger','징버거','channels4_profile.webp'),('lilpa','릴파','릴파-프로필.jpg'),('jururu','주르르','주르르-프로필.webp'),('gosegu','고세구','고세구-프로필.jpg'),('viichan','비챤','비찬-프로필.webp')]:
+              url='https://parable-asia.com/wp-content/uploads/2026/04/'+urllib.parse.quote(filename)
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=25) as r:body=r.read(8*1024*1024)
+              im=Image.open(io.BytesIO(body));im.thumbnail((800,800));im.save(out/(slug+'.webp'),'WEBP',quality=90)
+              records.append({'id':slug,'member':name,'sourcePage':'https://parable-asia.com/creator-network/','sourceUrl':url,'sourceSha256':hashlib.sha256(body).hexdigest(),'filename':filename,'file':slug+'.webp','width':im.width,'height':im.height,'sha256':hashlib.sha256((out/(slug+'.webp')).read_bytes()).hexdigest(),'namuMatchVerified':False,'usage':'Review-only official-source fallback; requested NamuWiki images remain pending exact verification.'})
+          (out/'manifest.json').write_text(json.dumps(records,ensure_ascii=False,indent=2));print(json.dumps(records,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: second-official-candidates-${{ github.run_id }}
-          path: portrait-candidates/
+          name: second-official-portraits-${{ github.run_id }}
+          path: official-portraits/
           retention-days: 14
