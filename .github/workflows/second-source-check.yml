@@ -1,0 +1,60 @@
+name: Second concept - public portrait source check
+on:
+  push:
+    branches: ['feature/second']
+    paths: ['.github/workflows/second-source-check.yml']
+permissions:
+  contents: read
+jobs:
+  sources:
+    if: github.ref == 'refs/heads/feature/second'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export current source for local design work
+        run: git archive --format=zip --output=second-base-source.zip HEAD
+      - name: Install public page inspection tools
+        run: |
+          python -m pip install --disable-pip-version-check beautifulsoup4==4.13.4 playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Inspect only the requested six public member pages
+        run: |
+          python - <<'PY'
+          import json, urllib.parse, urllib.request, urllib.error
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          out=Path('source-audit'); out.mkdir()
+          report=[]
+          members=[('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]
+          with sync_playwright() as p:
+              browser=p.chromium.launch()
+              page=browser.new_page(viewport={'width':1440,'height':1000},locale='ko-KR')
+              for slug,name in members:
+                  url='https://namu.wiki/w/'+urllib.parse.quote(name)
+                  item={'member':name,'url':url}
+                  try:
+                      response=page.goto(url,wait_until='domcontentloaded',timeout=25000)
+                      page.wait_for_timeout(1200)
+                      item.update(status=response.status,title=page.title(),final_url=page.url)
+                      item['images']=page.locator('img').evaluate_all('(els)=>els.slice(0,50).map(e=>({alt:e.alt,src:e.currentSrc||e.src,dataSrc:e.dataset.src,width:e.naturalWidth,height:e.naturalHeight}))')
+                      item['text_excerpt']=page.locator('body').inner_text()[:1500]
+                      page.screenshot(path=str(out/(slug+'.png')))
+                      (out/(slug+'.html')).write_text(page.content(),encoding='utf-8')
+                  except Exception as exc:
+                      item['error']=type(exc).__name__
+                  report.append(item)
+              browser.close()
+          (out/'result.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: second-source-check-${{ github.run_id }}
+          path: |
+            second-base-source.zip
+            source-audit/
+          retention-days: 14
