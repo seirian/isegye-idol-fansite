@@ -1,0 +1,153 @@
+name: Initialize isolated inour directory and verify mapping
+on:
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/inour-bootstrap.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  initialize:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/develop'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned SFTP client
+        run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
+      - name: Initialize only the dedicated directory and verify existing sites
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          ISEGYE_INITIALIZE_EMPTY_ROOT: 'true'
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, os, socket, stat, sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import paramiko
+          sys.path.insert(0, 'scripts')
+          import inour_sftp as d
+          report = {'checked_at': datetime.now(timezone.utc).isoformat(), 'commit': os.environ['GITHUB_SHA'],
+                    'root': d.ROOT, 'status': 'failed', 'shared_router_modified': False,
+                    'application_deployed': False, 'protected_files_unchanged': None}
+          password = os.environ.pop('ISEGYE_SFTP_PASSWORD', '')
+          transport = client = sock = remote = None
+          before = None
+          lock = None
+          stage = 'authentication'
+          try:
+              d.require(bool(password), 'Required environment secret unavailable')
+              sock = socket.create_connection((d.HOST, d.PORT), timeout=15)
+              transport = paramiko.Transport(sock)
+              transport.banner_timeout = 15
+              transport.auth_timeout = 20
+              transport.get_security_options().key_types = ('ssh-ed25519',)
+              transport.start_client(timeout=15)
+              key = transport.get_remote_server_key()
+              fingerprint = 'SHA256:' + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip('=')
+              d.require(key.get_name() == 'ssh-ed25519' and fingerprint == d.FINGERPRINT, 'Host key mismatch')
+              transport.auth_password(d.USER, password, fallback=True)
+              password = None
+              d.require(transport.is_authenticated(), 'Authentication incomplete')
+              client = paramiko.SFTPClient.from_transport(transport)
+              client.get_channel().settimeout(30)
+              remote = d.Remote(client)
+              report['authenticated'] = True
+              stage = 'protected_baseline'
+              d.require(remote.info('/web/.yeop-migration-lock') is None, 'Other site deployment in progress')
+              before = remote.snapshot()
+              origins = ('https://mir.yeop.net', 'https://yeop.net')
+              baseline = {o: d.http(o + '/') for o in origins}
+              d.require(all(v[0] == 200 for v in baseline.values()), 'Existing site not healthy; no changes made')
+              htaccess = remote.read('/web/.htaccess') or b''
+              directives = [line.strip() for line in htaccess.splitlines() if line.strip() and not line.lstrip().startswith(b'#')]
+              known = [b'RewriteEngine On',
+                       b'RewriteCond %{HTTP_HOST} ^mir\\.yeop\\.net(?::[0-9]+)?$ [NC]',
+                       b'RewriteCond %{REQUEST_URI} !^/_mir_site(?:/|$)',
+                       b'RewriteRule ^(.*)$ _mir_site/$1 [L]']
+              report['shared_router_known_mir_bridge_only'] = directives == known and htaccess.startswith(b'# MIR-SUBDOMAIN-BRIDGE-V1')
+              report['shared_router_has_isegye_reference'] = b'isegye' in htaccess.lower()
+              report['shared_router_sha256'] = d.digest(htaccess)
+              stage = 'initialize_isolated_directory'
+              existed = remote.info(d.ROOT) is not None
+              remote.initialize()
+              report['root_created'] = not existed
+              remote.directory(d.ROOT)
+              remote.directory(d.MIR)
+              report['distinct_real_directories'] = client.normalize(d.ROOT) != client.normalize(d.MIR)
+              report['root_mode'] = oct(stat.S_IMODE(remote.info(d.ROOT).st_mode))
+              lock_path = d.ROOT + '/.deploy-lock'
+              remote.mkdir(lock_path)
+              lock = lock_path
+              stage = 'prove_domain_mapping'
+              name = 'isegye-probe-' + os.urandom(16).hex() + '.txt'
+              data = ('isegye-root-proof:' + os.urandom(32).hex()).encode()
+              probe = d.ROOT + '/' + name
+              remote.new(probe, data)
+              try:
+                  direct = d.http(d.ORIGIN + '/' + name)
+                  nested = d.http(d.ORIGIN + '/_isegye_idol/' + name)
+                  report['canonical_mapping_proved'] = direct == (200, data)
+                  report['nested_mapping_proved'] = nested == (200, data)
+                  report['canonical_probe_http_status'] = direct[0]
+                  report['nested_probe_http_status'] = nested[0]
+                  report['cross_host_probe_exposure'] = False
+                  for origin in origins:
+                      for suffix in ('/' + name, '/_isegye_idol/' + name):
+                          _, body = d.http(origin + suffix)
+                          if data in body:
+                              report['cross_host_probe_exposure'] = True
+                  d.require(not report['cross_host_probe_exposure'], 'Cross-host probe exposure')
+              finally:
+                  remote.remove_own(probe, data)
+              report['probe_removed'] = True
+              stage = 'verify_preservation'
+              report['existing_sites_unchanged'] = {o: d.http(o + '/') == baseline[o] for o in origins}
+              d.require(all(report['existing_sites_unchanged'].values()), 'Existing site response changed')
+              report['status'] = 'ready' if report['canonical_mapping_proved'] else 'directory_ready_mapping_required'
+          except Exception as exc:
+              report['failed_stage'] = stage
+              report['error_type'] = type(exc).__name__
+              if isinstance(exc, d.Stop):
+                  report['reason'] = str(exc)
+          finally:
+              password = None
+              if remote and before is not None:
+                  try:
+                      report['protected_files_unchanged'] = remote.snapshot() == before
+                      if not report['protected_files_unchanged']:
+                          report['status'] = 'failed'
+                  except Exception:
+                      report['status'] = 'failed'
+                      report['preservation_check_failed'] = True
+              if remote and lock:
+                  try:
+                      remote.parents(lock)
+                      client.rmdir(lock)
+                  except Exception:
+                      report['lock_cleanup_failed'] = True
+                      report['status'] = 'failed'
+              for resource in (client, transport, sock):
+                  if resource:
+                      try: resource.close()
+                      except Exception: pass
+              payload = json.dumps(report, ensure_ascii=False, indent=2)
+              Path('inour-bootstrap.json').write_text(payload + '\n', encoding='utf-8')
+              print(payload)
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+                  summary.write('## Isolated directory setup\n\nNo application release, shared router change or MIR file change is performed.\n\n```json\n' + payload + '\n```\n')
+          sys.exit(0 if report['status'] in ('ready', 'directory_ready_mapping_required') else 1)
+          PY
+      - name: Save sanitized setup report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: inour-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}
+          path: inour-bootstrap.json
+          retention-days: 30
