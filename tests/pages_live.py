@@ -40,7 +40,9 @@ with sync_playwright() as p:
     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
     page.screenshot(path=str(output / 'home-mobile.png'), full_page=True)
     page.get_by_role('button', name='메뉴 열기', exact=True).click()
-    assert page.get_by_role('button', name='메뉴 열기', exact=True).get_attribute('aria-expanded') == 'true'
+    menu = page.locator('[data-action="menu"]')
+    assert menu.get_attribute('aria-expanded') == 'true'
+    assert menu.get_attribute('aria-label') == '메뉴 닫기'
     assert not errors, errors
     report.update(status='passed', navigation_items=8, music_items=6, korean_initial_search=True,
                   mobile_horizontal_overflow=False, browser_exceptions=errors)
