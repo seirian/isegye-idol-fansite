@@ -9,12 +9,12 @@ jobs:
   sources:
     if: github.ref == 'refs/heads/feature/second'
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Inspect public mirror (NamuWiki live returned 403; do not bypass)
+      - name: Inspect public file descriptions and their declared sources
         run: |
           python -m pip install --disable-pip-version-check beautifulsoup4==4.13.4 pillow==11.3.0
           python - <<'PY'
@@ -22,46 +22,48 @@ jobs:
           from pathlib import Path
           from bs4 import BeautifulSoup
           from PIL import Image
-          out=Path('source-audit'); out.mkdir(exist_ok=True)
+          out=Path('source-audit');out.mkdir(exist_ok=True)
           report=[]
-          def fetch(url):
-              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=18) as r:
-                  return r.read(6*1024*1024),r.status
-          for slug,name in [('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]:
-              item={'member':name,'slug':slug,'original':'https://namu.wiki/w/'+urllib.parse.quote(name),'liveNamuVerified':False,'candidates':[]}
-              for domain in ['namu.moe','d.namu.moe']:
-                  url='https://'+domain+'/w/'+urllib.parse.quote(name)
-                  try:
-                      data,status=fetch(url); soup=BeautifulSoup(data,'html.parser'); item.update(mirror=url,status=status)
-                      candidates=[]; seen=set()
-                      for img in soup.find_all('img'):
-                          alt=img.get('alt','')
-                          if name not in alt or any(x in alt for x in ['서명','미니','이모티콘','마크','로고','길드','아바타','유튜브']): continue
-                          src=img.get('data-src') or img.get('src')
-                          if not src or src.startswith('data:'):continue
-                          src=urllib.parse.urljoin(url,src)
-                          if src in seen:continue
-                          seen.add(src)
-                          candidates.append({'alt':alt,'url':src})
-                      item['named_images']=candidates[:20]
-                      priority=sorted(candidates,key=lambda x:0 if any(w in x['alt'] for w in ['지니','프로필']) else 1)
-                      for cand in priority[:3]:
-                          try:
-                              body,_=fetch(cand['url']);im=Image.open(io.BytesIO(body))
-                              if min(im.size)<200:continue
-                              filename=slug+'-'+str(len(item['candidates']))+'.webp'
-                              im.thumbnail((1000,1000));im.save(out/filename,'WEBP',quality=90)
-                              item['candidates'].append({**cand,'file':filename,'dimensions':im.size})
-                          except Exception as exc:cand['download_error']=type(exc).__name__
-                      if item['candidates']:break
-                  except Exception as exc:item[domain+'_error']=type(exc).__name__
+          def fetch(url,referer=None):
+              headers={'User-Agent':'Mozilla/5.0'}
+              if referer:headers['Referer']=referer
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=15) as r:return r.read(8*1024*1024),r.status,r.headers.get('Content-Type','')
+              except urllib.error.HTTPError as e:return e.read(500),e.code,e.headers.get('Content-Type','')
+          members=[('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]
+          for slug,name in members:
+              url='https://namu.moe/w/'+urllib.parse.quote(name)
+              item={'member':name,'slug':slug,'mirror':url,'files':[]}
+              try:
+                  data,status,ct=fetch(url);soup=BeautifulSoup(data,'html.parser')
+                  (out/(slug+'.html')).write_bytes(data)
+                  item['top_images']=[dict(im.attrs) for im in soup.find_all('img')[:18]]
+                  files=[]
+                  for a in soup.find_all('a',href=True):
+                      h=urllib.parse.unquote(a['href'])
+                      if '파일:' in h and name in h and ('지니' in h or '프로필' in h):
+                          full=urllib.parse.urljoin(url,a['href'])
+                          if full not in files:files.append(full)
+                  for file_url in files[:2]:
+                      body,st,ctype=fetch(file_url);fs=BeautifulSoup(body,'html.parser')
+                      f={'url':file_url,'status':st,'text':fs.get_text(' ',strip=True)[-6500:],'images':[dict(x.attrs) for x in fs.find_all('img')[:8]],'external_links':[a['href'] for a in fs.find_all('a',href=True) if a['href'].startswith('http')][:40]}
+                      item['files'].append(f)
+                  for im in soup.find_all('img'):
+                      if name not in im.get('alt','') or ('지니' not in im.get('alt','') and '프로필' not in im.get('alt','')):continue
+                      src=urllib.parse.urljoin(url,im.get('data-src') or im.get('src',''))
+                      if 'file.namu.moe' not in src:continue
+                      body,st,ct=fetch(src,url);item['asset_check']={'url':src,'status':st,'type':ct,'body_prefix':body[:100].decode(errors='replace') if not ct.startswith('image/') else None}
+                      if st==200 and ct.startswith('image/'):
+                          image=Image.open(io.BytesIO(body));image.thumbnail((900,1100));image.save(out/(slug+'.webp'),'WEBP',quality=88);item['downloaded']=slug+'.webp'
+                      break
+              except Exception as exc:item['error']=type(exc).__name__
               report.append(item)
-          (out/'mirror-result.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          (out/'file-sources.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: second-profile-candidates-${{ github.run_id }}
+          name: second-file-sources-${{ github.run_id }}
           path: source-audit/
           retention-days: 14
