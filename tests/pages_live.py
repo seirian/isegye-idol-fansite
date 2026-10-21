@@ -30,7 +30,8 @@ with sync_playwright() as p:
     assert page.locator('meta[name="robots"]').get_attribute('content') == 'noindex,nofollow'
     page.screenshot(path=str(output / 'home-desktop.png'), full_page=True)
     page.goto(URL + '#/search?q=%E3%85%87%E3%85%87%E3%84%B4', wait_until='networkidle')
-    page.locator('#main').get_by_text('아이네', exact=True).first.wait_for()
+    page.locator('#main .result-row').get_by_role('heading', name='아이네', exact=True).wait_for()
+    page.screenshot(path=str(output / 'search.png'), full_page=True)
     page.goto(URL + '#/music', wait_until='networkidle')
     page.wait_for_function("document.querySelectorAll('.music-card').length === 6")
     page.set_viewport_size({'width': 390, 'height': 844})
