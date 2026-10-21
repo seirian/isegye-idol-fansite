@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local-only Apache fixtures; no SFTP, live DNS or credentials."""
+"""Local Apache fixtures only; no SFTP, credentials or live-site writes."""
 from __future__ import annotations
 import hashlib
 import http.client
@@ -14,11 +14,13 @@ import subprocess
 import tempfile
 import time
 import sys
+from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from inour_domain_bridge import BRIDGE, AUDITED_SHA, plan, Stop
+from inour_domain_bridge import BRIDGE, AUDITED_SHA, plan, Stop, band_redirect as inspect_band_redirect
 from inour_sftp import router as site_router
-
 MIR_BRIDGE = b'# MIR-SUBDOMAIN-BRIDGE-V1\nRewriteEngine On\n\n# Stable host bridge for the MIR fanpage only.\nRewriteCond %{HTTP_HOST} ^mir\\.yeop\\.net(?::[0-9]+)?$ [NC]\nRewriteCond %{REQUEST_URI} !^/_mir_site(?:/|$)\nRewriteRule ^(.*)$ _mir_site/$1 [L]\n\n# yeop.net and every other host intentionally fall through untouched.\n# Personal-site rewrite rules may be appended below this block.\n'
 
 def main() -> None:
@@ -32,6 +34,9 @@ def main() -> None:
         mir, isegye = web / '_mir_site', web / '_isegye_idol'
         mir.mkdir(parents=True)
         isegye.mkdir()
+        (mir / '.htaccess').write_text('RewriteEngine On\nRewriteRule ^band$ https://mir.yeop.net/band/ [R=301,L]\n')
+        (mir / 'band').mkdir()
+        (mir / 'band' / 'index.html').write_bytes(b'MIR-BAND-FIXTURE')
         (web / '.htaccess').write_bytes(MIR_BRIDGE)
         (web / 'index.html').write_bytes(b'PERSONAL-SITE-FIXTURE')
         (mir / 'index.html').write_bytes(b'MIR-SITE-FIXTURE')
@@ -80,11 +85,28 @@ DirectoryIndex index.html
                 return response.status, response.read()
             finally:
                 conn.close()
+        def band_redirect():
+            conn = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+            try:
+                conn.request('GET', '/band', headers={'Host': 'mir.yeop.net'})
+                response = conn.getresponse()
+                return response.status, response.getheader('Location')
+            finally:
+                conn.close()
         def check(name: str, passed: bool):
             results.append({'test': name, 'passed': bool(passed)})
             if not passed:
                 raise AssertionError(name)
         try:
+            mock_response = MagicMock()
+            mock_response.status = 301
+            mock_response.headers = {'Location': 'https://mir.yeop.net/band/'}
+            mock_response.__enter__.return_value = mock_response
+            with patch('urllib.request.build_opener') as opener:
+                opener.return_value.open.return_value = mock_response
+                result = inspect_band_redirect(SimpleNamespace(NoRedirect=urllib.request.HTTPRedirectHandler))
+                check('redirect inspector requests noncanonical URL', opener.return_value.open.call_args.args[0].full_url == 'https://mir.yeop.net/band')
+                check('redirect inspector returns status and destination', result == (301, 'https://mir.yeop.net/band/'))
             check('fixture matches audited router', hashlib.sha256(MIR_BRIDGE).hexdigest() == AUDITED_SHA)
             check('append preserves original bytes', plan(MIR_BRIDGE) == (MIR_BRIDGE, MIR_BRIDGE + BRIDGE))
             check('repeated application is idempotent', plan(MIR_BRIDGE + BRIDGE) == (MIR_BRIDGE, MIR_BRIDGE + BRIDGE))
@@ -110,7 +132,10 @@ DirectoryIndex index.html
             check('initial personal response', baseline['yeop.net'] == (200, b'PERSONAL-SITE-FIXTURE'))
             check('canonical probe absent before mapping', request('isegye-idol.kr', '/' + probe)[0] == 404)
             check('nested probe present before mapping', request('isegye-idol.kr', '/_isegye_idol/' + probe) == (200, b'UNIQUE-ISEGYE-PROBE-FIXTURE'))
+            check('MIR band redirect before append', band_redirect() == (301, 'https://mir.yeop.net/band/'))
+            check('MIR canonical band healthy', request('mir.yeop.net', '/band/') == (200, b'MIR-BAND-FIXTURE'))
             (web / '.htaccess').write_bytes(MIR_BRIDGE + BRIDGE)
+            check('MIR band redirect after append', band_redirect() == (301, 'https://mir.yeop.net/band/'))
             check('original is exact prefix', (web / '.htaccess').read_bytes()[:len(MIR_BRIDGE)] == MIR_BRIDGE)
             check('canonical mapping', request('isegye-idol.kr', '/' + probe) == (200, b'UNIQUE-ISEGYE-PROBE-FIXTURE'))
             check('query preserved', request('isegye-idol.kr', '/' + probe + '?check=1') == (200, b'UNIQUE-ISEGYE-PROBE-FIXTURE'))
@@ -135,6 +160,7 @@ DirectoryIndex index.html
                 check(host + ' unchanged after fixture activation', request(host) == baseline[host])
                 check(host + ' cannot expose active ISEGYE', b'ISEGYE-APPLICATION-FIXTURE' not in request(host, f'/_isegye_idol/_isegye_releases/{release}/index.html')[1])
             (web / '.htaccess').write_bytes(MIR_BRIDGE)
+            check('MIR band redirect after rollback', band_redirect() == (301, 'https://mir.yeop.net/band/'))
             check('rollback bytes match', (web / '.htaccess').read_bytes() == MIR_BRIDGE)
             check('rollback canonical result', request('isegye-idol.kr', '/' + probe)[0] == 404)
             for host in ('mir.yeop.net', 'yeop.net'):

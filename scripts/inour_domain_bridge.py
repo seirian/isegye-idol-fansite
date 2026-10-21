@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""User-authorized ISEGYE host routing only. No application deployment.
-
-The only shared-file target is /web/.htaccess. The audited original must
-match exactly and is backed up before an atomic, append-only replacement.
-"""
+"""User-authorized ISEGYE routing; preserve MIR and back up shared configuration."""
 from __future__ import annotations
 import base64
 import hashlib
@@ -13,6 +9,8 @@ from pathlib import Path
 import socket
 import stat
 import sys
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 
 AUDITED_SHA = '160341acd7b3f74f147b1556ed6e3c94e9cdf84fc7150c6e13064c84ffae5697'
@@ -24,6 +22,9 @@ BRIDGE = (b'\n# BEGIN ISEGYE-SUBDOMAIN-BRIDGE-V1\n'
           b'RewriteCond %{HTTP_HOST} ^isegye-idol\\.kr(?::[0-9]+)?$ [NC]\n'
           b'RewriteCond %{REQUEST_URI} !^/_isegye_idol(?:/|$)\n'
           b'RewriteRule ^(.*)$ _isegye_idol/$1 [L]\n'
+          b'<If "%{HTTP_HOST} =~ m#(?i)^isegye-idol\\.kr(?::[0-9]+)?$# && %{REQUEST_URI} =~ m#^/(?:_mir_site|mir|_yeop_releases)(?:/|$)#">\n'
+          b'    Require all denied\n'
+          b'</If>\n'
           b'# END ISEGYE-SUBDOMAIN-BRIDGE-V1\n')
 
 class Stop(RuntimeError):
@@ -37,12 +38,22 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 def plan(current: bytes) -> tuple[bytes, bytes]:
-    """Accept the audited original or exactly that original plus our block."""
     require(isinstance(current, bytes), 'Shared router missing')
     original = current[:-len(BRIDGE)] if current.endswith(BRIDGE) else current
     require(sha(original) == AUDITED_SHA, 'Shared router changed since audit; manual review required')
     require(original.startswith(b'# MIR-SUBDOMAIN-BRIDGE-V1\n'), 'MIR compatibility marker missing')
     return original, original + BRIDGE
+
+def band_redirect(d) -> tuple[int, str]:
+    """Inspect the known canonical redirect without following it."""
+    request = urllib.request.Request('https://mir.yeop.net/band',
+                                    headers={'User-Agent': 'IsegyeIsolatedDeploy/1.0', 'Cache-Control': 'no-cache'})
+    try:
+        response = urllib.request.build_opener(d.NoRedirect).open(request, timeout=20)
+    except urllib.error.HTTPError as exc:
+        response = exc
+    with response:
+        return response.status, response.headers.get('Location', '')
 
 def apply(report: dict) -> None:
     import paramiko
@@ -59,6 +70,7 @@ def apply(report: dict) -> None:
     before = baseline = old = candidate = None
     swap_attempted = False
     mode = shared_owner = temporary = None
+    expected_redirect = (301, 'https://mir.yeop.net/band/')
     try:
         sock = socket.create_connection((d.HOST, d.PORT), timeout=15)
         resources.append(sock)
@@ -88,7 +100,6 @@ def apply(report: dict) -> None:
         require(d.managed_router(site_router), 'ISEGYE site router is unmanaged')
         require(s.normalize(ROOT) != s.normalize(d.MIR), 'Site directories alias each other')
         report['distinct_real_directories'] = True
-        # Shared lock coordinates with the existing MIR deployment. Never steal a lock.
         for path in (ROOT + '/.deploy-lock', SHARED_LOCK):
             require(r.info(path) is None, 'Another deployment holds a lock; no changes made')
             s.mkdir(path, 0o700)
@@ -103,9 +114,11 @@ def apply(report: dict) -> None:
         require(mode in (0o644, 0o640), 'Unexpected shared router permissions')
         report.update(original_sha256=sha(original), before_sha256=sha(old), planned_sha256=sha(candidate),
                       already_configured=(old == candidate), shared_mode=oct(mode))
-        urls = ('https://mir.yeop.net/', 'https://mir.yeop.net/band',
+        urls = ('https://mir.yeop.net/', 'https://mir.yeop.net/band/',
                 'https://mir.yeop.net/songbook', 'https://yeop.net/')
         baseline = {url: d.http(url) for url in urls}
+        report['baseline_http_status'] = {url: value[0] for url, value in baseline.items()}
+        require(band_redirect(d) == expected_redirect, 'Unexpected MIR band redirect')
         require(all(value[0] == 200 for value in baseline.values()), 'Existing site baseline unhealthy')
         stage = 'backup'
         folder = ROOT + '/.routing-backups'
@@ -164,6 +177,9 @@ def apply(report: dict) -> None:
         for suffix in ('/.isegye-owner', '/.routing-backups/' + backup.rsplit('/', 1)[1]):
             require(d.http(d.ORIGIN + suffix)[0] in (403, 404), 'Private metadata or backup is public')
         report['private_files_blocked'] = True
+        for suffix in ('/_mir_site/index.html', '/mir/index.html', '/_yeop_releases/'):
+            require(d.http(d.ORIGIN + suffix)[0] in (403, 404), 'MIR path exposed on ISEGYE host')
+        report['mir_paths_blocked_on_isegye_host'] = True
         home_status = d.http(d.ORIGIN + '/')[0]
         expected = 503 if site_router == d.router() else 200
         require(home_status == expected, 'Canonical homepage status differs from managed router state')
@@ -176,6 +192,8 @@ def apply(report: dict) -> None:
         checks = {url: d.http(url) == value for url, value in baseline.items()}
         require(all(checks.values()), 'Existing site response changed')
         report['existing_sites_unchanged'] = checks
+        require(band_redirect(d) == expected_redirect, 'MIR band redirect changed')
+        report['band_canonical_redirect_preserved'] = True
         r.remove_own(probe, proof)
         probe = None
         report['probe_removed'] = True
@@ -194,7 +212,7 @@ def apply(report: dict) -> None:
                     require(current == old, 'Router changed externally; automatic rollback refused')
                 report['rollback_restored_original'] = r.read(SHARED) == old
                 if baseline:
-                    report['rollback_existing_sites_unchanged'] = all(d.http(url) == value for url, value in baseline.items())
+                    report['rollback_existing_sites_unchanged'] = all(d.http(url) == value for url, value in baseline.items()) and band_redirect(d) == expected_redirect
             except Exception as rollback_error:
                 report['rollback_error_type'] = type(rollback_error).__name__
                 report['manual_recovery_required'] = True

@@ -19,14 +19,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Inspect public baseline without credentials or remote writes
+      - name: Inspect canonical public endpoints without credentials
         run: |
           python - <<'PY'
-          import hashlib, json, re, sys, urllib.request, urllib.error
+          import hashlib, json, sys, urllib.request, urllib.error
           from pathlib import Path
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, *args): return None
-          urls = ('https://mir.yeop.net/', 'https://mir.yeop.net/band', 'https://mir.yeop.net/songbook', 'https://yeop.net/')
+          urls = ('https://mir.yeop.net/', 'https://mir.yeop.net/band/', 'https://mir.yeop.net/songbook', 'https://yeop.net/', 'https://mir.yeop.net/band')
           report = {'remote_writes': 0, 'endpoints': {}}
           opener = urllib.request.build_opener(NoRedirect)
           for url in urls:
@@ -36,12 +36,15 @@ jobs:
                   except urllib.error.HTTPError as exc: res = exc
                   with res:
                       body = res.read(9 * 1024 * 1024)
-                      report['endpoints'][url] = {'status': res.status, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body), 'location': res.headers.get('Location','').split('?')[0].split('#')[0]}
+                      report['endpoints'][url] = {'status': res.status, 'sha256': hashlib.sha256(body).hexdigest(), 'bytes': len(body), 'location': res.headers.get('Location','')}
               except Exception as exc:
                   report['endpoints'][url] = {'error_type': type(exc).__name__}
           Path('public-endpoints.json').write_text(json.dumps(report, indent=2)+'\n')
           print(json.dumps(report, indent=2))
-          sys.exit(0 if all(x.get('status') == 200 for x in report['endpoints'].values()) else 1)
+          ok = all(report['endpoints'][url].get('status') == 200 for url in urls[:-1])
+          redirect = report['endpoints'][urls[-1]]
+          ok = ok and redirect.get('status') == 301 and redirect.get('location') == 'https://mir.yeop.net/band/'
+          sys.exit(0 if ok else 1)
           PY
       - name: Ensure local routing test server
         run: |
