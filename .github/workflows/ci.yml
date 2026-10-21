@@ -25,7 +25,7 @@ jobs:
       - name: Validate content and deployment boundaries
         run: |
           npm test
-          python -m unittest discover -s tests -p test_deployment.py -v
+          python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Build static site and offline review
         run: |
           npm run build
