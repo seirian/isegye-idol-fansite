@@ -1,4 +1,4 @@
-"""Verify the actual downloadable single HTML file using file://, without a server."""
+"""Verify the downloadable second-design HTML using file:// without a server."""
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -16,8 +16,8 @@ with sync_playwright() as pw:
     page.goto((root/'dist/review.html').as_uri(), wait_until='load')
     page.locator('#main h1').wait_for(timeout=5000)
     assert page.locator('.nav a').count() == 8
-    points = page.locator('.orbit-dot').evaluate_all('(nodes) => nodes.map(n => { const r=n.getBoundingClientRect(); return [Math.round(r.x),Math.round(r.y)]; })')
-    assert len({tuple(p) for p in points}) == 6, 'Six orbital symbols must have distinct positions'
+    assert page.locator('.stage-lineup .polaroid').count() == 6
+    assert page.locator('.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)')
     page.screenshot(path=str(out/'offline-desktop.png'), full_page=True)
     page.evaluate("location.hash='#/search?q=ㅇㅇㄴ'")
     page.wait_for_timeout(100)
@@ -36,10 +36,10 @@ with sync_playwright() as pw:
     page.set_viewport_size({'width':390,'height':844})
     page.wait_for_timeout(100)
     assert page.evaluate('document.documentElement.scrollWidth') <= 390
-    assert page.locator('#sidebar').evaluate('(node) => node.getBoundingClientRect().right') <= 0
+    assert page.locator('[data-action=menu]').get_attribute('aria-expanded') == 'false'
     page.screenshot(path=str(out/'offline-mobile.png'), full_page=True)
     assert not errors, errors
     assert not [url for url in requests if url.startswith(('http:', 'https:'))], 'Offline review must not load external assets'
     context.close()
     browser.close()
-print('PASS: standalone file://, 8 menus, six symbols, Korean initials, album tracks, bookmarks, mobile, no network assets.')
+print('PASS: standalone file://, 8 menus, six portraits, Korean initials, album tracks, bookmarks, mobile, no network assets.')

@@ -1,0 +1,14 @@
+{
+  "approvedConcept": "second",
+  "operatorApprovedDeployment": true,
+  "approvedAt": "2026-10-22",
+  "reviewedCommit": "caac96297d1f3caa8557e9beeed3132c514b66ea",
+  "sourceBackup": {
+    "branch": "backup/main1st",
+    "commit": "885e818063eeccedf468d52ce148a4760819c97d"
+  },
+  "imageStatus": "PARABLE official profile interim images, as shown in the approved review",
+  "namuPortraitsVerified": false,
+  "rightsPermissionVerified": false,
+  "note": "Site-owner approval selects this reviewed design for deployment; it is not a representation of third-party image licensing or NamuWiki identity verification."
+}
