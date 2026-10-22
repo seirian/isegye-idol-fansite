@@ -1,0 +1,17 @@
+{
+  "sourcePage": "https://parable-asia.com/creator-network/",
+  "checkedAt": "2026-10-22",
+  "requestedSource": "https://namu.wiki/w/이세계아이돌",
+  "namuMatchVerified": false,
+  "operatorApprovedDeployment": true,
+  "rightsPermissionVerified": false,
+  "note": "현재 여섯 이미지는 패러블 공식 소개 페이지의 프로필을 임시 사용하며, 요청한 나무위키 프로필과 동일하다고 확인된 이미지가 아닙니다. 나무위키 원본 대조 및 개별 이미지 이용허락 확인은 미완료입니다. 비공식 팬사이트이며 출처 표시는 권리자의 이용허락을 대신하지 않습니다.",
+  "members": [
+    {"id":"ine","member":"아이네","filename":"아이네-프로필.webp","requestedFile":"아이네 지니뮤직4K 배경제거.png","sourceSha256":"34c3df09cb51d5a4d3494506b4ac4d4cda76fa1ea5ae6b1b50d2727c49d4d440","preparedSha256":"82a4adb0f25e087eb4812e0af07e4a4297a19d4a501250e17fdde5a451654624"},
+    {"id":"jingburger","member":"징버거","filename":"channels4_profile.webp","requestedFile":"뉴버거 2.0.png","sourceSha256":"340e4e593b284706fb1c01266b49569714e86e001934aa01c16038e63511d3fc","preparedSha256":"22246935aac10461938a711840e5f84f40968ac64f78230f44e3b59c2bafd2b6"},
+    {"id":"lilpa","member":"릴파","filename":"릴파-프로필.jpg","requestedFile":"릴파_지니뮤직4K_배경제거.png","sourceSha256":"e42c1a4f40cf4b654eab570ab89df0833b76cecd8eb165af98ebebaf5f7741d3","preparedSha256":"5bb8ceadefd52614af5e70111bba17445c902657e20602dc133cd8f52d43d34f"},
+    {"id":"jururu","member":"주르르","filename":"주르르-프로필.webp","requestedFile":"주르르_지니뮤직4K_배경제거.png","sourceSha256":"8b507dbc7002b50e01cc8c383f719fa9bd7640dd97d6139bd27e15a52a261ccf","preparedSha256":"ae335959fb2292b1ee6a6ab97273f1b7b644fbf0b3cbd966e11dc3026c45f4f6"},
+    {"id":"gosegu","member":"고세구","filename":"고세구-프로필.jpg","requestedFile":"고세구_지니뮤직4K_배경제거.png","sourceSha256":"bcfe1169adf6a192d88f8cee7b06cebee3eb27325a4049e163b6dd0b8904bb60","preparedSha256":"5a51387fc2df636c8b7df81081529a54820ac0aa2c534b6a956f2a30c3eb0f9f"},
+    {"id":"viichan","member":"비챤","filename":"비찬-프로필.webp","requestedFile":"비챤_지니뮤직4K_배경제거.png","sourceSha256":"76a8823105161ebe115b4691fa886385991216b885738d980e0d954cea7a8943","preparedSha256":"3773995592988c90a34957ee3fe358db7fd15a8f44df0edb4383b9158a81bbef"}
+  ]
+}

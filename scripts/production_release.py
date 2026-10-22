@@ -60,7 +60,6 @@ def deploy_verified(remote, payload, commit, verify, report):
         report['previous_router_backup'] = backup
         d.require(remote.snapshot() == protected, 'Protected files changed; activation stopped')
         new = d.router(release)
-        # Record intent before the atomic operation, including uncertain read-back failures.
         activated = True
         remote.replace(router_path, new, previous)
         for rel, data in payload.items():
@@ -100,7 +99,7 @@ def deploy_verified(remote, payload, commit, verify, report):
 
 
 def verify_live(commit):
-    # No user submissions: the existing smoke suite intercepts GitHub issue navigation.
+    # No submissions: the smoke suite intercepts GitHub issue navigation.
     import subprocess
     env = dict(os.environ, BASE_URL=d.ORIGIN + '/')
     result = subprocess.run([sys.executable, 'tests/browser_smoke.py'], env=env,
@@ -109,9 +108,14 @@ def verify_live(commit):
     out.mkdir(parents=True, exist_ok=True)
     (out / 'browser-smoke.txt').write_text(result.stdout + result.stderr, encoding='utf-8')
     d.require(result.returncode == 0, 'Live browser tests failed')
+    second_env = dict(os.environ, SECOND_BASE_URL=d.ORIGIN + '/', SECOND_SKIP_OFFLINE='1', SECOND_EXPECT_MODE='production')
+    second = subprocess.run([sys.executable, 'tests/second_smoke.py'], env=second_env,
+                            capture_output=True, text=True, timeout=180)
+    (out / 'second-smoke.txt').write_text(second.stdout + second.stderr, encoding='utf-8')
+    d.require(second.returncode == 0, 'Live second-design tests failed')
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(**({'executable_path': os.environ['CHROMIUM_PATH']} if os.environ.get('CHROMIUM_PATH') else {}))
         context = browser.new_context(viewport={'width': 1440, 'height': 1080}, locale='ko-KR', timezone_id='Asia/Seoul')
         page = context.new_page()
         errors = []
@@ -119,11 +123,13 @@ def verify_live(commit):
         response = page.goto(d.ORIGIN + '/', wait_until='networkidle')
         d.require(response.status == 200, 'Live homepage not 200')
         page.locator('#main h1').wait_for()
+        d.require(page.locator('html').get_attribute('data-concept') == 'second', 'Wrong live design')
+        d.require(page.locator('.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)'), 'Live portraits failed to decode')
         d.require(page.locator('link[rel="canonical"]').get_attribute('href') == d.ORIGIN + '/', 'Wrong canonical URL')
         d.require(page.locator('meta[name="robots"]').get_attribute('content') == 'index,follow', 'Wrong production robots metadata')
         d.require('공개 베타' in page.locator('.preview-strip').inner_text(), 'Production label missing')
         meta = context.request.get(d.ORIGIN + '/build-info.json').json()
-        d.require(meta.get('commit') == commit and meta.get('mode') == 'production', 'Live commit mismatch')
+        d.require(meta.get('commit') == commit and meta.get('mode') == 'production' and meta.get('concept') == 'second', 'Live commit mismatch')
         page.screenshot(path=str(out / 'home-desktop.png'), full_page=True)
         page.set_viewport_size({'width': 390, 'height': 844})
         page.wait_for_timeout(300)
@@ -131,7 +137,7 @@ def verify_live(commit):
         page.screenshot(path=str(out / 'home-mobile.png'), full_page=True)
         d.require(not errors, 'Browser exceptions')
         (out / 'live-result.json').write_text(json.dumps({'url': d.ORIGIN, 'commit': commit, 'mode': 'production',
-                'status': 'passed', 'browser_smoke_scenarios': 9, 'mobile_overflow': False,
+                'status': 'passed', 'concept': 'second', 'portraits_verified': 6, 'second_design_checks': 44, 'namuPortraitsVerified': False, 'browser_smoke_scenarios': 9, 'mobile_overflow': False,
                 'canonical_verified': True, 'robots_verified': True, 'browser_exceptions': errors}, indent=2) + '\n')
         browser.close()
 
