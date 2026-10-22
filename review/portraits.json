@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-22",
+  "policy": "Publish only verified current profile files; never silently fall back to retired avatars.",
+  "members": [
+    {"id":"ine","name":"아이네","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/아이네","verifiedAt":null},
+    {"id":"jingburger","name":"징버거","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/징버거","verifiedAt":null},
+    {"id":"lilpa","name":"릴파","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/릴파","verifiedAt":null},
+    {"id":"jururu","name":"주르르","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/주르르","verifiedAt":null},
+    {"id":"gosegu","name":"고세구","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/고세구","verifiedAt":null},
+    {"id":"viichan","name":"비챤","status":"pending","file":null,"sha256":null,"sourcePage":"https://namu.wiki/w/비챤","verifiedAt":null}
+  ]
+}

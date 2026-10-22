@@ -1,0 +1,96 @@
+name: Readability and clean-about review
+on:
+  push:
+    branches: ['feature/readability']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-readability-review
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/readability'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install isolated review tools
+        run: |
+          python -m venv /tmp/readability-tools
+          /tmp/readability-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/readability-tools/bin/python -m playwright install --with-deps chromium
+      - name: Build noindex review without retired avatar files
+        run: /tmp/readability-tools/bin/python scripts/build_readability.py
+      - name: Check typography, honest portrait state, simplified about and responsive layout
+        run: |
+          /tmp/readability-tools/bin/python tests/readability_smoke.py
+          python -m http.server 4181 --bind 127.0.0.1 --directory readability-dist >/tmp/readability-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in {1..20}; do curl -fsS http://127.0.0.1:4181/ >/dev/null && break || sleep 1; done
+          BASE_URL=http://127.0.0.1:4181/ /tmp/readability-tools/bin/python tests/browser_smoke.py
+      - name: Save review and verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: readability-review-${{ github.sha }}
+          path: |
+            readability-dist/
+            test-results/
+          retention-days: 30
+          include-hidden-files: true
+      - name: Preserve existing develop and second previews
+        run: |
+          git fetch --depth=1 origin develop
+          mkdir -p /tmp/unchanged-preview
+          git archive FETCH_HEAD | tar -x -C /tmp/unchanged-preview
+          base_sha=$(git rev-parse FETCH_HEAD)
+          (cd /tmp/unchanged-preview && GITHUB_SHA="$base_sha" GITHUB_REF=refs/heads/develop PYTHON=/tmp/readability-tools/bin/python npm run build)
+          mkdir -p /tmp/review-pages/second /tmp/review-pages/previews/feature-readability
+          cp -a /tmp/unchanged-preview/dist/. /tmp/review-pages/
+          cp -a /tmp/unchanged-preview/second-dist/. /tmp/review-pages/second/
+          cp -a readability-dist/. /tmp/review-pages/previews/feature-readability/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/review-pages/
+  publish:
+    needs: build
+    concurrency:
+      group: isegye-pages-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://seirian.github.io/isegye-idol-fansite/previews/feature-readability/
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify actual published review
+        run: |
+          python -m venv /tmp/readability-live
+          /tmp/readability-live/bin/pip install playwright==1.56.0
+          /tmp/readability-live/bin/python -m playwright install --with-deps chromium
+          READABILITY_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-readability/ /tmp/readability-live/bin/python tests/readability_smoke.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: readability-live-${{ github.sha }}
+          path: test-results/readability/
+          retention-days: 30
