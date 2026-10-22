@@ -30,11 +30,12 @@ jobs:
           /tmp/readability-tools/bin/python -m playwright install --with-deps chromium
       - name: Prepare six verified Genie enlarge-view portraits
         run: /tmp/readability-tools/bin/python scripts/prepare_genie_portraits.py
-      - name: Build noindex review with selected Genie profiles
-        run: /tmp/readability-tools/bin/python scripts/build_readability.py
-      - name: Check typography, portraits, simplified about and responsive layout
+      - name: Build noindex review with supplied group illustration and Genie profiles
+        run: /tmp/readability-tools/bin/python scripts/build_group_hero.py
+      - name: Check typography, portraits, group image and responsive layout
         run: |
           /tmp/readability-tools/bin/python tests/readability_smoke.py
+          /tmp/readability-tools/bin/python tests/group_hero_smoke.py
           python -m http.server 4181 --bind 127.0.0.1 --directory readability-dist >/tmp/readability-http.log 2>&1 &
           server=$!
           trap 'kill "$server" 2>/dev/null || true' EXIT
@@ -84,15 +85,18 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Verify actual published review
+      - name: Verify actual published review and uploaded group illustration
         run: |
           python -m venv /tmp/readability-live
           /tmp/readability-live/bin/pip install playwright==1.56.0
           /tmp/readability-live/bin/python -m playwright install --with-deps chromium
           READABILITY_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-readability/ /tmp/readability-live/bin/python tests/readability_smoke.py
+          GROUP_HERO_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-readability/ /tmp/readability-live/bin/python tests/group_hero_smoke.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: readability-live-${{ github.sha }}
-          path: test-results/readability/
+          path: |
+            test-results/readability/
+            test-results/group-hero/
           retention-days: 30

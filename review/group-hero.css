@@ -1,0 +1,14 @@
+/* Uploaded illustration: complete composition, no crop or text overlay. */
+.hero-intro{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:center;gap:clamp(24px,3vw,44px)}
+.hero-copy{min-width:0}
+.hero-group{width:100%;max-width:560px;min-width:0;margin:0;justify-self:end;position:relative}
+.hero-group-frame{padding:8px;border:1px solid #edd4df;border-radius:24px;background:#fffafc;box-shadow:0 16px 38px #ae5e7c20;transform:rotate(2deg)}
+.hero-group-frame img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;object-position:center;border-radius:16px;filter:none;opacity:1}
+.hero-group figcaption{margin:19px 8px 0;text-align:right;font-size:.9375rem;line-height:1.7;font-weight:500;color:#75566d;overflow-wrap:normal}
+.hero-group figcaption span{color:#b33054;margin-right:8px}
+[data-theme=dark] .hero-group-frame{background:#3b2d3d;border-color:#6a4d65;box-shadow:0 16px 38px #0003}
+[data-theme=dark] .hero-group figcaption{color:#e2cddd}
+[data-theme=dark] .hero-group figcaption span{color:#ffadc6}
+@media(max-width:1150px){.hero-intro{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:26px}.hero-group-frame{padding:6px}.hero-group figcaption{font-size:.875rem}}
+@media(max-width:960px){.hero-intro{grid-template-columns:minmax(0,1fr);gap:32px}.hero-group{max-width:600px;justify-self:center}.hero-group-frame{transform:none}.hero-group figcaption{text-align:center;margin-top:12px}}
+@media(max-width:640px){.hero-intro{padding:0;gap:26px}.hero-group{max-width:none}.hero-group-frame{padding:5px;border-radius:18px;box-shadow:0 10px 24px #ae5e7c16}.hero-group-frame img{border-radius:12px}.hero-group figcaption{font-size:.875rem;margin:10px 0 0;line-height:1.7}.lineup-heading{margin-top:28px}}
