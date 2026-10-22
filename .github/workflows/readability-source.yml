@@ -1,0 +1,62 @@
+name: Readability review - source inspection
+on:
+  push:
+    branches: ['feature/readability']
+    paths: ['.github/workflows/readability-source.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: git archive --format=zip --output=current-source.zip HEAD
+      - name: Inspect public image sources without sign-in or security challenge bypass
+        run: |
+          python -m pip install --quiet beautifulsoup4==4.14.2
+          python - <<'PY'
+          import json, urllib.request, urllib.error, urllib.parse
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          out=Path('portrait-check'); out.mkdir(exist_ok=True)
+          def get(url):
+              req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 IsegyeProfileReview/1.0'})
+              try:
+                  with urllib.request.urlopen(req,timeout=15) as r: return r.status,r.headers.get('Content-Type',''),r.read(6*1024*1024)
+              except urllib.error.HTTPError as e: return e.code,e.headers.get('Content-Type',''),e.read(1024)
+              except Exception as e: return 0,type(e).__name__,b''
+          results=[]
+          # One normal request: do not solve or work around a security challenge.
+          url='https://namu.wiki/w/'+urllib.parse.quote('아이네')
+          status,kind,body=get(url)
+          results.append({'source':url,'status':status,'type':kind})
+          for mid,name in [('ine','아이네'),('jingburger','징버거'),('lilpa','릴파'),('jururu','주르르'),('gosegu','고세구'),('viichan','비챤')]:
+              url='https://d.namu.moe/w/'+urllib.parse.quote(name)
+              status,kind,body=get(url)
+              row={'id':mid,'member':name,'mirror':url,'status':status,'liveNamuVerified':False,'images':[]}
+              if status==200:
+                  soup=BeautifulSoup(body,'html.parser')
+                  for img in soup.find_all('img'):
+                      alt=img.get('alt','');src=img.get('data-original') or img.get('src','')
+                      if any(x in alt for x in ('지니뮤직4K','뉴버거 2.0')) and src:
+                          src=urllib.parse.urljoin(url,src)
+                          if src not in [x['url'] for x in row['images']]:row['images'].append({'alt':alt,'url':src})
+                  if row['images']:
+                      image=row['images'][0];s,t,b=get(image['url']);image.update(status=s,type=t)
+                      if s==200 and t.startswith('image/'):
+                          (out/(mid+'.image')).write_bytes(b)
+              results.append(row)
+          (out/'report.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
+          print(json.dumps(results,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: readability-source-${{ github.run_id }}
+          path: |
+            current-source.zip
+            portrait-check/
+          retention-days: 14
