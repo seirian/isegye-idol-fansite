@@ -1,0 +1,5 @@
+/* Keep the user's selected Genie portraits intact: no face cropping or recoloring. */
+.portrait:not(.pending){aspect-ratio:1/1;background:#fff}
+.portrait img{object-fit:contain;object-position:center;filter:none}
+.polaroid:hover .portrait img{transform:none}
+.profile-attribution{margin-top:10px}

@@ -1,0 +1,71 @@
+name: Inspect user-selected Genie portraits
+on:
+  push:
+    branches: ['feature/readability']
+    paths: ['.github/workflows/genie-portrait-source.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/feature/readability'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install public HTML parser
+        run: python -m pip install beautifulsoup4==4.13.4 pillow==11.3.0
+      - name: Read the linked member enlarge-view originals
+        run: |
+          python - <<'PY'
+          import hashlib, io, json, re, urllib.request, urllib.parse
+          from pathlib import Path
+          from datetime import datetime, timezone
+          from bs4 import BeautifulSoup
+          from PIL import Image, ImageOps
+          out=Path('genie-inspection');out.mkdir()
+          group='https://www.genie.co.kr/detail/artistInfo?xxnm=81287268'
+          members=[('ine','아이네','82604076'),('jingburger','징버거','82604068'),('lilpa','릴파','82604072'),('jururu','주르르','82064570'),('gosegu','고세구','82604071'),('viichan','비챤','82604070')]
+          def get(url):
+              assert urllib.parse.urlparse(url).hostname in ('www.genie.co.kr','image.genie.co.kr')
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 (compatible; IsegyeFanReview/1.0)','Referer':group})
+              with urllib.request.urlopen(req,timeout=25) as r:
+                  assert urllib.parse.urlparse(r.url).hostname in ('www.genie.co.kr','image.genie.co.kr')
+                  data=r.read(12*1024*1024+1)
+                  assert len(data)<=12*1024*1024
+                  return data,r.headers.get_content_charset()
+          data,enc=get(group)
+          group_html=data.decode(enc or 'utf-8',errors='strict')
+          soup=BeautifulSoup(group_html,'html.parser')
+          (out/'group.html').write_text(group_html,encoding='utf-8')
+          report={'source':'Genie Music','sourcePage':group,'checkedAt':datetime.now(timezone.utc).isoformat(),'members':[]}
+          for mid,name,aid in members:
+              match=[a for a in soup.select('a') if a.get_text(strip=True)==name and aid in ' '.join(str(a.get(k,'')) for k in ('href','onclick'))]
+              assert match,(name,'Group member link mismatch')
+              url='https://www.genie.co.kr/detail/artistInfo?xxnm='+aid
+              body,enc=get(url);html=body.decode(enc or 'utf-8',errors='strict')
+              page=BeautifulSoup(html,'html.parser')
+              assert page.select_one('.info-zone .name').get_text(strip=True)==name
+              enlarged=page.select_one('.photo-zone a[image-view="true"]')
+              assert enlarged is not None
+              original=urllib.parse.urljoin(url,enlarged['href'])
+              assert aid+'_' in original and '_600x600.' in original
+              raw,_=get(original)
+              (out/(mid+'.jpg')).write_bytes(raw)
+              (out/(mid+'.html')).write_text(html,encoding='utf-8')
+              with Image.open(io.BytesIO(raw)) as im:
+                  assert im.size==(600,600) and im.format=='JPEG'
+                  image=ImageOps.exif_transpose(im).convert('RGB')
+                  image.save(out/(mid+'.webp'),'WEBP',quality=92,method=6)
+              report['members'].append({'id':mid,'name':name,'status':'verified','artistId':aid,'sourcePage':url,'sourceImage':original,'sourceSha256':hashlib.sha256(raw).hexdigest(),'file':'review/portraits/'+mid+'.webp','sha256':hashlib.sha256((out/(mid+'.webp')).read_bytes()).hexdigest(),'verifiedAt':report['checkedAt'],'width':600,'height':600,'verification':'Member name and link matched to user-selected Genie group; enlarge-view source retrieved. No NamuWiki identity or rights clearance asserted.'})
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - name: Save public source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: genie-portrait-originals-${{ github.run_id }}
+          path: genie-inspection/
+          retention-days: 14

@@ -31,7 +31,7 @@ jobs:
           python -m venv /tmp/archive-browser-tests
           /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 pillow==11.3.0
           /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
-      - name: Build selected second design and offline review
+      - name: Build approved readable design and offline review
         run: |
           npm run build
           node scripts/standalone.mjs
@@ -41,11 +41,16 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
           /tmp/archive-browser-tests/bin/python tests/offline_smoke.py
-          python -m http.server 4174 --bind 127.0.0.1 --directory dist >/tmp/second-ci-http.log 2>&1 &
-          server=$!
-          trap 'kill "$server" 2>/dev/null || true' EXIT
-          for i in {1..20}; do curl -fsS http://127.0.0.1:4174/ >/dev/null && break || sleep 1; done
-          /tmp/archive-browser-tests/bin/python tests/second_smoke.py
+          READABILITY_BUILD_DIR=dist /tmp/archive-browser-tests/bin/python tests/readability_smoke.py
+          GROUP_HERO_BUILD_DIR=dist /tmp/archive-browser-tests/bin/python tests/group_hero_smoke.py
+      - name: Verify production packaging without credentials or upload
+        run: |
+          DEPLOY_ENV=production GITHUB_REF=refs/heads/main GITHUB_REF_NAME=main npm run build
+          READABILITY_BUILD_DIR=dist READABILITY_EXPECT_MODE=production READABILITY_OUT_DIR=test-results/production-candidate/readability /tmp/archive-browser-tests/bin/python tests/readability_smoke.py
+          GROUP_HERO_BUILD_DIR=dist GROUP_HERO_EXPECT_MODE=production GROUP_HERO_OUT_DIR=test-results/production-candidate/group-hero /tmp/archive-browser-tests/bin/python tests/group_hero_smoke.py
+          npm run build
+        env:
+          PYTHON: /tmp/archive-browser-tests/bin/python
       - name: Upload review package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -60,13 +65,14 @@ jobs:
           name: browser-review-${{ github.sha }}
           path: test-results/
           retention-days: 14
-      - name: Preserve second review URL alongside the selected develop design
+      - name: Preserve both reviewed URLs alongside develop
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         run: |
           mkdir -p /tmp/isegye-pages
           cp -a dist/. /tmp/isegye-pages/
-          mkdir -p /tmp/isegye-pages/second
-          cp -a second-dist/. /tmp/isegye-pages/second/
+          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability
+          cp -a readability-dist/. /tmp/isegye-pages/second/
+          cp -a readability-dist/. /tmp/isegye-pages/previews/feature-readability/
       - name: Upload develop Pages package
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         uses: actions/upload-pages-artifact@v3

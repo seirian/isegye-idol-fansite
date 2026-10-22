@@ -10,7 +10,7 @@ spec.loader.exec_module(s)
 
 class SelectedBuildTests(unittest.TestCase):
     def test_backup_points_to_original_main(self):
-        approval = json.loads((ROOT/'second/release.json').read_text())
+        approval = json.loads((ROOT/'review/release.json').read_text())
         self.assertEqual(approval['sourceBackup'], {'branch':'backup/main1st', 'commit':'885e818063eeccedf468d52ce148a4760819c97d'})
         self.assertIs(approval['operatorApprovedDeployment'], True)
 
@@ -31,7 +31,8 @@ class SelectedBuildTests(unittest.TestCase):
 
     def test_production_has_no_offline_payload(self):
         source=(ROOT/'scripts/build_selected.py').read_text()
-        self.assertIn("ignore=shutil.ignore_patterns('review-second.html', 'image-sources.json')",source)
-        self.assertIn("OUT / 'assets/portraits/sources.json'", source)
+        self.assertIn("ignore=shutil.ignore_patterns('review.html')",source)
+        self.assertNotIn("OUT / 'assets/portraits/sources.json'", source)
+        self.assertIn("ROOT / 'readability-dist'", source)
 
 if __name__ == '__main__': unittest.main()

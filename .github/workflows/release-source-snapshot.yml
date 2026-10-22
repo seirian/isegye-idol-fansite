@@ -1,0 +1,23 @@
+name: Release source snapshot
+on:
+  push:
+    branches: ['feature/readability']
+    paths: ['.github/workflows/release-source-snapshot.yml']
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/feature/readability'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export tracked files only, without credentials
+        run: git archive --format=zip --output=release-source.zip HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-source-${{ github.sha }}
+          path: release-source.zip
+          retention-days: 14
