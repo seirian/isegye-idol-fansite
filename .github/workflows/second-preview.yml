@@ -1,0 +1,98 @@
+name: Second concept - isolated review
+on:
+  push:
+    branches: ['feature/second']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-second-review
+  cancel-in-progress: true
+jobs:
+  build-test:
+    if: github.ref == 'refs/heads/feature/second'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate unchanged shared data
+        run: npm test
+      - name: Install preview-only tooling
+        run: |
+          python -m venv /tmp/second-tools
+          /tmp/second-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/second-tools/bin/python -m playwright install --with-deps chromium
+      - name: Build second concept with pinned, attributed images
+        run: /tmp/second-tools/bin/python scripts/build_second.py
+      - name: Test shared behavior, member images, responsive layout and offline review
+        run: |
+          python -m http.server 4174 --bind 127.0.0.1 --directory second-dist >/tmp/second-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in {1..20}; do curl -fsS http://127.0.0.1:4174/ >/dev/null && break || sleep 1; done
+          BASE_URL=http://127.0.0.1:4174/ /tmp/second-tools/bin/python tests/browser_smoke.py
+          /tmp/second-tools/bin/python tests/second_smoke.py
+      - name: Export exact implementation source
+        if: always()
+        run: git archive --format=zip --output=second-implementation-source.zip HEAD
+      - name: Save review files and actual browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: second-review-${{ github.sha }}
+          path: |
+            second-dist/
+            test-results/
+            second-implementation-source.zip
+          retention-days: 30
+          include-hidden-files: true
+      - name: Prepare additive preview package without modifying develop
+        if: success() && vars.ENABLE_PAGES_PREVIEW == 'true'
+        run: |
+          git fetch --depth=1 origin develop
+          mkdir -p /tmp/first-preview
+          git archive FETCH_HEAD | tar -x -C /tmp/first-preview
+          first_sha=$(git rev-parse FETCH_HEAD)
+          (cd /tmp/first-preview && GITHUB_SHA="$first_sha" GITHUB_REF=refs/heads/develop node scripts/build.mjs)
+          mkdir -p /tmp/first-preview/dist/second
+          cp -a second-dist/. /tmp/first-preview/dist/second/
+      - name: Upload combined Pages package (existing root plus /second/)
+        if: success() && vars.ENABLE_PAGES_PREVIEW == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/first-preview/dist/
+  preview:
+    needs: build-test
+    if: github.ref == 'refs/heads/feature/second' && vars.ENABLE_PAGES_PREVIEW == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://seirian.github.io/isegye-idol-fansite/second/
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify the published second concept (no submissions)
+        run: |
+          python -m venv /tmp/second-live
+          /tmp/second-live/bin/pip install playwright==1.56.0
+          /tmp/second-live/bin/python -m playwright install --with-deps chromium
+          SECOND_BASE_URL=https://seirian.github.io/isegye-idol-fansite/second/ SECOND_SKIP_OFFLINE=1 /tmp/second-live/bin/python tests/second_smoke.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: second-live-${{ github.sha }}
+          path: test-results/second/
+          retention-days: 30
