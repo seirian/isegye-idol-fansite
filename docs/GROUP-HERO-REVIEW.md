@@ -11,3 +11,16 @@
 - 검토 URL: https://seirian.github.io/isegye-idol-fansite/previews/feature-readability/
 
 main/develop 병합 및 인아워넷 운영 배포는 하지 않습니다. 실제 게시 성공은 Actions와 게시 후 브라우저 결과로 확인합니다.
+
+## 게시 전 검증 및 재실행 기록
+
+구현 커밋 `2db7280db7882980d0be0cc7cdc32fe24665c120`의 실행 `39794658687`에서 검토 파일과 Pages 패키지가 생성됐습니다. 다운로드한 `readability-review-2db7280db7882980d0be0cc7cdc32fe24665c120` 아티팩트에서 다음 결과를 확인했습니다.
+
+- 기존 가독성·지니 프로필·소개 검사: 186/186 통과, 브라우저 예외 없음.
+- 단체 이미지·반응형·오프라인 검사: 51/51 통과, 브라우저 예외 없음.
+- 포함된 단체 이미지 SHA-256: `3ce98e06f795aadbe983c12e7e04e74afa2dc6309402e6cc5b9e65750290a63a`.
+- 실제 생성된 PC·모바일 캡처에서 단체 사진의 전체 구도와 여섯 프로필 유지 확인.
+
+그러나 API가 해당 실행과 게시 작업을 계속 queued로 보고했고 게시 후 live 아티팩트는 확인되지 않았습니다. 작업 재실행 API는 `The workflow run containing this job is already running`으로 거부했으며 pending_deployments는 빈 배열이었습니다. 이 메시지를 권한 부족이나 게시 성공으로 해석하지 않습니다.
+
+사용자의 재시도 요청에 따라 이 문서 업데이트 push로 검토 워크플로의 새 실행을 시작합니다. 기존 workflow concurrency 설정에 따라 이전 실행을 교체하되, 환경 보호 규칙과 운영 권한은 변경하지 않습니다. 결과 확인 전까지 웹 게시 완료로 표시하지 않습니다.
