@@ -108,11 +108,20 @@ def verify_live(commit):
     out.mkdir(parents=True, exist_ok=True)
     (out / 'browser-smoke.txt').write_text(result.stdout + result.stderr, encoding='utf-8')
     d.require(result.returncode == 0, 'Live browser tests failed')
-    second_env = dict(os.environ, SECOND_BASE_URL=d.ORIGIN + '/', SECOND_SKIP_OFFLINE='1', SECOND_EXPECT_MODE='production')
-    second = subprocess.run([sys.executable, 'tests/second_smoke.py'], env=second_env,
-                            capture_output=True, text=True, timeout=180)
-    (out / 'second-smoke.txt').write_text(second.stdout + second.stderr, encoding='utf-8')
-    d.require(second.returncode == 0, 'Live second-design tests failed')
+    suite_results = {}
+    for name, prefix, script in (
+        ('readability', 'READABILITY', 'tests/readability_smoke.py'),
+        ('group-hero', 'GROUP_HERO', 'tests/group_hero_smoke.py'),
+    ):
+        suite_env = dict(os.environ)
+        suite_env.update({prefix + '_URL': d.ORIGIN + '/', prefix + '_EXPECT_MODE': 'production',
+                          prefix + '_OUT_DIR': 'test-results/production/' + name})
+        run = subprocess.run([sys.executable, script], env=suite_env,
+                             capture_output=True, text=True, timeout=240)
+        (out / (name + '-smoke.txt')).write_text(run.stdout + run.stderr, encoding='utf-8')
+        d.require(run.returncode == 0, 'Live ' + name + ' tests failed')
+        suite_results[name] = json.loads((out / name / 'result.json').read_text())
+        d.require(suite_results[name]['passed'] == suite_results[name]['total'], 'Incomplete live suite')
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(**({'executable_path': os.environ['CHROMIUM_PATH']} if os.environ.get('CHROMIUM_PATH') else {}))
@@ -137,7 +146,7 @@ def verify_live(commit):
         page.screenshot(path=str(out / 'home-mobile.png'), full_page=True)
         d.require(not errors, 'Browser exceptions')
         (out / 'live-result.json').write_text(json.dumps({'url': d.ORIGIN, 'commit': commit, 'mode': 'production',
-                'status': 'passed', 'concept': 'second', 'portraits_verified': 6, 'second_design_checks': 44, 'namuPortraitsVerified': False, 'browser_smoke_scenarios': 9, 'mobile_overflow': False,
+                'status': 'passed', 'concept': 'second', 'portraits_verified': 6, 'readability_checks': suite_results['readability']['passed'], 'group_hero_checks': suite_results['group-hero']['passed'], 'profile_source': 'Genie Music', 'group_hero_verified': True, 'browser_smoke_scenarios': 9, 'mobile_overflow': False,
                 'canonical_verified': True, 'robots_verified': True, 'browser_exceptions': errors}, indent=2) + '\n')
         browser.close()
 

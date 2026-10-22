@@ -11,7 +11,9 @@ from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, expect
 
 ROOT=Path(__file__).resolve().parents[1]
-OUT=ROOT/'test-results/readability'
+OUT=ROOT/os.environ.get('READABILITY_OUT_DIR','test-results/readability')
+BUILD=Path(os.environ.get('READABILITY_BUILD_DIR','readability-dist'))
+MODE=os.environ.get('READABILITY_EXPECT_MODE','preview')
 OUT.mkdir(parents=True,exist_ok=True)
 URL=os.environ.get('READABILITY_URL','http://127.0.0.1:4180/').rstrip('/')+'/'
 checks=[];errors=[];requests=[];server=None
@@ -42,7 +44,7 @@ def contrast(fg,bg):
 
 try:
     if 'READABILITY_URL' not in os.environ:
-        server=subprocess.Popen(['python','-m','http.server','4180','--bind','127.0.0.1','--directory','readability-dist'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        server=subprocess.Popen(['python','-m','http.server','4180','--bind','127.0.0.1','--directory',str(BUILD)],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         for _ in range(30):
             try: urlopen(URL,timeout=1).close();break
             except Exception: time.sleep(.1)
@@ -58,7 +60,7 @@ try:
         page.locator('#main h1').wait_for()
         check('preview HTTP 200',res.status==200)
         check('readability review marker',page.locator('html').get_attribute('data-review')=='readability')
-        check('preview noindex',page.locator('meta[name=robots]').get_attribute('content')=='noindex,nofollow')
+        check('correct indexing mode',page.locator('meta[name=robots]').get_attribute('content')==('index,follow' if MODE=='production' else 'noindex,nofollow'))
         check('six selected Genie portraits',page.locator('.stage-lineup img').count()==6)
         check('no pending member placeholders',page.locator('.stage-lineup .portrait.pending').count()==0)
         check('all six images decoded at original dimensions',page.locator('.stage-lineup img').evaluate_all('(xs)=>xs.length===6&&xs.every(x=>x.complete&&x.naturalWidth===600&&x.naturalHeight===600)'))
@@ -67,6 +69,10 @@ try:
         check('published commit matches',meta.get('commit')==os.environ.get('GITHUB_SHA','local'))
         check('six verified zero pending in build metadata',meta.get('verifiedPortraitCount')==6 and meta.get('pendingPortraitCount')==0)
         check('Genie source recorded',meta.get('profileSource')=='Genie Music')
+        check('expected build mode',meta.get('mode')==MODE)
+        if MODE=='production':
+            check('production canonical',page.locator('link[rel=canonical]').get_attribute('href')=='https://isegye-idol.kr/')
+            check('production not labelled as review','공개 베타' in page.locator('.preview-strip').inner_text() and '검토' not in page.locator('.preview-strip').inner_text())
         for profile in profiles:
             image=page.locator('.stage-lineup img[alt="'+profile['name']+' 프로필 이미지"]')
             check(profile['id']+' name matches correct local asset',('/'+profile['id']+'.webp') in image.get_attribute('src'))
@@ -136,9 +142,9 @@ try:
         check('no uncaught browser exceptions',not errors,errors)
         check('no old profile downloads',not any('parable-asia.com' in x or '/2026/04/' in x for x in requests))
         check('no external runtime asset requests',not any(x.startswith('http') and urlparse(x).netloc!=urlparse(URL).netloc for x in requests))
-        if 'READABILITY_URL' not in os.environ:
+        if 'READABILITY_URL' not in os.environ and MODE=='preview':
             offline=c.new_page()
-            offline.goto((ROOT/'readability-dist/review.html').as_uri(),wait_until='load')
+            offline.goto((ROOT/BUILD/'review.html').as_uri(),wait_until='load')
             offline.locator('#main h1').wait_for()
             check('offline review includes all six decoded portraits',offline.locator('.stage-lineup img').evaluate_all('(xs)=>xs.length===6&&xs.every(x=>x.complete&&x.naturalWidth===600&&x.src.startsWith("data:image/webp"))'))
             offline.evaluate("location.hash='#/search?q=ㅇㅇㄴ'")

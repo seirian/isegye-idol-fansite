@@ -1,0 +1,15 @@
+{
+  "approvedDesign": "readability-group-hero",
+  "operatorApprovedDeployment": true,
+  "approvedAt": "2026-10-22",
+  "reviewedCommit": "ff93882c6509acb1a8d7664ae7455e11fea95040",
+  "sourceBackup": {
+    "branch": "backup/main1st",
+    "commit": "885e818063eeccedf468d52ce148a4760819c97d"
+  },
+  "previousProductionCommit": "d0135773576526583ac6546f8d7f141f600c0296",
+  "groupImageSha256": "3ce98e06f795aadbe983c12e7e04e74afa2dc6309402e6cc5b9e65750290a63a",
+  "profileSource": "Genie Music",
+  "rightsPermissionVerified": false,
+  "note": "Owner approved deploying the current review. Source/image identity validation is not third-party license verification."
+}

@@ -60,7 +60,7 @@ jobs:
           (cd /tmp/unchanged-preview && GITHUB_SHA="$base_sha" GITHUB_REF=refs/heads/develop PYTHON=/tmp/readability-tools/bin/python npm run build)
           mkdir -p /tmp/review-pages/second /tmp/review-pages/previews/feature-readability
           cp -a /tmp/unchanged-preview/dist/. /tmp/review-pages/
-          cp -a /tmp/unchanged-preview/second-dist/. /tmp/review-pages/second/
+          cp -a /tmp/unchanged-preview/dist/. /tmp/review-pages/second/
           cp -a readability-dist/. /tmp/review-pages/previews/feature-readability/
       - uses: actions/upload-pages-artifact@v3
         with:

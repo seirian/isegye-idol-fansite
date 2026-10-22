@@ -11,7 +11,9 @@ from urllib.request import urlopen
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'test-results/group-hero'
+OUT = ROOT / os.environ.get('GROUP_HERO_OUT_DIR', 'test-results/group-hero')
+BUILD = Path(os.environ.get('GROUP_HERO_BUILD_DIR', 'readability-dist'))
+MODE = os.environ.get('GROUP_HERO_EXPECT_MODE', 'preview')
 OUT.mkdir(parents=True, exist_ok=True)
 URL = os.environ.get('GROUP_HERO_URL', 'http://127.0.0.1:4182/').rstrip('/') + '/'
 SHA = '3ce98e06f795aadbe983c12e7e04e74afa2dc6309402e6cc5b9e65750290a63a'
@@ -24,7 +26,7 @@ def check(name, passed):
 
 try:
     if 'GROUP_HERO_URL' not in os.environ:
-        server = subprocess.Popen(['python', '-m', 'http.server', '4182', '--bind', '127.0.0.1', '--directory', 'readability-dist'], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        server = subprocess.Popen(['python', '-m', 'http.server', '4182', '--bind', '127.0.0.1', '--directory', str(BUILD)], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
             try:
                 urlopen(URL, timeout=1).close()
@@ -44,7 +46,7 @@ try:
         page.locator('.hero-group img').wait_for()
         check('HTTP 200', response.status == 200)
         check('group hero marker', page.locator('html').get_attribute('data-hero') == 'group-photo')
-        check('review stays noindex', page.locator('meta[name=robots]').get_attribute('content') == 'noindex,nofollow')
+        check('correct indexing mode', page.locator('meta[name=robots]').get_attribute('content') == ('index,follow' if MODE == 'production' else 'noindex,nofollow'))
         check('old invitation removed', page.locator('.hero-message,.universe-ticket,.float-caption,.sticker-star').count() == 0)
         check('invitation text absent', 'YOU ARE INVITED TO' not in page.locator('#main').inner_text())
         check('six Genie profile cards retained', page.locator('.stage-lineup .portrait img').count() == 6)
@@ -83,10 +85,10 @@ try:
         page.evaluate("document.documentElement.style.fontSize='200%'")
         check('200% text enlargement has no overflow', page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
         page.evaluate("document.documentElement.style.fontSize='100%'")
-        if 'GROUP_HERO_URL' not in os.environ:
+        if 'GROUP_HERO_URL' not in os.environ and MODE == 'preview':
             offline = context.new_page()
             offline.on('pageerror', lambda err: errors.append(str(err)))
-            offline.goto((ROOT / 'readability-dist/review.html').as_uri(), wait_until='load')
+            offline.goto((ROOT / BUILD / 'review.html').as_uri(), wait_until='load')
             offline.locator('.hero-group img').wait_for()
             check('offline illustration embedded and decoded', offline.locator('.hero-group img').evaluate('(e)=>e.src.startsWith("data:image/webp;base64,")&&e.complete&&e.naturalWidth===800'))
             check('offline portraits retained', offline.locator('.stage-lineup img').evaluate_all('(es)=>es.length===6&&es.every(e=>e.complete&&e.naturalWidth===600)'))
