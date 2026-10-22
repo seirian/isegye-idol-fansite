@@ -1,21 +1,22 @@
-"""Public review UI checks. No submissions, external writes or credential use."""
+"""Public review checks. No submissions, external writes or credential use."""
 from __future__ import annotations
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import time
 from urllib.request import urlopen
+from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, expect
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'test-results/readability'
 OUT.mkdir(parents=True,exist_ok=True)
 URL=os.environ.get('READABILITY_URL','http://127.0.0.1:4180/').rstrip('/')+'/'
-checks=[]
-errors=[]
-requests=[]
-server=None
+checks=[];errors=[];requests=[];server=None
+manifest=json.loads((ROOT/'review/portraits.json').read_text(encoding='utf-8'))
+profiles=manifest['members']
 
 def check(name,value,detail=None):
     checks.append({'name':name,'passed':bool(value),**({'detail':detail} if detail is not None else {})})
@@ -58,8 +59,20 @@ try:
         check('preview HTTP 200',res.status==200)
         check('readability review marker',page.locator('html').get_attribute('data-review')=='readability')
         check('preview noindex',page.locator('meta[name=robots]').get_attribute('content')=='noindex,nofollow')
-        check('six pending profiles instead of outdated avatars',page.locator('.stage-lineup .portrait.pending').count()==6)
-        check('no retired avatar images in member lineup',page.locator('.stage-lineup img').count()==0)
+        check('six selected Genie portraits',page.locator('.stage-lineup img').count()==6)
+        check('no pending member placeholders',page.locator('.stage-lineup .portrait.pending').count()==0)
+        check('all six images decoded at original dimensions',page.locator('.stage-lineup img').evaluate_all('(xs)=>xs.length===6&&xs.every(x=>x.complete&&x.naturalWidth===600&&x.naturalHeight===600)'))
+        check('no misleading pending label','최신 프로필 준비 중' not in page.locator('#main').inner_text())
+        meta=c.request.get(URL+'build-info.json').json()
+        check('published commit matches',meta.get('commit')==os.environ.get('GITHUB_SHA','local'))
+        check('six verified zero pending in build metadata',meta.get('verifiedPortraitCount')==6 and meta.get('pendingPortraitCount')==0)
+        check('Genie source recorded',meta.get('profileSource')=='Genie Music')
+        for profile in profiles:
+            image=page.locator('.stage-lineup img[alt="'+profile['name']+' 프로필 이미지"]')
+            check(profile['id']+' name matches correct local asset',('/'+profile['id']+'.webp') in image.get_attribute('src'))
+            check(profile['id']+' whole image without face cropping',image.evaluate('(x)=>getComputedStyle(x).objectFit')=='contain')
+            asset=c.request.get(URL+'assets/portraits/'+profile['id']+'.webp?v='+profile['sha256'][:12])
+            check(profile['id']+' served bytes match verified source',asset.status==200 and hashlib.sha256(asset.body()).hexdigest()==profile['sha256'])
         page.screenshot(path=str(OUT/'home-desktop.png'),full_page=True)
         page.locator('.stage-lineup .save-button').first.click()
         expect(page.locator('.stage-lineup .save-button').first).to_have_attribute('aria-pressed','true')
@@ -69,6 +82,7 @@ try:
         text=page.locator('#main').inner_text()
         for forbidden in ('.webp','.jpg','.png','운영 소스','main','feature/','요청한 나무위키','SHA','403','503','이미지 출처와 확인 범위'):
             check('about omits '+forbidden,forbidden not in text)
+        check('single concise Genie attribution',page.locator('.profile-attribution a').count()==1 and page.locator('.profile-attribution a').inner_text().strip()=='지니뮤직')
         check('concise about has three sections',page.locator('.about-panel').count()==3)
         check('no repository/source file links on about',page.locator('#main a[href*="github.com"],#main a[href*="namu.wiki"]').count()==0)
         check('unofficial notice retained','공식 사이트가 아닙니다' in text)
@@ -77,6 +91,15 @@ try:
         page.goto(URL+'#/record/ine',wait_until='networkidle')
         check('member page omits raw image metadata',page.locator('.portrait-credit').count()==0)
         check('actual record sources retained',page.locator('.source-item').count()>0)
+        for profile in profiles:
+            page.goto(URL+'#/record/'+profile['id'],wait_until='networkidle')
+            image=page.locator('.member-detail-portrait img')
+            check(profile['id']+' detail portrait correct',image.count()==1 and image.get_attribute('alt')==profile['name']+' 프로필 이미지' and image.evaluate('(x)=>x.complete&&x.naturalWidth===600'))
+        page.goto(URL+'#/record/ine',wait_until='networkidle')
+        page.screenshot(path=str(OUT/'member-detail.png'),full_page=True)
+        page.goto(URL+'#/members',wait_until='networkidle')
+        check('member listing has all six selected portraits',page.locator('#main .polaroid img').count()==6)
+        page.screenshot(path=str(OUT/'members-desktop.png'),full_page=True)
         routes=('home','members','music','schedule','videos','dictionary','history','guide','search','record/ine','about','privacy','report','saved')
         for width in (320,390,768,1440):
             page.set_viewport_size({'width':width,'height':950})
@@ -100,6 +123,7 @@ try:
         check('Escape closes menu',page.locator('[data-action=menu]').get_attribute('aria-expanded')=='false')
         page.get_by_role('button',name='색상 테마 변경',exact=True).click()
         expect(page.locator('html')).to_have_attribute('data-theme','dark')
+        check('dark theme leaves portraits unfiltered',page.locator('.stage-lineup img').evaluate_all('(xs)=>xs.every(x=>getComputedStyle(x).filter==="none")'))
         page.screenshot(path=str(OUT/'home-dark-mobile.png'),full_page=True)
         page.goto(URL+'#/about',wait_until='networkidle')
         page.evaluate("document.documentElement.dataset.theme='light'")
@@ -110,17 +134,18 @@ try:
             page.goto(URL+'#/'+route,wait_until='networkidle')
             check('200% text / '+route+' reflows',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
         check('no uncaught browser exceptions',not errors,errors)
-        check('no old profile downloads',not any('/2026/04/' in x or x.endswith('.webp') for x in requests))
+        check('no old profile downloads',not any('parable-asia.com' in x or '/2026/04/' in x for x in requests))
+        check('no external runtime asset requests',not any(x.startswith('http') and urlparse(x).netloc!=urlparse(URL).netloc for x in requests))
         if 'READABILITY_URL' not in os.environ:
             offline=c.new_page()
             offline.goto((ROOT/'readability-dist/review.html').as_uri(),wait_until='load')
             offline.locator('#main h1').wait_for()
-            check('offline review has six honest profile placeholders',offline.locator('.stage-lineup .portrait.pending').count()==6)
+            check('offline review includes all six decoded portraits',offline.locator('.stage-lineup img').evaluate_all('(xs)=>xs.length===6&&xs.every(x=>x.complete&&x.naturalWidth===600&&x.src.startsWith("data:image/webp"))'))
             offline.evaluate("location.hash='#/search?q=ㅇㅇㄴ'")
             expect(offline.locator('.result-row h3').first).to_have_text('아이네')
             check('offline initial search preserved',True)
         b.close()
 finally:
-    (OUT/'result.json').write_text(json.dumps({'url':URL,'commit':os.environ.get('GITHUB_SHA','local'),'checks':checks,'passed':sum(x['passed'] for x in checks),'total':len(checks),'browser_errors':errors,'latestPortraitsApplied':False},ensure_ascii=False,indent=2))
+    (OUT/'result.json').write_text(json.dumps({'url':URL,'commit':os.environ.get('GITHUB_SHA','local'),'checks':checks,'passed':sum(x['passed'] for x in checks),'total':len(checks),'browser_errors':errors,'geniePortraitsApplied':True,'portraitSource':manifest['sourcePage'],'sourceCheckedAt':manifest['checkedAt']},ensure_ascii=False,indent=2))
     if server: server.terminate();server.wait(timeout=5)
 print('Readability checks passed:',len(checks))

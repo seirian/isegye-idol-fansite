@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Isolated readability review. No network, credentials or production writes.
+Run prepare_genie_portraits.py first to download the pinned public originals.
 
 Current portraits require local files and verified provenance in review/portraits.json.
 Pending files render explicit name cards, not outdated avatar substitutes.
@@ -59,6 +60,7 @@ def main() -> None:
                 if image.format!='WEBP' or min(image.size)<200: raise RuntimeError('Invalid portrait')
             (OUT/'assets/portraits'/f"{m['id']}.webp").write_bytes(data)
             item['sourcePage'] = m['sourcePage']
+            item['version'] = m['sha256'][:12]
             inline[m['id']] = 'data:image/webp;base64,'+base64.b64encode(data).decode()
         elif m['status'] != 'pending':
             raise RuntimeError('Unrecognized portrait status')
@@ -67,11 +69,11 @@ def main() -> None:
     js = (source/'src/second-app.js').read_text()
     start = js.index("const portrait=(m,cls='')=>")
     end = js.index('const memberCard=m=>',start)
-    js = js[:start]+'''const portrait=(m,cls='')=>PORTRAITS[m.id]?.status==='verified'?`<div class="portrait ${m.tone} ${cls}"><img src="./assets/portraits/${m.id}.webp" width="600" height="600" alt="${e(m.name)} 프로필 이미지" decoding="async" loading="eager"><span class="portrait-fallback" aria-hidden="true">이미지를 불러오지 못했어요</span></div>`:`<div class="portrait pending ${m.tone} ${cls}" role="img" aria-label="${e(m.name)} 최신 프로필 이미지 준비 중"><span class="pending-mark" aria-hidden="true">✦</span><strong class="pending-name">${e(m.name)}</strong><span class="pending-label">최신 프로필<br>준비 중</span></div>`;
+    js = js[:start]+'''const portrait=(m,cls='')=>PORTRAITS[m.id]?.status==='verified'?`<div class="portrait ${m.tone} ${cls}"><img src="./assets/portraits/${m.id}.webp?v=${PORTRAITS[m.id].version}" width="600" height="600" alt="${e(m.name)} 프로필 이미지" decoding="async" loading="eager"><span class="portrait-fallback" aria-hidden="true">이미지를 불러오지 못했어요</span></div>`:`<div class="portrait pending ${m.tone} ${cls}" role="img" aria-label="${e(m.name)} 최신 프로필 이미지 준비 중"><span class="pending-mark" aria-hidden="true">✦</span><strong class="pending-name">${e(m.name)}</strong><span class="pending-label">최신 프로필<br>준비 중</span></div>`;
 ''' + js[end:]
     start = js.index('function aboutView(){')
     end = js.index('function privacyView()',start)
-    js = js[:start]+'''function aboutView(){return heading('좋아하는 마음을, 오래도록.','이세계아이돌 비공식 팬 아카이브')+`<p class="about-intro">멤버들의 음악과 방송, 함께한 순간을 한곳에서 찾아보는 공간입니다. 공개된 자료를 바탕으로, 팬들이 궁금한 이야기를 차곡차곡 모읍니다.</p><div class="about-grid"><section class="about-panel"><h2>무엇을 볼 수 있나요?</h2><p>멤버 소개부터 음악, 소식·일정과 활동 기록까지. 기록마다 원문 출처를 연결해 더 자세한 이야기도 확인할 수 있습니다.</p><a class="text-link" href="#/members">멤버 만나러 가기 ${icon('arrow')}</a></section><section class="about-panel"><h2>함께 채우는 기록</h2><p>잘못된 정보나 빠진 기록을 발견하셨나요? 공개된 근거와 함께 알려주세요. 확인한 뒤 수정하겠습니다.</p><a class="text-link" href="#/report">정보 제보 · 정정 요청 ${icon('arrow')}</a></section><section class="about-panel wide"><h2>이용 안내</h2><p>패러블 및 아티스트의 공식 사이트가 아닙니다. 이미지와 원본 콘텐츠의 권리는 각 권리자에게 있습니다. 자료 출처는 해당 기록에서 확인할 수 있습니다.</p><a class="text-link" href="#/record/fan-policy">운영 원칙 ${icon('arrow')}</a></section></div>`;}
+    js = js[:start]+'''function aboutView(){return heading('좋아하는 마음을, 오래도록.','이세계아이돌 비공식 팬 아카이브')+`<p class="about-intro">멤버들의 음악과 방송, 함께한 순간을 한곳에서 찾아보는 공간입니다. 공개된 자료를 바탕으로, 팬들이 궁금한 이야기를 차곡차곡 모읍니다.</p><div class="about-grid"><section class="about-panel"><h2>무엇을 볼 수 있나요?</h2><p>멤버 소개부터 음악, 소식·일정과 활동 기록까지. 기록마다 원문 출처를 연결해 더 자세한 이야기도 확인할 수 있습니다.</p><a class="text-link" href="#/members">멤버 만나러 가기 ${icon('arrow')}</a></section><section class="about-panel"><h2>함께 채우는 기록</h2><p>잘못된 정보나 빠진 기록을 발견하셨나요? 공개된 근거와 함께 알려주세요. 확인한 뒤 수정하겠습니다.</p><a class="text-link" href="#/report">정보 제보 · 정정 요청 ${icon('arrow')}</a></section><section class="about-panel wide"><h2>이용 안내</h2><p>패러블 및 아티스트의 공식 사이트가 아닙니다. 이미지와 원본 콘텐츠의 권리는 각 권리자에게 있습니다. 자료 출처는 해당 기록에서 확인할 수 있습니다.</p><p class="profile-attribution">프로필 이미지: ${external('https://www.genie.co.kr/detail/artistInfo?xxnm=81287268','지니뮤직')}</p><a class="text-link" href="#/record/fan-policy">운영 원칙 ${icon('arrow')}</a></section></div>`;}
 ''' + js[end:]
     start = js.index('${m?`<div class="portrait-credit">')
     end = js.index('${badge(r)}',start)
@@ -81,7 +83,7 @@ def main() -> None:
     (OUT/'src/app.js').write_text(js,encoding='utf-8')
     css = (ROOT/'second/theme.css').read_text()
     css = re.sub(r'font-size:([0-9.]+)px',lambda m:'font-size:'+str(max(14,float(m[1]))/16)+'rem',css)
-    css += '\n'+(ROOT/'review/readability.css').read_text()+'\n'+(ROOT/'review/contrast.css').read_text()
+    css += '\n'+(ROOT/'review/readability.css').read_text()+'\n'+(ROOT/'review/contrast.css').read_text()+'\n'+(ROOT/'review/portraits.css').read_text()
     (OUT/'src/styles.css').write_text(css,encoding='utf-8')
     html = (source/'index.html').read_text().replace('./src/second-app.js','./src/app.js').replace('./src/second.css','./src/styles.css')
     html = html.replace('<html ', '<html data-review="readability" ',1)
@@ -89,7 +91,8 @@ def main() -> None:
     (OUT/'index.html').write_text(html,encoding='utf-8')
     metadata = {'concept':'second','review':'readability','mode':'preview','commit':os.environ.get('GITHUB_SHA','local'),
                 'builtAt':datetime.now(timezone.utc).isoformat(),'verifiedPortraitCount':len(inline),
-                'pendingPortraitCount':6-len(inline),'oldAvatarsIncluded':False}
+                'pendingPortraitCount':6-len(inline),'oldAvatarsIncluded':False,
+                'profileSource':manifest['source'],'profileSourceCheckedAt':manifest['checkedAt']}
     (OUT/'build-info.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n')
     parts=[]
     for name in ('data.js','lib.js','portraits.js','app.js'):
@@ -97,7 +100,7 @@ def main() -> None:
         part=re.sub(r'^import .*;\r?\n','',part,flags=re.M)
         parts.append(re.sub(r'^export ','',part,flags=re.M))
     standalone_js='const INLINE_PORTRAITS='+json.dumps(inline)+';\nconst e=escapeHtml;\n'+'\n'.join(parts)
-    standalone_js=standalone_js.replace('src="./assets/portraits/${m.id}.webp"','src="${INLINE_PORTRAITS[m.id]}"')
+    standalone_js=standalone_js.replace('src="./assets/portraits/${m.id}.webp?v=${PORTRAITS[m.id].version}"','src="${INLINE_PORTRAITS[m.id]}"')
     offline=html.replace('<link rel="stylesheet" href="./src/styles.css">','<style>'+css+'</style>')
     offline=offline.replace('<script type="module" src="./src/app.js"></script>','<script type="module">'+standalone_js+'</script>')
     icon='data:image/svg+xml;base64,'+base64.b64encode((OUT/'assets/favicon.svg').read_bytes()).decode()

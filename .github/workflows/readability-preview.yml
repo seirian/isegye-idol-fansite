@@ -28,9 +28,11 @@ jobs:
           python -m venv /tmp/readability-tools
           /tmp/readability-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
           /tmp/readability-tools/bin/python -m playwright install --with-deps chromium
-      - name: Build noindex review without retired avatar files
+      - name: Prepare six verified Genie enlarge-view portraits
+        run: /tmp/readability-tools/bin/python scripts/prepare_genie_portraits.py
+      - name: Build noindex review with selected Genie profiles
         run: /tmp/readability-tools/bin/python scripts/build_readability.py
-      - name: Check typography, honest portrait state, simplified about and responsive layout
+      - name: Check typography, portraits, simplified about and responsive layout
         run: |
           /tmp/readability-tools/bin/python tests/readability_smoke.py
           python -m http.server 4181 --bind 127.0.0.1 --directory readability-dist >/tmp/readability-http.log 2>&1 &
