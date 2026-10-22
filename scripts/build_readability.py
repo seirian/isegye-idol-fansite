@@ -81,7 +81,7 @@ def main() -> None:
     (OUT/'src/app.js').write_text(js,encoding='utf-8')
     css = (ROOT/'second/theme.css').read_text()
     css = re.sub(r'font-size:([0-9.]+)px',lambda m:'font-size:'+str(max(14,float(m[1]))/16)+'rem',css)
-    css += '\n'+(ROOT/'review/readability.css').read_text()
+    css += '\n'+(ROOT/'review/readability.css').read_text()+'\n'+(ROOT/'review/contrast.css').read_text()
     (OUT/'src/styles.css').write_text(css,encoding='utf-8')
     html = (source/'index.html').read_text().replace('./src/second-app.js','./src/app.js').replace('./src/second.css','./src/styles.css')
     html = html.replace('<html ', '<html data-review="readability" ',1)

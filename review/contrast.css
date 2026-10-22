@@ -1,0 +1,16 @@
+/* Text on pastel surfaces must remain opaque and legible. */
+.member-caption small{color:#635767}
+.daily-note .eyebrow,.daily-note>small,.note-status p,.note-date,.note-date small{color:#655170}
+.daily-note h3 em{color:#73508b}
+.explore-card.violet{color:#59456f}.explore-card.mint{color:#305f52}.explore-card.peach{color:#874b36}.explore-card.yellow{color:#69521d}
+.explore-card p,.explore-top{opacity:1}
+.bottom-banner .eyebrow,.bottom-banner p{color:#70586f}
+.art-cat{color:#275b84}.art-smile{color:#795014}.art-white{color:#624a7d}.art-light{color:#51416e}
+.universe-ticket{color:#694c7a}.float-caption{color:#7d526b}
+[data-theme=dark] .member-caption small{color:#c8bbcf}
+[data-theme=dark] .daily-note .eyebrow,[data-theme=dark] .daily-note>small,[data-theme=dark] .note-status p,[data-theme=dark] .note-date,[data-theme=dark] .note-date small{color:#d5bfdf}
+[data-theme=dark] .daily-note h3 em{color:#e1baf8}
+[data-theme=dark] .bottom-banner .eyebrow,[data-theme=dark] .bottom-banner p{color:#dec5d7}
+[data-theme=dark] .explore-card.violet{color:#e3cffa}[data-theme=dark] .explore-card.mint{color:#c5eddf}[data-theme=dark] .explore-card.peach{color:#ffdac7}[data-theme=dark] .explore-card.yellow{color:#f6e8bc}
+/* Album artworks retain their light background in the dark interface. */
+[data-theme=dark] .art-cat{color:#275b84}[data-theme=dark] .art-smile{color:#795014}[data-theme=dark] .art-white{color:#624a7d}[data-theme=dark] .art-light{color:#51416e}
