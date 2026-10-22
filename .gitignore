@@ -9,3 +9,6 @@ test-results/
 .DS_Store
 __pycache__/
 site.tar.gz
+
+# Rebuilt from checksum-pinned public Genie originals.
+/review/portraits/*.webp
