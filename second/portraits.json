@@ -3,8 +3,9 @@
   "checkedAt": "2026-10-22",
   "requestedSource": "https://namu.wiki/w/이세계아이돌",
   "namuMatchVerified": false,
-  "productionCleared": false,
-  "note": "나무위키 원문은 자동 접근 제한(HTTP 403), 공개 미러의 이미지 서버는 오류(HTTP 503)로 원본 파일을 확보하지 못했습니다. 현재 여섯 이미지는 패러블 공식 소개 페이지의 프로필을 임시 사용한 검토본이며, 요청한 나무위키 프로필과 동일하다고 확인된 이미지가 아닙니다. 운영 반영 전 요청 이미지 교체와 권리 확인이 필요합니다.",
+  "operatorApprovedDeployment": true,
+  "rightsPermissionVerified": false,
+  "note": "현재 여섯 이미지는 패러블 공식 소개 페이지의 프로필을 임시 사용하며, 요청한 나무위키 프로필과 동일하다고 확인된 이미지가 아닙니다. 나무위키 원본 대조 및 개별 이미지 이용허락 확인은 미완료입니다. 비공식 팬사이트이며 출처 표시는 권리자의 이용허락을 대신하지 않습니다.",
   "members": [
     {"id":"ine","member":"아이네","filename":"아이네-프로필.webp","requestedFile":"아이네 지니뮤직4K 배경제거.png","sourceSha256":"34c3df09cb51d5a4d3494506b4ac4d4cda76fa1ea5ae6b1b50d2727c49d4d440","preparedSha256":"82a4adb0f25e087eb4812e0af07e4a4297a19d4a501250e17fdde5a451654624"},
     {"id":"jingburger","member":"징버거","filename":"channels4_profile.webp","requestedFile":"뉴버거 2.0.png","sourceSha256":"340e4e593b284706fb1c01266b49569714e86e001934aa01c16038e63511d3fc","preparedSha256":"22246935aac10461938a711840e5f84f40968ac64f78230f44e3b59c2bafd2b6"},

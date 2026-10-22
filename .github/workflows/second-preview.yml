@@ -21,23 +21,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Read diagnostic annotations for the previous Pages publish attempt
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python - <<'PY'
-          import json, os, urllib.request
-          from pathlib import Path
-          out=Path('test-results/second-publish');out.mkdir(parents=True,exist_ok=True)
-          report={'run':39697277087,'job':119557985002,'changes_made':False}
-          try:
-              req=urllib.request.Request('https://api.github.com/repos/seirian/isegye-idol-fansite/check-runs/119557985002/annotations',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-              with urllib.request.urlopen(req,timeout=20) as response: data=json.load(response)
-              report['annotations']=[{key:a.get(key) for key in ('annotation_level','title','message')} for a in data]
-          except Exception as exc:report['read_error_type']=type(exc).__name__
-          (out/'availability.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
-          print(json.dumps(report,ensure_ascii=False,indent=2))
-          PY
       - name: Validate unchanged shared data
         run: npm test
       - name: Install preview-only tooling
@@ -76,7 +59,7 @@ jobs:
           mkdir -p /tmp/first-preview
           git archive FETCH_HEAD | tar -x -C /tmp/first-preview
           first_sha=$(git rev-parse FETCH_HEAD)
-          (cd /tmp/first-preview && GITHUB_SHA="$first_sha" GITHUB_REF=refs/heads/develop node scripts/build.mjs)
+          (cd /tmp/first-preview && GITHUB_SHA="$first_sha" GITHUB_REF=refs/heads/develop PYTHON=/tmp/second-tools/bin/python node scripts/build.mjs)
           mkdir -p /tmp/first-preview/dist/second
           cp -a second-dist/. /tmp/first-preview/dist/second/
       - name: Upload combined Pages package (existing root plus /second/)
@@ -86,6 +69,9 @@ jobs:
           path: /tmp/first-preview/dist/
   preview:
     needs: build-test
+    concurrency:
+      group: isegye-pages-publish
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/feature/second' && vars.ENABLE_SECOND_PAGES_PREVIEW == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8

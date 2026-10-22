@@ -1,5 +1,4 @@
-"""Second-concept-specific checks; execute against a local preview or the published preview.
-The existing browser_smoke.py separately checks the nine shared functional scenarios.
+"""Second-concept checks against local, preview or approved production URLs.
 No form submission, account access, or production writes.
 """
 import json
@@ -10,14 +9,14 @@ from playwright.sync_api import sync_playwright, expect
 
 ROOT=Path(__file__).resolve().parents[1]
 URL=os.environ.get('SECOND_BASE_URL','http://127.0.0.1:4174/').rstrip('/')+'/'
-OUT=ROOT/'test-results/second'
+OUT=ROOT/('test-results/production/second' if os.environ.get('SECOND_EXPECT_MODE')=='production' else 'test-results/second')
 OUT.mkdir(parents=True,exist_ok=True)
 checks=[]
 def check(name,value):
     checks.append({'name':name,'passed':bool(value)})
     assert value,name
 with sync_playwright() as p:
-    browser=p.chromium.launch()
+    browser=p.chromium.launch(**({'executable_path':os.environ['CHROMIUM_PATH']} if os.environ.get('CHROMIUM_PATH') else {}))
     context=browser.new_context(viewport={'width':1440,'height':1080},locale='ko-KR',timezone_id='Asia/Seoul',reduced_motion='reduce',color_scheme='light')
     page=context.new_page()
     errors=[];external=[]
@@ -27,7 +26,8 @@ with sync_playwright() as p:
     page.locator('#main h1').wait_for()
     check('preview HTTP 200',response.status==200)
     check('second-concept marker',page.locator('html').get_attribute('data-concept')=='second')
-    check('noindex preview',page.locator('meta[name=robots]').get_attribute('content')=='noindex,nofollow')
+    expected_robots='index,follow' if os.environ.get('SECOND_EXPECT_MODE')=='production' else 'noindex,nofollow'
+    check('mode-specific indexing metadata',page.locator('meta[name=robots]').get_attribute('content')==expected_robots)
     check('six member cards',page.locator('.stage-lineup .polaroid').count()==6)
     check('six decoded local portraits',page.locator('.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)'))
     check('temporary portrait disclosure', '임시본' in page.locator('.hero-footnote').inner_text())
