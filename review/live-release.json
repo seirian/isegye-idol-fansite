@@ -1,0 +1,15 @@
+{
+  "approvedDesign": "live-member-music-history",
+  "operatorApprovedDeployment": true,
+  "approvedAt": "2026-10-24",
+  "reviewedCommit": "a2c8993a2e20b25c689f61b64dcabda0a0866d26",
+  "sourceBackup": {
+    "branch": "backup/main1st",
+    "commit": "885e818063eeccedf468d52ce148a4760819c97d"
+  },
+  "previousProductionCommit": "b422a1653fef48bf2eb91663a99c767279bb48d1",
+  "groupImageSha256": "3ce98e06f795aadbe983c12e7e04e74afa2dc6309402e6cc5b9e65750290a63a",
+  "profileSource": "Genie Music",
+  "rightsPermissionVerified": false,
+  "note": "Owner approved deploying the current review. Source/image identity validation is not third-party license verification."
+}

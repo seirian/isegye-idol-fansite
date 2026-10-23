@@ -15,7 +15,7 @@ jobs:
       name: production
       url: https://isegye-idol.kr/
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -27,7 +27,7 @@ jobs:
         env:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
         run: test "$PRODUCTION_PAUSED" != 'true'
-      - name: Validate content, isolation and release rollback
+      - name: Validate source, isolation and rollback
         run: |
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
@@ -36,30 +36,34 @@ jobs:
           python -m venv /tmp/archive-browser-tests
           /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0
           /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
-      - name: Build approved readable group-hero production bundle
+      - name: Refresh public data and verify reviewed music sources
+        run: |
+          /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
+          /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
+      - name: Build approved LIVE, member, music and history release
         run: npm run build
         env:
           PYTHON: /tmp/archive-browser-tests/bin/python
           DEPLOY_ENV: production
-      - name: Browser and portrait checks before any upload
-        run: |
-          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
-          READABILITY_BUILD_DIR=dist READABILITY_EXPECT_MODE=production /tmp/archive-browser-tests/bin/python tests/readability_smoke.py
-          GROUP_HERO_BUILD_DIR=dist GROUP_HERO_EXPECT_MODE=production /tmp/archive-browser-tests/bin/python tests/group_hero_smoke.py
-      - name: Deploy isolated release and verify live site with rollback
-        run: /tmp/archive-browser-tests/bin/python scripts/production_release.py
+      - name: Verify exact production bundle before any upload
         env:
-          # Owner approved current readable UI, Genie portraits and group hero. Deployment remains main-only.
+          RELEASE_MODE: production
+          RELEASE_OUT: test-results/production-candidate
+        run: /tmp/archive-browser-tests/bin/python scripts/verify_release_v04.py
+      - name: Deploy isolated release and verify live site with rollback
+        run: /tmp/archive-browser-tests/bin/python scripts/deploy_release_v04.py
+        env:
           PRODUCTION_ENABLED: 'true'
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
-      - name: Save credential-free deployment result and browser evidence
+      - name: Save credential-free release report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: isegye-production-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             inour-report.json
+            dist/build-info.json
             test-results/
           if-no-files-found: warn
           retention-days: 30
