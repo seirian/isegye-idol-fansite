@@ -1,0 +1,40 @@
+name: LIVE source and transport
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/live-source.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: |
+          mkdir -p live-source
+          git archive --format=zip --output=live-source/source.zip HEAD
+          python - <<'PY'
+          import json, urllib.request, concurrent.futures
+          from pathlib import Path
+          urls={'reference':'https://segubaseball.com/war-room/','network':'https://parable-asia.com/creator-network/'}
+          for mid,cid in {'ine':'inehine','jingburger':'jingburger1','lilpa':'lilpa0309','jururu':'cotton1217','gosegu':'gosegu2','viichan':'viichan6'}.items(): urls[mid]='https://chapi.sooplive.co.kr/api/'+cid+'/station'
+          def get(pair):
+            key,url=pair
+            try:
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Origin':'https://seirian.github.io'})
+              with urllib.request.urlopen(req,timeout=18) as r:
+                body=r.read(3000000);Path('live-source/'+key+'.txt').write_bytes(body)
+                return {'key':key,'url':r.url,'status':r.status,'headers':dict(r.headers),'bytes':len(body)}
+            except Exception as e:return {'key':key,'error':str(e)}
+          results=list(concurrent.futures.ThreadPoolExecutor(max_workers=3).map(get,urls.items()))
+          Path('live-source/report.json').write_text(json.dumps(results,ensure_ascii=False,indent=2));print(json.dumps(results,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: live-source-${{ github.run_id }}
+          path: live-source/
+          retention-days: 14
