@@ -59,6 +59,8 @@ def main() -> None:
     (OUT/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     from enhance_catalog import enhance
     app,css,html=enhance(OUT,app,css,html)
+    from enhance_visual_history import enhance_visual_history
+    app,css,html=enhance_visual_history(OUT,app,css,html)
     parts=[]
     for name in ('data.js','lib.js','portraits.js','app.js'):
         part=(OUT/'src'/name).read_text();part=re.sub(r'^import .*;\r?\n','',part,flags=re.M)

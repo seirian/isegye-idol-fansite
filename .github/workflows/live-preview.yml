@@ -37,9 +37,11 @@ jobs:
       - name: Verify deterministic LIVE behavior and actual SOOP browser access
         env:
           LIVE_REAL_CHECK: 'true'
+          VISUAL_REAL_CHECK: 'true'
         run: |
           /tmp/live-tools/bin/python tests/live_browser.py
           /tmp/live-tools/bin/python tests/catalog_browser.py
+          /tmp/live-tools/bin/python tests/visual_history_browser.py
       - name: Keep all currently supported preview paths
         run: |
           git fetch --depth=1 origin develop
@@ -63,6 +65,7 @@ jobs:
             live-dist/
             test-results/live/
             test-results/catalog/
+            test-results/visual/
           include-hidden-files: true
           retention-days: 30
   publish:
@@ -89,6 +92,7 @@ jobs:
         env:
           LIVE_URL: https://seirian.github.io/isegye-idol-fansite/previews/feature-live/
           LIVE_REAL_CHECK: 'true'
+          VISUAL_REAL_CHECK: 'true'
           LIVE_TEST_OUT: test-results/live-published
         run: |
           python -m venv /tmp/live-check
@@ -96,6 +100,7 @@ jobs:
           /tmp/live-check/bin/python -m playwright install --with-deps chromium
           /tmp/live-check/bin/python tests/live_browser.py
           CATALOG_URL="$LIVE_URL" CATALOG_OUT=test-results/catalog-published /tmp/live-check/bin/python tests/catalog_browser.py
+          VISUAL_URL="$LIVE_URL" VISUAL_OUT=test-results/visual-published /tmp/live-check/bin/python tests/visual_history_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -103,4 +108,5 @@ jobs:
           path: |
             test-results/live-published/
             test-results/catalog-published/
+            test-results/visual-published/
           retention-days: 30

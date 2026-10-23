@@ -35,7 +35,7 @@ try:
   expected={'ine':3,'jingburger':3,'lilpa':5,'jururu':3,'gosegu':4,'viichan':3};total=0
   for mid,n in expected.items():
    page.goto(URL+'#/record/'+mid,wait_until='networkidle');page.locator('[data-profile-detail]').wait_for()
-   check(mid+' basic facts and sources',page.locator('.catalog-facts>div').count()==7 and page.locator('.catalog-profile a[href*="namu.wiki"]').count()==1 and page.locator('.catalog-profile a[href*="namu.moe"]').count()==1)
+   check(mid+' basic facts and original source only',page.locator('.catalog-facts>div').count()==7 and page.locator('.catalog-profile a[href*="namu.wiki"]').count()==1 and page.locator('.catalog-profile a[href*="namu.moe"]').count()==0)
    check(mid+' related channel count',page.locator('[data-channel]').count()==n)
    blocks=page.locator('[data-channel]')
    for i in range(n):
