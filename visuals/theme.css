@@ -12,3 +12,9 @@
 @media(max-width:760px){.history-header{padding:24px}.history-events>li{grid-template-columns:1fr;gap:8px;padding-left:22px}.history-events>li:before{left:5px;top:18px}.history-dot{left:-22px;right:auto;top:8px}.history-date{padding-top:0;font-size:14px}.history-event{padding:18px}.history-stats{gap:20px}.history-year-title h2{font-size:1.75rem}.explore-grid{grid-template-columns:1fr}.history-select{min-width:130px}.history-controls{padding:16px}}
 @media(max-width:420px){.live-mini[data-state=live]:has(.live-mini-media)>span:last-child{padding:7px 4px;justify-content:center}.history-header{padding:20px}.history-stats{gap:16px}.history-stats strong{font-size:1.75rem}.history-select{min-width:100%}}
 @media(prefers-reduced-motion:reduce){.music-video-play svg{transform:none!important}}
+
+/* Keep fallback text below the replacement image, including its positioned children. */
+.music-video-fallback{z-index:0}
+.music-video-art>img{z-index:1}
+.music-video-play{z-index:2}
+.music-video-art .music-video-label{z-index:3}
