@@ -1,0 +1,24 @@
+name: Export promotion source
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/promotion-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.ref == 'refs/heads/feature/live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export tracked public repository sources only
+        run: git archive --format=zip -o promotion-source.zip HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: promotion-source-${{ github.sha }}
+          path: promotion-source.zip
+          retention-days: 7

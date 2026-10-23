@@ -1,0 +1,67 @@
+name: Verify exact music alternatives
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/music-video-final-check.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: |
+          mkdir -p final-inspection
+          python - <<'PY'
+          import json,re,urllib.request,urllib.parse,urllib.error,concurrent.futures as cf
+          from pathlib import Path
+          from datetime import datetime,timezone
+          def get(url):
+            try:
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko-KR,ko;q=0.9'}),timeout=18) as r:return r.status,r.read(4000000).decode('utf-8','replace')
+            except urllib.error.HTTPError as e:return e.code,''
+            except Exception as e:return type(e).__name__,''
+          def txt(x):return x if isinstance(x,str) else (x.get('simpleText') or ''.join(y.get('text','') for y in x.get('runs',[]))) if isinstance(x,dict) else ''
+          queries=[['cover-Kc85nOaqLwo','My Universe Coldplay BTS TJ Karaoke'],['cover-Kc85nOaqLwo','My Universe Coldplay BTS KY Karaoke'],['cover-q8iiUYJsOUM','징버거 치스비치 JUST 4 U 커버'],['cover-q8iiUYJsOUM','치스비치 JUST 4 U 노래방 TJ KY'],['cover-7E_cZ9eU3ZE','징버거 ahoy 단독 커버'],['cover-7E_cZ9eU3ZE','宝鐘海賊団 金영 TJ 노래방']]
+          def search(pair):
+            sid,q=pair;st,text=get('https://www.youtube.com/results?'+urllib.parse.urlencode({'search_query':q,'hl':'ko'}));m=re.search(r'(?:var\s+)?ytInitialData\s*=\s*',text);root={};vs=[]
+            if m:
+              try:root=json.JSONDecoder().raw_decode(text[m.end():])[0]
+              except Exception:pass
+            def walk(o):
+              if isinstance(o,dict):
+                v=o.get('videoRenderer')
+                if v:
+                  by=v.get('ownerText',{});ep=(by.get('runs') or [{}])[0].get('navigationEndpoint',{}).get('browseEndpoint',{})
+                  vs.append({'videoId':v.get('videoId'),'title':txt(v.get('title')),'author':txt(by),'channelId':ep.get('browseId'),'duration':txt(v.get('lengthText'))})
+                for x in o.values():walk(x)
+              elif isinstance(o,list):
+                for x in o:walk(x)
+            walk(root);return {'songId':sid,'query':q,'status':st,'results':vs[:8]}
+          with cf.ThreadPoolExecutor(max_workers=2) as p:rows=list(p.map(search,queries))
+          def metadata(v):
+            st,t=get('https://www.youtube.com/oembed?'+urllib.parse.urlencode({'url':'https://www.youtube.com/watch?v='+v,'format':'json'}));d={}
+            try:d=json.loads(t) if st==200 else {}
+            except Exception:pass
+            return {'videoId':v,'status':st,**{k:d[k] for k in ('title','author_name','author_url','thumbnail_url') if k in d}}
+          ids=sorted({v['videoId'] for row in rows for v in row['results'] if v.get('videoId')})
+          with cf.ThreadPoolExecutor(max_workers=3) as p:metas=dict(zip(ids,p.map(metadata,ids)))
+          details={}
+          for v in ['woefPcipL10','4hok9XRvahA','2_eHypcdkBA','-fFnGSmFCNQ','Nl_VwZXXgzg','WqGFxMyS9K4']:
+            st,t=get('https://www.youtube.com/watch?v='+v);m=re.search(r'(?:var\s+)?ytInitialPlayerResponse\s*=\s*',t);d={}
+            if m:
+              try:d=json.JSONDecoder().raw_decode(t[m.end():])[0]
+              except Exception:pass
+            vd=d.get('videoDetails',{})
+            details[v]={'status':st,**{k:vd.get(k) for k in ('title','author','channelId','lengthSeconds','shortDescription')},'playability':d.get('playabilityStatus',{}).get('status')}
+          Path('final-inspection/result.json').write_text(json.dumps({'checkedAt':datetime.now(timezone.utc).isoformat(),'searches':rows,'metadata':metas,'details':details},ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: music-exact-source-${{ github.run_id }}
+          path: final-inspection/
+          retention-days: 14

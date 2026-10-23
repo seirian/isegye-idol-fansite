@@ -13,9 +13,10 @@ with sync_playwright() as pw:
     requests = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('request', lambda request: requests.append(request.url))
+    page.route('https://**', lambda route: route.abort())
     page.goto((root/'dist/review.html').as_uri(), wait_until='load')
     page.locator('#main h1').wait_for(timeout=5000)
-    assert page.locator('.nav a').count() == 8
+    assert page.locator('.nav a').count() == 7
     assert page.locator('.stage-lineup .polaroid').count() == 6
     assert page.locator('.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)')
     page.screenshot(path=str(out/'offline-desktop.png'), full_page=True)
@@ -39,7 +40,9 @@ with sync_playwright() as pw:
     assert page.locator('[data-action=menu]').get_attribute('aria-expanded') == 'false'
     page.screenshot(path=str(out/'offline-mobile.png'), full_page=True)
     assert not errors, errors
-    assert not [url for url in requests if url.startswith(('http:', 'https:'))], 'Offline review must not load external assets'
+    from urllib.parse import urlsplit
+    assert all(urlsplit(u).hostname in {'chapi.sooplive.co.kr','i.ytimg.com','liveimg.sooplive.com'} for u in requests if u.startswith(('http:','https:'))), 'Unexpected external request'
+    assert page.locator('.live-mini[data-state=offline]').count() == 0, 'Unavailable services must not imply broadcast ended'
     context.close()
     browser.close()
-print('PASS: standalone file://, 8 menus, six portraits, Korean initials, album tracks, bookmarks, mobile, no network assets.')
+print('PASS: standalone file://, 7 menus, six portraits, Korean initials, album tracks, bookmarks, mobile, external services blocked, local artwork retained.')

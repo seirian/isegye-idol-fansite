@@ -1,0 +1,120 @@
+name: LIVE review - broadcast status
+on:
+  push:
+    branches: ['feature/live']
+    paths-ignore: ['docs/**', '.github/workflows/live-inspection.yml', '.github/workflows/live-source.yml', '.github/workflows/catalog-sources.yml', '.github/workflows/catalog-channel-sources.yml', '.github/workflows/music-video-audit.yml', '.github/workflows/music-video-followup.yml', '.github/workflows/music-video-final-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-live-review
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate source and LIVE state transitions
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install build and browser tools
+        run: |
+          python -m venv /tmp/live-tools
+          /tmp/live-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/live-tools/bin/python -m playwright install --with-deps chromium
+      - name: Refresh verified member channel uploads
+        run: /tmp/live-tools/bin/python scripts/refresh_catalog_videos.py
+      - name: Verify every selected music video source
+        run: /tmp/live-tools/bin/python scripts/check_music_video_sources.py
+      - name: Build LIVE preview only
+        run: /tmp/live-tools/bin/python scripts/build_live.py
+      - name: Verify deterministic LIVE behavior and actual SOOP browser access
+        env:
+          LIVE_REAL_CHECK: 'true'
+          VISUAL_REAL_CHECK: 'true'
+        run: |
+          /tmp/live-tools/bin/python tests/live_browser.py
+          /tmp/live-tools/bin/python tests/catalog_browser.py
+          /tmp/live-tools/bin/python tests/visual_history_browser.py
+          /tmp/live-tools/bin/python tests/official_mv_browser.py
+          /tmp/live-tools/bin/python tests/music_sources_browser.py
+      - name: Keep all currently supported preview paths
+        run: |
+          git fetch --depth=1 origin develop
+          mkdir -p /tmp/live-base
+          git archive FETCH_HEAD | tar -x -C /tmp/live-base
+          sha=$(git rev-parse FETCH_HEAD)
+          (cd /tmp/live-base && GITHUB_SHA="$sha" GITHUB_REF=refs/heads/develop PYTHON=/tmp/live-tools/bin/python npm run build)
+          mkdir -p /tmp/live-pages/second /tmp/live-pages/previews/feature-readability /tmp/live-pages/previews/feature-live
+          cp -a /tmp/live-base/dist/. /tmp/live-pages/
+          cp -a /tmp/live-base/dist/. /tmp/live-pages/second/
+          cp -a /tmp/live-base/dist/. /tmp/live-pages/previews/feature-readability/
+          cp -a live-dist/. /tmp/live-pages/previews/feature-live/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/live-pages/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: live-review-${{ github.sha }}
+          path: |
+            live-dist/
+            test-results/live/
+            test-results/catalog/
+            test-results/visual/
+            test-results/music-sources/
+          include-hidden-files: true
+          retention-days: 30
+  publish:
+    needs: build
+    concurrency:
+      group: isegye-pages-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://seirian.github.io/isegye-idol-fansite/previews/feature-live/
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify the published version, interactions and real six-channel data
+        env:
+          LIVE_URL: https://seirian.github.io/isegye-idol-fansite/previews/feature-live/
+          LIVE_REAL_CHECK: 'true'
+          VISUAL_REAL_CHECK: 'true'
+          LIVE_TEST_OUT: test-results/live-published
+        run: |
+          python -m venv /tmp/live-check
+          /tmp/live-check/bin/pip install playwright==1.56.0
+          /tmp/live-check/bin/python -m playwright install --with-deps chromium
+          /tmp/live-check/bin/python tests/live_browser.py
+          CATALOG_URL="$LIVE_URL" CATALOG_OUT=test-results/catalog-published /tmp/live-check/bin/python tests/catalog_browser.py
+          VISUAL_URL="$LIVE_URL" VISUAL_OUT=test-results/visual-published /tmp/live-check/bin/python tests/visual_history_browser.py
+          MV_URL="$LIVE_URL" MV_OUT=test-results/visual-published/official-mv /tmp/live-check/bin/python tests/official_mv_browser.py
+          MUSIC_URL="$LIVE_URL" MUSIC_OUT=test-results/music-sources-published /tmp/live-check/bin/python tests/music_sources_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: live-published-${{ github.sha }}
+          path: |
+            test-results/live-published/
+            test-results/catalog-published/
+            test-results/visual-published/
+            test-results/music-sources-published/
+          retention-days: 30
