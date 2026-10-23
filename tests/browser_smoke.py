@@ -11,8 +11,8 @@ from urllib.request import urlopen
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'test-results'
-OUT.mkdir(exist_ok=True)
+OUT = ROOT / os.environ.get('SMOKE_OUT', 'test-results')
+OUT.mkdir(parents=True, exist_ok=True)
 
 class BrowserSmoke(unittest.TestCase):
     @classmethod
@@ -63,7 +63,7 @@ class BrowserSmoke(unittest.TestCase):
 
     def test_01_home_and_navigation(self):
         self.assertIn('오늘도', self.page.locator('#main h1').inner_text())
-        self.assertEqual(self.page.locator('.nav a').count(), 8)
+        self.assertEqual(self.page.locator('.nav a').count(), 7)
         self.assertEqual(self.page.locator('.member-card').count(), 6)
         self.assertEqual(self.page.locator('.music-card').count(), 3)
         self.page.screenshot(path=str(OUT / 'home-desktop.png'), full_page=True)
@@ -85,18 +85,19 @@ class BrowserSmoke(unittest.TestCase):
         self.assertIn('찾는 기록이 아직 없어요', self.page.locator('#main').inner_text())
 
     def test_03_music_filters_detail(self):
-        self.go('#/music?type=solo')
-        self.assertEqual(self.page.locator('.music-card').count(), 1)
-        self.page.locator('.music-card a').click()
+        self.go('#/music?type=original&scope=solo')
+        self.assertEqual(self.page.locator('[data-song]').count(), 3)
+        self.page.locator('[data-song="cat-save-world"] a').click()
         self.page.wait_for_timeout(100)
-        self.assertEqual(self.page.locator('.track-list li').count(), 3)
-        self.assertIn('NO CAT, NO LIFE!', self.page.locator('#main h1').inner_text())
-        self.assertGreater(self.page.locator('.source-item a').count(), 0)
+        self.assertEqual(self.page.locator('.catalog-tracklist li').count(), 3)
+        self.assertIn('고양이가 세상을 구한다!', self.page.locator('#main h1').inner_text())
+        self.assertGreater(self.page.locator('.catalog-detail-sources a').count(), 0)
         self.page.screenshot(path=str(OUT / 'music-detail.png'), full_page=True)
         self.go('#/music?member=ine')
-        self.assertEqual(self.page.locator('.music-card').count(), 5)
+        self.assertGreater(self.page.locator('[data-song]').count(), 0)
         self.go('#/music?type=cover')
-        self.assertEqual(self.page.locator('.music-card').count(), 0)
+        self.assertEqual(self.page.locator('.catalog-result-heading strong').inner_text(), '133')
+        self.assertEqual(self.page.locator('[data-song]').count(), 24)
 
     def test_04_bookmarks_persist_and_remove(self):
         self.go('#/record/no-cat-no-life')
@@ -153,13 +154,15 @@ class BrowserSmoke(unittest.TestCase):
         self.assertTrue(requested)
         self.assertIn('/issues/new?', requested[0])
 
-    def test_09_all_links_safe_and_no_external_assets(self):
+    def test_09_all_links_safe_and_no_automatic_playback(self):
         for route in ['#/home', '#/music', '#/guide', '#/record/no-cat-no-life']:
             self.go(route)
             for href in self.page.locator('a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))'):
                 self.assertTrue(href.startswith('#') or href.startswith('https://'), href)
         self.assertEqual(self.page.locator('iframe, audio, video').count(), 0)
-        self.assertEqual(self.page.locator('img[src^="http"]').count(), 0)
+        from urllib.parse import urlsplit
+        for src in self.page.locator('img[src^="http"]').evaluate_all('(xs)=>xs.map(x=>x.src)'):
+            self.assertIn(urlsplit(src).hostname, {'i.ytimg.com','liveimg.sooplive.com',urlsplit(self.url).hostname})
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

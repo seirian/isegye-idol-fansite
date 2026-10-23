@@ -41,7 +41,7 @@ try:
         context = browser.new_context(viewport={'width': 1440, 'height': 1050}, locale='ko-KR', timezone_id='Asia/Seoul', reduced_motion='reduce', color_scheme='light')
         page = context.new_page()
         page.on('pageerror', lambda err: errors.append(str(err)))
-        page.on('request', lambda req: external.append(req.url) if req.url.startswith('http') and urlparse(req.url).netloc != urlparse(URL).netloc else None)
+        page.on('request', lambda req: external.append(req.url) if req.url.startswith('http') and urlparse(req.url).netloc not in {urlparse(URL).netloc, 'chapi.sooplive.co.kr', 'liveimg.sooplive.com', 'i.ytimg.com'} else None)
         response = page.goto(URL, wait_until='networkidle')
         page.locator('.hero-group img').wait_for()
         check('HTTP 200', response.status == 200)
@@ -93,7 +93,7 @@ try:
             check('offline illustration embedded and decoded', offline.locator('.hero-group img').evaluate('(e)=>e.src.startsWith("data:image/webp;base64,")&&e.complete&&e.naturalWidth===800'))
             check('offline portraits retained', offline.locator('.stage-lineup img').evaluate_all('(es)=>es.length===6&&es.every(e=>e.complete&&e.naturalWidth===600)'))
         check('no browser exceptions', not errors)
-        check('no automatic external asset requests', not external)
+        check('no unapproved external asset requests', not external)
         browser.close()
 finally:
     (OUT / 'result.json').write_text(json.dumps({'url': URL, 'commit': os.environ.get('GITHUB_SHA', 'local'), 'passed': sum(c['passed'] for c in checks), 'total': len(checks), 'checks': checks, 'browser_errors': errors, 'external_requests': external}, ensure_ascii=False, indent=2), encoding='utf-8')

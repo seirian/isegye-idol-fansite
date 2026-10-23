@@ -1,0 +1,81 @@
+name: Inspect LIVE public sources
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/live-inspection.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export exact baseline
+        run: |
+          mkdir -p live-inspection
+          git archive --format=zip --output=live-inspection/source.zip HEAD
+      - name: Install read-only browser tools
+        run: |
+          python -m venv /tmp/live-inspect
+          /tmp/live-inspect/bin/pip install playwright==1.56.0 requests==2.32.3 beautifulsoup4==4.13.4
+          /tmp/live-inspect/bin/python -m playwright install --with-deps chromium
+      - name: Inspect specified reference and public channel responses
+        run: |
+          /tmp/live-inspect/bin/python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          import requests
+          from bs4 import BeautifulSoup
+          from playwright.sync_api import sync_playwright
+          out=Path('live-inspection')
+          report={'reference':{},'platform':[], 'channelLinks':[]}
+          s=requests.Session();s.headers['User-Agent']='Mozilla/5.0'
+          for label,url in [('reference','https://segubaseball.com/war-room/'),('network','https://parable-asia.com/creator-network/')]:
+            try:
+              r=s.get(url,timeout=25);(out/(label+'.html')).write_text(r.text)
+              soup=BeautifulSoup(r.text,'html.parser')
+              report[label]={'status':r.status_code,'url':r.url,'text':soup.get_text(' ',strip=True)[:16000], 'scripts':[x.get('src') for x in soup.select('script[src]')]}
+              if label=='network':report['channelLinks']=[{'text':a.get_text(' ',strip=True),'href':a.get('href')} for a in soup.select('a[href]') if any(x in a['href'] for x in ('sooplive','afreecatv'))]
+            except Exception as e:report[label]={'error':str(e)}
+          candidates={'ine':'inehine','jingburger':'jingburger1','lilpa':'lilpa0309','jururu':'cotton1217','gosegu':'gosegu2','viichan':'viichan6'}
+          for mid,cid in candidates.items():
+            url=f'https://chapi.sooplive.co.kr/api/{cid}/station'
+            item={'member':mid,'candidateChannel':cid,'url':url}
+            try:
+              r=s.get(url,headers={'Origin':'https://seirian.github.io'},timeout=15)
+              item.update(status=r.status_code,finalUrl=r.url,cors=r.headers.get('access-control-allow-origin'),credentials=r.headers.get('access-control-allow-credentials'))
+              data=r.json();(out/(mid+'-station.json')).write_text(json.dumps(data,ensure_ascii=False,indent=2))
+              item['data']=data
+            except Exception as e:item['error']=str(e)
+            report['platform'].append(item);time.sleep(.3)
+          with sync_playwright() as p:
+            browser=p.chromium.launch(headless=True)
+            page=browser.new_page(viewport={'width':1440,'height':1000},locale='ko-KR')
+            api_requests=[]
+            page.on('request',lambda r:api_requests.append(r.url) if r.resource_type in ('fetch','xhr') else None)
+            try:
+              page.goto('https://segubaseball.com/war-room/',wait_until='networkidle',timeout=45000)
+              page.screenshot(path=str(out/'reference-desktop.png'),full_page=True)
+              report['reference']['renderedText']=page.locator('body').inner_text()[:20000]
+              report['reference']['requests']=api_requests
+              report['reference']['links']=page.locator('a[href]').evaluate_all('(xs)=>xs.map(x=>({text:x.innerText,url:x.href})).filter(x=>x.url.includes("soop")||x.url.includes("afreeca"))')
+              page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(out/'reference-mobile.png'),full_page=True)
+            except Exception as e:report['reference']['browserError']=str(e)
+            try:
+              page.goto('https://seirian.github.io/isegye-idol-fansite/',wait_until='domcontentloaded',timeout=30000)
+              report['browserCors']=page.evaluate('''async () => {try {const r=await fetch('https://chapi.sooplive.co.kr/api/gosegu2/station',{credentials:'omit',signal:AbortSignal.timeout(12000)});return {ok:r.ok,status:r.status,data:await r.json()}}catch(e){return {error:String(e)}}}''')
+            except Exception as e:report['browserCors']={'error':str(e)}
+            browser.close()
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps({k:v for k,v in report.items() if k not in ('platform','browserCors')},ensure_ascii=False)[:20000])
+          print([(x['member'],x.get('status'),x.get('cors'),x.get('data',{}).get('station',{}).get('user_nick')) for x in report['platform']])
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: live-inspection-${{ github.run_id }}
+          path: live-inspection/
+          retention-days: 14

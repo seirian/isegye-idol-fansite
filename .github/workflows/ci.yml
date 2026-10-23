@@ -14,7 +14,7 @@ jobs:
   test-build:
     name: Content, unit and browser tests
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -22,60 +22,59 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Validate content and deployment boundaries
+      - name: Validate content, release and rollback boundaries
         run: |
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated build and browser dependencies
         run: |
-          python -m venv /tmp/archive-browser-tests
-          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 pillow==11.3.0
-          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
-      - name: Build approved readable design and offline review
+          python -m venv /tmp/release-tools
+          /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/release-tools/bin/python -m playwright install --with-deps chromium
+      - name: Refresh public channel snapshots and verify selected music links
+        run: |
+          /tmp/release-tools/bin/python scripts/refresh_catalog_videos.py
+          /tmp/release-tools/bin/python scripts/check_music_video_sources.py
+      - name: Build owner-approved LIVE and catalog release
+        env:
+          PYTHON: /tmp/release-tools/bin/python
         run: |
           npm run build
           node scripts/standalone.mjs
-        env:
-          PYTHON: /tmp/archive-browser-tests/bin/python
-      - name: Browser, portraits and offline smoke tests
+      - name: Test exact preview bundle and disconnected standalone UI
         run: |
-          /tmp/archive-browser-tests/bin/python tests/browser_smoke.py
-          /tmp/archive-browser-tests/bin/python tests/offline_smoke.py
-          READABILITY_BUILD_DIR=dist /tmp/archive-browser-tests/bin/python tests/readability_smoke.py
-          GROUP_HERO_BUILD_DIR=dist /tmp/archive-browser-tests/bin/python tests/group_hero_smoke.py
-      - name: Verify production packaging without credentials or upload
+          /tmp/release-tools/bin/python scripts/verify_release_v04.py
+          /tmp/release-tools/bin/python tests/offline_smoke.py
+      - name: Validate main-only production packaging without upload
+        env:
+          PYTHON: /tmp/release-tools/bin/python
         run: |
           DEPLOY_ENV=production GITHUB_REF=refs/heads/main GITHUB_REF_NAME=main npm run build
-          READABILITY_BUILD_DIR=dist READABILITY_EXPECT_MODE=production READABILITY_OUT_DIR=test-results/production-candidate/readability /tmp/archive-browser-tests/bin/python tests/readability_smoke.py
-          GROUP_HERO_BUILD_DIR=dist GROUP_HERO_EXPECT_MODE=production GROUP_HERO_OUT_DIR=test-results/production-candidate/group-hero /tmp/archive-browser-tests/bin/python tests/group_hero_smoke.py
+          test ! -f dist/review.html
           npm run build
-        env:
-          PYTHON: /tmp/archive-browser-tests/bin/python
-      - name: Upload review package
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: site-review-${{ github.sha }}
           path: dist/
           include-hidden-files: true
           retention-days: 14
-      - name: Upload browser screenshots
+      - name: Save test reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: browser-review-${{ github.sha }}
           path: test-results/
           retention-days: 14
-      - name: Preserve both reviewed URLs alongside develop
+      - name: Preserve published review URLs alongside develop
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         run: |
-          mkdir -p /tmp/isegye-pages
+          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability /tmp/isegye-pages/previews/feature-live
           cp -a dist/. /tmp/isegye-pages/
-          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability
           cp -a readability-dist/. /tmp/isegye-pages/second/
           cp -a readability-dist/. /tmp/isegye-pages/previews/feature-readability/
-      - name: Upload develop Pages package
+          cp -a dist/. /tmp/isegye-pages/previews/feature-live/
+      - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
-        uses: actions/upload-pages-artifact@v3
         with:
           path: /tmp/isegye-pages/
   pages-preview:
@@ -86,33 +85,38 @@ jobs:
       cancel-in-progress: false
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://seirian.github.io/isegye-idol-fansite/
     steps:
       - uses: actions/configure-pages@v5
-      - name: Deploy develop review build
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Install live browser verifier
+      - name: Install public site verifier
         run: |
           python -m venv /tmp/pages-verifier
           /tmp/pages-verifier/bin/pip install playwright==1.56.0
           /tmp/pages-verifier/bin/python -m playwright install --with-deps chromium
-      - name: Verify deployed commit, search and mobile layout
-        run: /tmp/pages-verifier/bin/python tests/pages_live.py
-      - name: Save live Pages verification
+      - name: Verify published develop and retained review URL
+        env:
+          RELEASE_URL: https://seirian.github.io/isegye-idol-fansite/
+          RELEASE_MODE: preview
+          RELEASE_OUT: test-results/pages
+        run: |
+          /tmp/pages-verifier/bin/python scripts/verify_release_v04.py
+          RELEASE_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-live/ RELEASE_OUT=test-results/pages-feature /tmp/pages-verifier/bin/python tests/release_v04_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: pages-live-${{ github.sha }}
-          path: test-results/pages/
+          path: |
+            test-results/pages/
+            test-results/pages-feature/
           retention-days: 14

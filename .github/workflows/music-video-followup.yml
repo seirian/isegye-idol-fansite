@@ -1,0 +1,87 @@
+name: Inspect remaining music video alternatives
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/music-video-followup.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/feature/live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read public matching candidates without credentials
+        run: |
+          mkdir -p followup
+          python - <<'PY'
+          import concurrent.futures as cf
+          import json,re,time,urllib.request,urllib.parse,urllib.error
+          from datetime import datetime,timezone
+          from pathlib import Path
+          queries=[
+            ['cover-WItY2T5zz1A','주르르 이세돌 합격자의 노래 과제 백업'],
+            ['cover-WItY2T5zz1A','주르르 노래 과제 2021 오디션'],
+            ['cover-7GyW2INMluY','고세구 사쿠란보 킹받게 백업'],
+            ['cover-7GyW2INMluY','고세구 사쿠란보 커버'],
+            ['cover-7E_cZ9eU3ZE','징버거 Ahoy 해적단 백업'],
+            ['cover-7E_cZ9eU3ZE','징버거 아호이 버거해적단'],
+            ['cover-q8iiUYJsOUM','징버거 JUST 4 U 백업'],
+            ['cover-q8iiUYJsOUM','징버거 JUST4U'],
+            ['cover-gT3HKgVJuRQ','고세구 후라이의 꿈 커버 백업'],
+            ['cover-Kc85nOaqLwo','My WAKTAVERSE 백업'],
+            ['cover-Kc85nOaqLwo','마이 왁타버스 연공전 2021'],
+            ['cover-buJjUHSalVA','파이팅 해야지 릴파 뢴트 권민 히키킹 백업'],
+            ['cover-buJjUHSalVA','릴파 파이팅 해야지 커버'],
+            ['cover-DPEtmqvaKqY','고세구 팬서비스 MV 백업'],
+            ['cover-7GyW2INMluY','사쿠란보 TJ karaoke'],
+            ['cover-7E_cZ9eU3ZE','Ahoy 宝鐘海賊団 TJ KY 노래방'],
+            ['cover-q8iiUYJsOUM','JUST 4 U TJ KY 노래방'],
+            ['cover-gT3HKgVJuRQ','후라이의 꿈 TJ KY 노래방'],
+            ['cover-buJjUHSalVA','파이팅 해야지 TJ KY 노래방']
+          ]
+          def get(url):
+              try:
+                  req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko-KR,ko;q=0.9'})
+                  with urllib.request.urlopen(req,timeout=18) as r:return r.status,r.read(3000000)
+              except urllib.error.HTTPError as e:return e.code,b''
+              except Exception as e:return type(e).__name__,b''
+          def txt(v):
+              return v if isinstance(v,str) else (v.get('simpleText') or ''.join(x.get('text','') for x in v.get('runs',[]))) if isinstance(v,dict) else ''
+          def search(item):
+              sid,q=item;status,body=get('https://www.youtube.com/results?'+urllib.parse.urlencode({'search_query':q,'hl':'ko','gl':'KR'}));text=body.decode('utf-8','replace');m=re.search(r'(?:var\s+)?ytInitialData\s*=\s*',text);root={};out=[]
+              if m:
+                  try:root=json.JSONDecoder().raw_decode(text[m.end():])[0]
+                  except Exception:pass
+              def walk(o):
+                  if isinstance(o,dict):
+                      v=o.get('videoRenderer')
+                      if v and re.fullmatch(r'[A-Za-z0-9_-]{11}',v.get('videoId','')):
+                          by=v.get('ownerText') or v.get('longBylineText') or {};ep=(by.get('runs') or [{}])[0].get('navigationEndpoint',{}).get('browseEndpoint',{})
+                          out.append({'videoId':v['videoId'],'title':txt(v.get('title')),'author':txt(by),'channelId':ep.get('browseId'),'channelUrl':ep.get('canonicalBaseUrl'),'duration':txt(v.get('lengthText'))})
+                      for value in o.values():walk(value)
+                  elif isinstance(o,list):
+                      for value in o:walk(value)
+              walk(root);time.sleep(.3)
+              return {'songId':sid,'query':q,'status':status,'results':out[:10]}
+          with cf.ThreadPoolExecutor(max_workers=2) as p:results=list(p.map(search,queries))
+          ids=sorted({v['videoId'] for r in results for v in r['results']})
+          def meta(v):
+              status,body=get('https://www.youtube.com/oembed?'+urllib.parse.urlencode({'url':'https://www.youtube.com/watch?v='+v,'format':'json'}))
+              try:d=json.loads(body) if status==200 else {}
+              except Exception:d={}
+              return {'videoId':v,'status':status,**{k:d[k] for k in ('title','author_name','author_url','thumbnail_url') if k in d}}
+          with cf.ThreadPoolExecutor(max_workers=3) as p:metadata=dict(zip(ids,p.map(meta,ids)))
+          Path('followup/results.json').write_text(json.dumps({'checkedAt':datetime.now(timezone.utc).isoformat(),'searches':results,'metadata':metadata},ensure_ascii=False,indent=2))
+          print(json.dumps({'queries':len(results),'candidates':len(ids),'valid':sum(x['status']==200 for x in metadata.values())}))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: music-video-followup-${{ github.run_id }}
+          path: followup/
+          retention-days: 14

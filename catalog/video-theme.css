@@ -1,0 +1,8 @@
+.music-source-info{margin:1.1rem 0;padding:1rem 1.2rem;border:1px solid var(--line);border-radius:18px;background:var(--paper);font-size:1rem;line-height:1.7;overflow-wrap:anywhere}
+.music-source-heading{display:flex;align-items:center;gap:.5rem 1rem;flex-wrap:wrap}
+.music-source-heading strong{font-size:1rem}.music-source-heading span{font-size:.9375rem}
+.music-source-info p{margin:.55rem 0;font-size:.9375rem;line-height:1.7}
+.music-original-source{margin-top:.65rem;font-size:.9375rem}
+.music-original-source summary{cursor:pointer;padding:.25rem 0;font-size:.9375rem}
+.music-video-art>.music-video-label{max-width:calc(100% - 1.2rem);white-space:normal;font-size:.875rem;line-height:1.5}
+.music-source-info[data-video-kind="unavailable"]{border-style:dashed}
