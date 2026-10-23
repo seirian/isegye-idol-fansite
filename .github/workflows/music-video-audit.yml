@@ -1,0 +1,88 @@
+name: Audit music video sources
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/music-video-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/feature/live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export source and inspect public YouTube metadata only
+        run: |
+          mkdir -p audit-output
+          git archive --format=zip HEAD -o audit-output/source.zip
+          python - <<'PY'
+          import concurrent.futures as cf
+          from datetime import datetime,timezone
+          import json,re,time,urllib.request,urllib.parse,urllib.error
+          from pathlib import Path
+          names={'ine':'아이네','jingburger':'징버거','lilpa':'릴파','jururu':'주르르','gosegu':'고세구','viichan':'비챤'}
+          data=json.loads(Path('catalog/music.json').read_text())
+          songs=list(data['songs'])
+          for line in Path('catalog/covers.tsv').read_text().splitlines():
+              if not line or line.startswith('#'):continue
+              v,title,members,scope,date,orig,context=line.split('\t')
+              songs.append({'id':'cover-'+v,'title':title,'members':members.split(','),'scope':scope,'videoId':v,'originalReference':orig})
+          def get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.6'})
+              try:
+                  with urllib.request.urlopen(req,timeout=18) as r:return r.status,r.read(3000000)
+              except urllib.error.HTTPError as e:return e.code,b''
+              except Exception as e:return type(e).__name__,b''
+          def metadata(v):
+              status,body=get('https://www.youtube.com/oembed?'+urllib.parse.urlencode({'url':'https://www.youtube.com/watch?v='+v,'format':'json'}))
+              try:d=json.loads(body) if status==200 else {}
+              except Exception:d={}
+              return {'videoId':v,'status':status,**{k:d.get(k) for k in ('title','author_name','author_url','thumbnail_url','thumbnail_width','thumbnail_height') if k in d}}
+          ids=sorted({s['videoId'] for s in songs if s.get('videoId')}|{'3cEUPoPXz7E','8e1Npb3wKyY','DJLa8QYUtmQ','ZuttYdmPfzU'})
+          with cf.ThreadPoolExecutor(max_workers=3) as pool:meta=dict(zip(ids,pool.map(metadata,ids)))
+          Path('audit-output/existing.json').write_text(json.dumps({'checkedAt':datetime.now(timezone.utc).isoformat(),'songs':songs,'metadata':meta},ensure_ascii=False,indent=2))
+          def txt(value):
+              if isinstance(value,str):return value
+              if isinstance(value,dict):return value.get('simpleText') or ''.join(x.get('text','') for x in value.get('runs',[]))
+              return ''
+          def search(q):
+              status,body=get('https://www.youtube.com/results?'+urllib.parse.urlencode({'search_query':q,'hl':'ko','gl':'KR'}))
+              text=body.decode('utf-8','replace');m=re.search(r'(?:var\s+)?ytInitialData\s*=\s*',text);root={}
+              if m:
+                  try:root=json.JSONDecoder().raw_decode(text[m.end():])[0]
+                  except Exception:pass
+              out=[]
+              def walk(o):
+                  if isinstance(o,dict):
+                      v=o.get('videoRenderer')
+                      if v and re.fullmatch(r'[A-Za-z0-9_-]{11}',v.get('videoId','')):
+                          by=v.get('ownerText') or v.get('longBylineText') or {}
+                          run=(by.get('runs') or [{}])[0];ep=run.get('navigationEndpoint',{})
+                          out.append({'videoId':v['videoId'],'title':txt(v.get('title')),'author':txt(by),'channelId':ep.get('browseEndpoint',{}).get('browseId'),'channelUrl':ep.get('browseEndpoint',{}).get('canonicalBaseUrl'),'duration':txt(v.get('lengthText')),'views':txt(v.get('viewCountText')),'published':txt(v.get('publishedTimeText'))})
+                      for value in o.values():walk(value)
+                  elif isinstance(o,list):
+                      for value in o:walk(value)
+              walk(root)
+              return {'query':q,'status':status,'results':out[:10],'parsed':bool(root)}
+          missing=[s for s in songs if not s.get('videoId') or meta.get(s['videoId'],{}).get('status')!=200]
+          def discover(s):
+              artist='이세계아이돌' if s['scope']=='group' else ' '.join(names[m] for m in s['members'])
+              q=artist+' '+s['title'];r=search(q);time.sleep(.3)
+              return {'songId':s['id'],**r}
+          with cf.ThreadPoolExecutor(max_workers=2) as pool:found=list(pool.map(discover,missing))
+          Path('audit-output/search.json').write_text(json.dumps(found,ensure_ascii=False,indent=2))
+          candidates={v['videoId'] for r in found for v in r['results'][:5]}-set(meta)
+          with cf.ThreadPoolExecutor(max_workers=3) as pool:meta.update(dict(zip(sorted(candidates),pool.map(metadata,sorted(candidates)))))
+          Path('audit-output/candidates.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2))
+          print(json.dumps({'songs':len(songs),'registered':len(ids)-4,'available':sum(meta.get(s.get('videoId'),{}).get('status')==200 for s in songs),'searched':len(found),'searchResults':sum(len(r['results']) for r in found)},ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: music-video-audit-${{ github.run_id }}
+          path: audit-output/
+          retention-days: 14
