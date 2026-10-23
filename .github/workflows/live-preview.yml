@@ -2,7 +2,7 @@ name: LIVE review - broadcast status
 on:
   push:
     branches: ['feature/live']
-    paths-ignore: ['docs/**', '.github/workflows/live-inspection.yml', '.github/workflows/live-source.yml', '.github/workflows/catalog-sources.yml', '.github/workflows/catalog-channel-sources.yml']
+    paths-ignore: ['docs/**', '.github/workflows/live-inspection.yml', '.github/workflows/live-source.yml', '.github/workflows/catalog-sources.yml', '.github/workflows/catalog-channel-sources.yml', '.github/workflows/music-video-audit.yml', '.github/workflows/music-video-followup.yml', '.github/workflows/music-video-final-check.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,6 +32,8 @@ jobs:
           /tmp/live-tools/bin/python -m playwright install --with-deps chromium
       - name: Refresh verified member channel uploads
         run: /tmp/live-tools/bin/python scripts/refresh_catalog_videos.py
+      - name: Verify every selected music video source
+        run: /tmp/live-tools/bin/python scripts/check_music_video_sources.py
       - name: Build LIVE preview only
         run: /tmp/live-tools/bin/python scripts/build_live.py
       - name: Verify deterministic LIVE behavior and actual SOOP browser access
@@ -43,6 +45,7 @@ jobs:
           /tmp/live-tools/bin/python tests/catalog_browser.py
           /tmp/live-tools/bin/python tests/visual_history_browser.py
           /tmp/live-tools/bin/python tests/official_mv_browser.py
+          /tmp/live-tools/bin/python tests/music_sources_browser.py
       - name: Keep all currently supported preview paths
         run: |
           git fetch --depth=1 origin develop
@@ -67,6 +70,7 @@ jobs:
             test-results/live/
             test-results/catalog/
             test-results/visual/
+            test-results/music-sources/
           include-hidden-files: true
           retention-days: 30
   publish:
@@ -103,6 +107,7 @@ jobs:
           CATALOG_URL="$LIVE_URL" CATALOG_OUT=test-results/catalog-published /tmp/live-check/bin/python tests/catalog_browser.py
           VISUAL_URL="$LIVE_URL" VISUAL_OUT=test-results/visual-published /tmp/live-check/bin/python tests/visual_history_browser.py
           MV_URL="$LIVE_URL" MV_OUT=test-results/visual-published/official-mv /tmp/live-check/bin/python tests/official_mv_browser.py
+          MUSIC_URL="$LIVE_URL" MUSIC_OUT=test-results/music-sources-published /tmp/live-check/bin/python tests/music_sources_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -111,4 +116,5 @@ jobs:
             test-results/live-published/
             test-results/catalog-published/
             test-results/visual-published/
+            test-results/music-sources-published/
           retention-days: 30

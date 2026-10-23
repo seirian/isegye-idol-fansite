@@ -18,7 +18,8 @@ def load_music():
   item={'id':'cover-'+vid,'title':title,'type':'cover','scope':scope,'members':members.split(','),'date':date,'dateKind':'영상 공개일','format':'커버 영상','videoId':vid,'url':'https://www.youtube.com/watch?v='+vid,'context':context,'sources':['covers']}
   if original:item['originalReference']='https://namu.wiki/w/'+quote(original,safe='/#')
   music['songs'].append(item)
- return music
+ from music_video_sources import apply_video_sources
+ return apply_video_sources(music)
 
 def enhance(out,app,css,html):
  profiles=json.loads((ROOT/'catalog/members.json').read_text())
@@ -45,13 +46,16 @@ def enhance(out,app,css,html):
  payload={'members':profiles['members'],'music':music,'videos':videos}
  embedded=json.dumps(payload,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
  core=re.sub(r'^export ','',(ROOT/'catalog/core.js').read_text(),flags=re.M)
- app=once(app,'shell();render();','const CATALOG='+embedded+';\n'+core+'\n'+(ROOT/'catalog/ui.js').read_text()+'\nshell();render();')
- css+='\n'+(ROOT/'catalog/theme.css').read_text()
+ app=once(app,'shell();render();','const CATALOG='+embedded+';\n'+core+'\n'+(ROOT/'catalog/video-ui.js').read_text()+'\n'+(ROOT/'catalog/ui.js').read_text()+'\nshell();render();')
+ app=once(app,"${s.videoId?external(catalogVideoUrl(s.videoId),'YouTube에서 영상 보기','button primary'):external(source[0].url,'발매 정보 확인','button primary')}",'${musicVideoActions(s,source)}')
+ app=once(app,'<div class="catalog-song-people">','${musicVideoInfo(s)}<div class="catalog-song-people">')
+ css+='\n'+(ROOT/'catalog/theme.css').read_text()+'\n'+(ROOT/'catalog/video-theme.css').read_text()
  html=once(html,"img-src 'self' data:","img-src 'self' data: https://i.ytimg.com")
  html=once(html,'<html ','<html data-catalog-review="true" ')
  html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 멤버 소개와 음악 검토</title>',html)
  (out/'src/app.js').write_text(app);(out/'src/styles.css').write_text(css);(out/'index.html').write_text(html)
  meta=json.loads((out/'build-info.json').read_text())
+ meta['musicVideoAudit']=music['videoAudit']
  meta['catalog']={'members':6,'channels':21,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'build-time-public-Atom-feed','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
  (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
  return app,css,html

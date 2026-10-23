@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Reviewed thumbnail rendering and source-backed history; feature preview only."""
 from __future__ import annotations
 from datetime import date
@@ -96,6 +95,7 @@ def enhance_visual_history(out: Path, app: str, css: str, html: str) -> tuple[st
     app = app.replace('LIVE와 홈 화면은 SOOP에 공개 방송 상태를 직접 요청합니다.', 'LIVE와 홈 화면은 SOOP에 공개 방송 상태를 직접 요청하며, 방송 미리보기는 SOOP 이미지 서버에서 불러옵니다.')
     core = re.sub(r'^export ', '', (ROOT / 'visuals/core.js').read_text(), flags=re.M)
     app = once(app, 'shell();render();', 'const HISTORY=' + json.dumps(public, ensure_ascii=False, separators=(',', ':')) + ';\n' + core + '\n' + (ROOT / 'visuals/ui.js').read_text() + '\nshell();render();')
+    app = once(app, '<span class="music-video-label">YouTube</span>', '<span class="music-video-label">${e(musicVideoLabel(s))}</span>')
     css += '\n' + (ROOT / 'visuals/theme.css').read_text()
     html = once(html, "img-src 'self' data: https://i.ytimg.com", "img-src 'self' data: https://i.ytimg.com https://liveimg.sooplive.com")
     html = once(html, '<html ', '<html data-visual-history="true" ')

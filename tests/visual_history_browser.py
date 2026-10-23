@@ -80,7 +80,7 @@ try:
   check('song detail shows video thumbnail label',page.locator('.catalog-song-detail-visual .music-video-art').count()==1 and 'YouTube 영상 썸네일' in page.locator('.catalog-song-detail-visual').inner_text())
   page.locator('.music-video-art>img').first.evaluate("e=>{Object.defineProperty(e,'naturalWidth',{get:()=>120});Object.defineProperty(e,'naturalHeight',{get:()=>90});e.dispatchEvent(new Event('load'));}")
   check('generic tiny YouTube response becomes fallback',page.locator('.music-video-art[data-media-error=true]>img[hidden]').count()==1)
-  page.goto(URL+'#/song/be-my-light',wait_until='networkidle')
+  page.goto(URL+'#/song/cover-q8iiUYJsOUM',wait_until='networkidle')
   check('no-video item retains abstract art',page.locator('.catalog-song-detail-visual .music-video-art').count()==0 and page.locator('.catalog-song-detail-visual .catalog-song-art').count()==1)
   page.goto(URL+'#/history',wait_until='networkidle')
   check('55 dated history events and six year groups',page.locator('[data-history-event]').count()==55 and page.locator('.history-year').count()==6)
