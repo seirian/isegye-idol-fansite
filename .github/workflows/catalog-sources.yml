@@ -1,0 +1,69 @@
+name: Inspect member and music sources
+on:
+  push:
+    branches: ['feature/live']
+    paths: ['.github/workflows/catalog-sources.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sources:
+    if: github.ref == 'refs/heads/feature/live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export exact source
+        run: |
+          mkdir -p source-inspection
+          git archive --format=zip --output=source-inspection/source.zip HEAD
+      - name: Install HTML parser
+        run: python -m pip install beautifulsoup4==4.13.4
+      - name: Inspect public source documents without credentials
+        run: |
+          python - <<'PY'
+          import concurrent.futures, json, re, urllib.request, urllib.parse
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          from datetime import datetime,timezone
+          out=Path('source-inspection')
+          docs=['이세계아이돌','이세계아이돌/커버 곡','이세계아이돌/디스코그래피','이세계아이돌/오리지널 곡','이세계아이돌/유튜브','아이네','징버거','릴파','주르르','고세구','비챤']
+          allowed={'namu.wiki','namu.moe','www.namu.moe','m.namu.moe','parable-asia.com','www.youtube.com'}
+          def get(url):
+              assert urllib.parse.urlparse(url).hostname in allowed
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 (compatible; IsegyeArchiveSourceReview/1.0)'})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  assert urllib.parse.urlparse(r.url).hostname in allowed
+                  data=r.read(5*1024*1024+1);assert len(data)<=5*1024*1024
+                  return data.decode(r.headers.get_content_charset() or 'utf-8',errors='replace')
+          def task(pair):
+              i,doc=pair; attempts=[]
+              for host in ['namu.wiki','namu.moe','www.namu.moe']:
+                  url='https://'+host+'/w/'+urllib.parse.quote(doc,safe='/')
+                  try:
+                      html=get(url); soup=BeautifulSoup(html,'html.parser')
+                      text=soup.get_text(' ',strip=True)
+                      if len(text)<1000:raise ValueError('Short or blocked response')
+                      (out/f'doc-{i}.html').write_text(html)
+                      (out/f'doc-{i}.txt').write_text(soup.get_text('\n',strip=True))
+                      links=[{'text':a.get_text(' ',strip=True),'url':urllib.parse.urljoin(url,a.get('href',''))} for a in soup.select('a[href]')]
+                      frames=[e.get('src') for e in soup.select('iframe[src]')]
+                      (out/f'doc-{i}-links.json').write_text(json.dumps({'links':links,'iframes':frames},ensure_ascii=False,indent=2))
+                      return {'id':i,'document':doc,'source':url,'length':len(text),'attempts':attempts}
+                  except Exception as e: attempts.append({'url':url,'error':str(e)[:180]})
+              return {'id':i,'document':doc,'attempts':attempts,'failed':True}
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:results=list(pool.map(task,enumerate(docs)))
+          for key,url in [('network','https://parable-asia.com/creator-network/'),('discography','https://parable-asia.com/discography/')]:
+              try:(out/(key+'.html')).write_text(get(url))
+              except Exception as e:results.append({'document':key,'error':str(e)[:180]})
+          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'documents':results}
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: member-music-sources-${{ github.run_id }}
+          path: source-inspection/
+          retention-days: 14
