@@ -86,7 +86,7 @@ try:
   check('all timeline items have accessible sources',page.locator('.history-events .history-sources').count()==55)
   check('timeline omits mirror links',page.locator('.history-events a[href*="namu.moe"]').count()==0)
   page.screenshot(path=str(OUT/'history-desktop.png'),full_page=True)
-  page.locator('.history-year-nav a').filter(has_text='2021').click();check('2021 filter has six events',page.locator('[data-history-event]').count()==6)
+  page.locator('.history-year-nav a').filter(has_text='2021').click();expect(page.locator('[data-history-event]')).to_have_count(6);check('2021 filter has six events',page.locator('[data-history-event]').count()==6)
   page.locator('[data-history-filter=type]').select_option('audition');expect(page.locator('.history-results strong')).to_have_text('5개 기록')
   check('year and category filters compose',page.locator('[data-history-event]').count()==5)
   page.goto(URL+'#/history?member=lilpa&type=performance&q=LILPACON',wait_until='networkidle');check('member and title search compose',page.locator('[data-history-event]').count()==1 and '2024.07.12' in page.locator('.history-date').inner_text(),page.locator('.history-date').inner_text())
