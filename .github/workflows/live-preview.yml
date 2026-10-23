@@ -2,7 +2,7 @@ name: LIVE review - broadcast status
 on:
   push:
     branches: ['feature/live']
-    paths-ignore: ['docs/**', '.github/workflows/live-inspection.yml', '.github/workflows/live-source.yml']
+    paths-ignore: ['docs/**', '.github/workflows/live-inspection.yml', '.github/workflows/live-source.yml', '.github/workflows/catalog-sources.yml', '.github/workflows/catalog-channel-sources.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,12 +30,16 @@ jobs:
           python -m venv /tmp/live-tools
           /tmp/live-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
           /tmp/live-tools/bin/python -m playwright install --with-deps chromium
+      - name: Refresh verified member channel uploads
+        run: /tmp/live-tools/bin/python scripts/refresh_catalog_videos.py
       - name: Build LIVE preview only
         run: /tmp/live-tools/bin/python scripts/build_live.py
       - name: Verify deterministic LIVE behavior and actual SOOP browser access
         env:
           LIVE_REAL_CHECK: 'true'
-        run: /tmp/live-tools/bin/python tests/live_browser.py
+        run: |
+          /tmp/live-tools/bin/python tests/live_browser.py
+          /tmp/live-tools/bin/python tests/catalog_browser.py
       - name: Keep all currently supported preview paths
         run: |
           git fetch --depth=1 origin develop
@@ -58,6 +62,7 @@ jobs:
           path: |
             live-dist/
             test-results/live/
+            test-results/catalog/
           include-hidden-files: true
           retention-days: 30
   publish:
@@ -90,9 +95,12 @@ jobs:
           /tmp/live-check/bin/pip install playwright==1.56.0
           /tmp/live-check/bin/python -m playwright install --with-deps chromium
           /tmp/live-check/bin/python tests/live_browser.py
+          CATALOG_URL="$LIVE_URL" CATALOG_OUT=test-results/catalog-published /tmp/live-check/bin/python tests/catalog_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: live-published-${{ github.sha }}
-          path: test-results/live-published/
+          path: |
+            test-results/live-published/
+            test-results/catalog-published/
           retention-days: 30

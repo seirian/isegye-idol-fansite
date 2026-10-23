@@ -57,6 +57,8 @@ def main() -> None:
     meta=json.loads((OUT/'build-info.json').read_text())
     meta.update(review='live',branch='feature/live',live={'source':'SOOP public station','pollSeconds':30,'staleAfterSeconds':90,'members':6,'transport':'browser-cors','failureMeansOffline':False})
     (OUT/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
+    from enhance_catalog import enhance
+    app,css,html=enhance(OUT,app,css,html)
     parts=[]
     for name in ('data.js','lib.js','portraits.js','app.js'):
         part=(OUT/'src'/name).read_text();part=re.sub(r'^import .*;\r?\n','',part,flags=re.M)
