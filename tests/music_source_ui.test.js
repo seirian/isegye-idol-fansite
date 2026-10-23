@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const context={e:String,external:(url,label)=>`<a href="${url}">${label}</a>`,catalogVideoUrl:id=>'https://www.youtube.com/watch?v='+id};
+vm.createContext(context);vm.runInContext(readFileSync(new URL('../catalog/video-ui.js',import.meta.url),'utf8'),context);
+test('fan backup is explicitly unofficial',()=>{const html=context.musicVideoInfo({videoId:'abcdefghijk',videoSource:{kind:'fan_backup',channel:'Fan',note:''}});assert.ok(html.includes('비공식'));assert.ok(!html.includes('공식 MV'));});
+test('karaoke caveat is not duplicated',()=>{const html=context.musicVideoInfo({videoId:'abcdefghijk',videoSource:{kind:'karaoke_tj',channel:'TJ',note:'멤버 가창 영상이 아닌 원곡의 TJ 노래방 반주입니다.'}});assert.equal((html.match(/멤버 가창 영상이 아닌/g)||[]).length,1);});
+test('unresolved link does not claim a replacement exists',()=>{const html=context.musicVideoInfo({originalVideoId:'abcdefghijk',videoSource:{kind:'unavailable',note:''}});assert.ok(html.includes('직접 확인'));assert.ok(!html.includes('대체 영상을 연결했습니다'));assert.ok(html.includes('https://www.youtube.com/watch?v=abcdefghijk'));});
+test('selected source controls the primary action',()=>{const html=context.musicVideoActions({videoId:'zGOzGcEbd-s',videoSource:{kind:'official_mv'}},[]);assert.ok(html.includes('watch?v=zGOzGcEbd-s'));assert.ok(html.includes('공식 MV 보기'));});
