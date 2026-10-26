@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m venv /tmp/release-tools
           /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0 cryptography
-          /tmp/release-tools/bin/python -m playwright install --with-deps chromium
+          bash scripts/ci_browser_install.sh /tmp/release-tools/bin/python
       - name: Test first-administrator access with local synthetic identities only
         run: /tmp/release-tools/bin/python tests/auth/browser.py
       - name: Refresh public channel snapshots and verify selected music links

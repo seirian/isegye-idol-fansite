@@ -29,7 +29,7 @@ jobs:
         run: test "$PRODUCTION_PAUSED" != 'true'
       - name: Validate registered Google Web Client ID
         env:
-          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID }}
+          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
         run: |
           python -c "import os,re; assert re.fullmatch(r'[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com',os.environ.get('ISEGYE_GOOGLE_CLIENT_ID','').strip()), 'Google Web Client ID missing or malformed'; print('Registered client identifier format verified; value not logged')"
       - name: Install and verify pinned authentication library
@@ -47,7 +47,7 @@ jobs:
         run: |
           python -m venv /tmp/archive-browser-tests
           /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 cryptography
-          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+          bash scripts/ci_browser_install.sh /tmp/archive-browser-tests/bin/python
       - name: Verify authentication using local test identities only
         run: /tmp/archive-browser-tests/bin/python tests/auth/browser.py
       - name: Build credential-free authentication runtime
@@ -72,7 +72,7 @@ jobs:
           PRODUCTION_ENABLED: 'true'
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
-          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID }}
+          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
       - name: Save credential-free release report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
