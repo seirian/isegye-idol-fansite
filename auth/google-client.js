@@ -20,7 +20,7 @@
         busy = true; error.hidden = true;
         try {
           const response = await fetch('/auth/google', {
-            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            method: 'POST', credentials: 'same-origin', cache:'no-store',
             headers: {'Content-Type':'application/json','X-CSRF-Token':container.dataset.csrf},
             body: JSON.stringify({credential})
           });
@@ -32,9 +32,20 @@
         finally { busy = false; }
       }
     });
-    google.accounts.id.renderButton(document.querySelector('#google-button'), {
-      type:'standard', theme:'outline', size:'large', text:'continue_with', shape:'pill', locale:'ko', width:280
-    });
+    const host = document.querySelector('#google-button');
+    let renderedWidth = 0;
+    const render = () => {
+      const width = Math.max(200, Math.min(280, Math.floor(host.clientWidth)));
+      if (width === renderedWidth) return;
+      renderedWidth = width;
+      host.replaceChildren();
+      google.accounts.id.renderButton(host, {
+        type:'standard', theme:'outline', size:'large', text:'continue_with', shape:'pill', locale:'ko', width
+      });
+    };
+    render();
+    if (window.ResizeObserver) new ResizeObserver(render).observe(host);
+    else window.addEventListener('resize', render);
     document.querySelector('#signin-loading').hidden = true;
   };
   if (document.readyState === 'complete') begin();
