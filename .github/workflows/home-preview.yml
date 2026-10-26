@@ -1,0 +1,114 @@
+name: Simple home - isolated review
+on:
+  push:
+    branches: ['feature/home-simple']
+    paths-ignore: ['docs/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-home-simple-review
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/home-simple'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate existing content and home selectors
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install isolated review tools
+        run: |
+          python -m venv /tmp/home-tools
+          /tmp/home-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/home-tools/bin/python -m playwright install --with-deps chromium
+      - name: Refresh existing channel feed snapshots and build home proposal
+        env:
+          PYTHON: /tmp/home-tools/bin/python
+          HOME_BASE_SHA: 435a9a7ab772c06f56283636e1fd9c5dc678048b
+        run: |
+          /tmp/home-tools/bin/python scripts/refresh_catalog_videos.py
+          npm run build
+          /tmp/home-tools/bin/python scripts/build_home_review.py
+      - name: Verify home, LIVE preservation and retained catalog
+        env:
+          HOME_REAL_CHECK: 'true'
+        run: |
+          /tmp/home-tools/bin/python tests/home_simple_browser.py
+          python -m http.server 4199 --bind 127.0.0.1 --directory home-dist >/tmp/home-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          sleep 1
+          CATALOG_URL=http://127.0.0.1:4199/ CATALOG_OUT=test-results/home-catalog /tmp/home-tools/bin/python tests/catalog_browser.py
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: develop
+          path: review-base
+          persist-credentials: false
+      - name: Preserve develop and previously published review routes
+        run: |
+          base=$(git -C review-base rev-parse HEAD)
+          (cd review-base && /tmp/home-tools/bin/python scripts/refresh_catalog_videos.py && GITHUB_SHA="$base" GITHUB_REF=refs/heads/develop GITHUB_REF_NAME=develop PYTHON=/tmp/home-tools/bin/python npm run build)
+          mkdir -p /tmp/home-pages/second /tmp/home-pages/previews/feature-readability /tmp/home-pages/previews/feature-live /tmp/home-pages/previews/feature-home-simple
+          cp -a review-base/dist/. /tmp/home-pages/
+          cp -a review-base/readability-dist/. /tmp/home-pages/second/
+          cp -a review-base/readability-dist/. /tmp/home-pages/previews/feature-readability/
+          cp -a review-base/dist/. /tmp/home-pages/previews/feature-live/
+          cp -a home-dist/. /tmp/home-pages/previews/feature-home-simple/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/home-pages/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: home-review-${{ github.sha }}
+          path: |
+            home-dist/
+            test-results/home-simple/
+            test-results/home-catalog/
+          include-hidden-files: true
+          retention-days: 30
+  publish:
+    needs: build
+    concurrency:
+      group: isegye-pages-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: https://seirian.github.io/isegye-idol-fansite/previews/feature-home-simple/
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify the actual review URL
+        env:
+          HOME_URL: https://seirian.github.io/isegye-idol-fansite/previews/feature-home-simple/
+          HOME_OUT: test-results/home-published
+          HOME_REAL_CHECK: 'true'
+        run: |
+          python -m venv /tmp/home-check
+          /tmp/home-check/bin/pip install playwright==1.56.0
+          /tmp/home-check/bin/python -m playwright install --with-deps chromium
+          /tmp/home-check/bin/python tests/home_simple_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: home-published-${{ github.sha }}
+          path: test-results/home-published/
+          retention-days: 30
