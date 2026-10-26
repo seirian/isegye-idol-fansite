@@ -17,8 +17,9 @@ with sync_playwright() as pw:
     page.goto((root/'dist/review.html').as_uri(), wait_until='load')
     page.locator('#main h1').wait_for(timeout=5000)
     assert page.locator('.nav a').count() == 7
-    assert page.locator('.stage-lineup .polaroid').count() == 6
-    assert page.locator('.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)')
+    simple = page.locator('.hm-page').count() == 1
+    assert page.locator('.hm-member' if simple else '.stage-lineup .polaroid').count() == 6
+    assert page.locator('.hm-members img' if simple else '.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)')
     page.screenshot(path=str(out/'offline-desktop.png'), full_page=True)
     page.evaluate("location.hash='#/search?q=ㅇㅇㄴ'")
     page.wait_for_timeout(100)

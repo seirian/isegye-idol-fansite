@@ -17,6 +17,7 @@ def main():
             ('official-mv','tests/official_mv_browser.py',{'MV_URL':url,'MV_OUT':str(out/'official-mv')}),
             ('music-sources','tests/music_sources_browser.py',{'MUSIC_URL':url,'MUSIC_OUT':str(out/'music-sources')}),
             ('group-hero','tests/group_hero_smoke.py',{'GROUP_HERO_URL':url,'GROUP_HERO_OUT_DIR':str(out/'group-hero'),'GROUP_HERO_EXPECT_MODE':mode}),
+            ('home','tests/home_simple_browser.py',{'HOME_URL':url,'HOME_OUT':str(out/'home'),'HOME_EXPECT_MODE':mode,'HOME_EXPECT_APPROVED':'true','HOME_REAL_CHECK':'true'}),
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
     try:
         if 'RELEASE_URL' not in os.environ:
@@ -35,6 +36,9 @@ def main():
             if report.exists():
                 data=json.loads(report.read_text());summary['suites'][name].update(checks=data.get('passed'),total=data.get('total'))
                 if data.get('passed')!=data.get('total'):raise RuntimeError('Incomplete suite: '+name)
+        capture=subprocess.run([sys.executable,str(ROOT/'tests/home_capture.py')],cwd=ROOT,env=dict(os.environ,HOME_URL=url,HOME_OUT=str(out/'home')),capture_output=True,text=True,timeout=120)
+        (out/'home-capture.log').write_text(capture.stdout+capture.stderr)
+        if capture.returncode:raise RuntimeError('Real home capture failed: '+capture.stderr[-2000:])
         summary['status']='verified'
     finally:
         (out/'result.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')

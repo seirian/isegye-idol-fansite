@@ -1,0 +1,24 @@
+name: Export approved home release source
+on:
+  push:
+    branches: ['feature/home-simple']
+    paths: ['.github/workflows/home-release-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.ref == 'refs/heads/feature/home-simple'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Archive tracked source only without repository credentials
+        run: git archive --format=tar.gz --output=home-release-source.tar.gz HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: home-release-source-${{ github.sha }}
+          path: home-release-source.tar.gz
+          retention-days: 7

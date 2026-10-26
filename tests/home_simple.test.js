@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {homeLatestVideos,homeMusicSelection,homeUpcoming} from '../home-review/core.js';
+const now=Date.parse('2026-10-26T10:00:00Z');
+const mk=(id,date)=>({id,title:id,publishedAt:date});
+const base={members:[{id:'ine',name:'아이네',channels:[{key:'i',kind:'본채널',name:'I',channelId:'CI'},{key:'v',kind:'다시보기',name:'V',channelId:'CV'}]}],videos:{channels:[{key:'i',channelId:'CI',checkedAt:'2026-10-26T09:00:00Z',status:'ok',videos:[mk('aaaaaaaaaaa','2026-10-24T00:00:00Z'),mk('bbbbbbbbbbb','2026-10-25T00:00:00Z')]},{key:'v',channelId:'CV',videos:[mk('ccccccccccc','2026-10-26T00:00:00Z')]}]}};
+test('recent videos follow publication date, exclude VOD',()=>assert.deepEqual(homeLatestVideos(base,'all',now).map(v=>v.id),['bbbbbbbbbbb','aaaaaaaaaaa']));
+test('unmatched member has honest empty state',()=>assert.equal(homeLatestVideos(base,'gosegu',now).length,0));
+test('unsafe IDs and future dates are discarded',()=>{const d=structuredClone(base);d.videos.channels[0].videos.push(mk('../evil','2026-10-25'),mk('ddddddddddd','2027-01-01'));assert.equal(homeLatestVideos(d,'all',now).length,2);});
+test('duplicate videos are not shown twice',()=>{const d=structuredClone(base);d.videos.channels[0].videos.push(d.videos.channels[0].videos[0]);assert.equal(homeLatestVideos(d,'all',now).length,2);});
+test('wrong channel identity is rejected',()=>{const d=structuredClone(base);d.videos.channels[0].channelId='WRONG';assert.equal(homeLatestVideos(d,'all',now).length,0);});
+test('stale snapshots do not masquerade as new checks',()=>{const d=structuredClone(base);d.videos.channels[0].checkedAt='2026-09-01';assert.equal(homeLatestVideos(d,'all',now)[0].stale,true);assert.equal(homeLatestVideos(d,'all',now)[0].checkedAt,'2026-09-01');});
+const songs=[{id:'title',album:'A',type:'original',date:'2026-10-01',members:['ine'],videoSource:{kind:'official_mv'}},{id:'audio',album:'A',type:'original',date:'2026-10-01',members:['ine'],videoSource:{kind:'official_audio'}},{id:'other',album:'B',type:'original',date:'2026-09-01',members:['ine']},{id:'cover',type:'cover',date:'2026-10-01',members:['ine']}];
+test('one representative song per original album, MV first',()=>assert.deepEqual(homeMusicSelection(songs,'original','2026-10-26').map(s=>s.id),['title','other']));
+test('cover tab and unavailable type are safe',()=>{assert.equal(homeMusicSelection(songs,'cover','2026-10-26')[0].id,'cover');assert.equal(homeMusicSelection(songs,'invalid','2026-10-26')[0].id,'title');});
+test('future release not presented as published',()=>assert.equal(homeMusicSelection(songs,'original','2026-08-01').length,0));
+test('selectors do not mutate catalogue order',()=>{const original=JSON.stringify(songs);homeMusicSelection(songs);assert.equal(JSON.stringify(songs),original);});
+test('old dates never become upcoming',()=>assert.deepEqual(homeUpcoming([{kind:'event',date:'2026-01-01'},{kind:'event',date:'2026-11-01'}],'2026-10-26').map(s=>s.date),['2026-11-01']));

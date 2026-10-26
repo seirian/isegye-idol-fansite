@@ -35,7 +35,7 @@ jobs:
         run: |
           /tmp/release-tools/bin/python scripts/refresh_catalog_videos.py
           /tmp/release-tools/bin/python scripts/check_music_video_sources.py
-      - name: Build owner-approved LIVE and catalog release
+      - name: Build approved simple-home release
         env:
           PYTHON: /tmp/release-tools/bin/python
         run: |
@@ -68,11 +68,12 @@ jobs:
       - name: Preserve published review URLs alongside develop
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         run: |
-          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability /tmp/isegye-pages/previews/feature-live
+          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability /tmp/isegye-pages/previews/feature-live /tmp/isegye-pages/previews/feature-home-simple
           cp -a dist/. /tmp/isegye-pages/
           cp -a readability-dist/. /tmp/isegye-pages/second/
           cp -a readability-dist/. /tmp/isegye-pages/previews/feature-readability/
           cp -a dist/. /tmp/isegye-pages/previews/feature-live/
+          cp -a dist/. /tmp/isegye-pages/previews/feature-home-simple/
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         with:
@@ -112,6 +113,7 @@ jobs:
         run: |
           /tmp/pages-verifier/bin/python scripts/verify_release_v04.py
           RELEASE_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-live/ RELEASE_OUT=test-results/pages-feature /tmp/pages-verifier/bin/python tests/release_v04_browser.py
+          RELEASE_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-home-simple/ RELEASE_OUT=test-results/pages-home /tmp/pages-verifier/bin/python tests/release_v04_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -119,4 +121,5 @@ jobs:
           path: |
             test-results/pages/
             test-results/pages-feature/
+            test-results/pages-home/
           retention-days: 14
