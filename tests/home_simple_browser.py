@@ -9,6 +9,7 @@ URL=os.getenv('HOME_URL','http://127.0.0.1:4198/').rstrip('/')+'/'
 OUT=ROOT/os.getenv('HOME_OUT','test-results/home-simple');OUT.mkdir(parents=True,exist_ok=True)
 CHANNELS=['inehine','jingburger1','lilpa0309','cotton1217','gosegu2','viichan6']
 NAMES=['아이네','징버거','릴파','주르르','고세구','비챤']
+MODE=os.getenv('HOME_EXPECT_MODE','preview');APPROVED=os.getenv('HOME_EXPECT_APPROVED')=='true'
 checks=[];errors=[];server=None;actual=None
 SVG=b'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#dce9f4"/><text x="320" y="180" text-anchor="middle" font-size="24">LAYOUT TEST IMAGE</text></svg>'
 def check(name,ok,detail=None):
@@ -35,9 +36,9 @@ try:
   for url in ('https://liveimg.sooplive.com/**','https://i.ytimg.com/**'):page.route(url,lambda r:r.fulfill(status=200,content_type='image/svg+xml',body=SVG))
   page.goto(URL,wait_until='networkidle');page.wait_for_function('document.querySelectorAll(".live-mini[data-state=loading]").length===0')
   meta=c.request.get(URL+'build-info.json').json()
-  check('home review metadata',meta['review']=='home-simple' and not meta['operatorApprovedDeployment'])
+  check('home review metadata',meta['review']=='home-simple' and meta['operatorApprovedDeployment']==APPROVED)
   check('exact commit',meta['commit']==os.getenv('GITHUB_SHA',meta['commit']))
-  check('preview only',page.locator('meta[name=robots]').get_attribute('content')=='noindex,nofollow' and page.locator('link[rel=canonical]').count()==0)
+  check('expected indexing mode',page.locator('meta[name=robots]').get_attribute('content')==('index,follow' if MODE=='production' else 'noindex,nofollow') and page.locator('link[rel=canonical]').count()==(1 if MODE=='production' else 0))
   check('seven menus unchanged',page.locator('[data-nav]').count()==7)
   check('LIVE is first visible section',page.locator('#main>section').first.get_attribute('class')=='live-home')
   check('six LIVE statuses retained',page.locator('.live-mini').count()==6)

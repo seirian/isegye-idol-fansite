@@ -46,7 +46,7 @@ try:
   check('LIVE menu replaces glossary',page.locator('[data-nav=live]').count()==1 and page.locator('[data-nav=dictionary]').count()==0)
   check('seven navigation menus after video removal',page.locator('[data-nav]').count()==7)
   check('home has six live status summaries',page.locator('.live-mini').count()==6)
-  check('live summary precedes hero',page.locator('.live-home').bounding_box()['y']<page.locator('.hero').bounding_box()['y'])
+  check('live summary precedes hero',page.locator('.live-home').bounding_box()['y']<page.locator('.hero,.hm-intro').bounding_box()['y'])
   check('mixed home reports 2 live / 1 unknown / 3 offline',page.locator('.live-mini[data-state=live]').count()==2 and page.locator('.live-mini[data-state=unknown]').count()==1 and page.locator('.live-mini[data-state=offline]').count()==3)
   check('first refresh requests exactly six endpoints',len(calls)==6,len(calls))
   page.screenshot(path=str(OUT/'mock-home-desktop.png'),full_page=True)

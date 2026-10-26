@@ -40,7 +40,7 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
           /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
-      - name: Build approved LIVE, member, music and history release
+      - name: Build approved simple home with LIVE preserved
         run: npm run build
         env:
           PYTHON: /tmp/archive-browser-tests/bin/python

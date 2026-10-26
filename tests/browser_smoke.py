@@ -62,10 +62,11 @@ class BrowserSmoke(unittest.TestCase):
         self.page.wait_for_timeout(100)
 
     def test_01_home_and_navigation(self):
-        self.assertIn('오늘도', self.page.locator('#main h1').inner_text())
+        simple = self.page.locator('.hm-page').count() == 1
+        self.assertIn('오늘의 이세돌' if simple else '오늘도', self.page.locator('#main h1').inner_text())
         self.assertEqual(self.page.locator('.nav a').count(), 7)
-        self.assertEqual(self.page.locator('.member-card').count(), 6)
-        self.assertEqual(self.page.locator('.music-card').count(), 3)
+        self.assertEqual(self.page.locator('.hm-member' if simple else '.member-card').count(), 6)
+        self.assertEqual(self.page.locator('.hm-song-grid [data-song]' if simple else '.music-card').count(), 3)
         self.page.screenshot(path=str(OUT / 'home-desktop.png'), full_page=True)
         for route in ['members', 'schedule', 'music', 'videos', 'dictionary', 'history', 'guide', 'about', 'privacy', 'report', 'saved']:
             self.go('#/' + route)

@@ -2,7 +2,7 @@ name: Simple home - isolated review
 on:
   push:
     branches: ['feature/home-simple']
-    paths-ignore: ['docs/**']
+    paths-ignore: ['docs/**', '.github/workflows/home-release-source.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
           HOME_BASE_SHA: 435a9a7ab772c06f56283636e1fd9c5dc678048b
         run: |
           /tmp/home-tools/bin/python scripts/refresh_catalog_videos.py
-          npm run build
+          /tmp/home-tools/bin/python scripts/build_release_v04.py
           /tmp/home-tools/bin/python scripts/build_home_review.py
       - name: Verify home, LIVE preservation and retained catalog
         env:
