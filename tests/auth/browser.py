@@ -8,7 +8,9 @@ OUT=ROOT/'test-results/auth';OUT.mkdir(parents=True,exist_ok=True)
 checks=[]
 def check(name,ok):
     checks.append({'name':name,'passed':bool(ok)})
-    if not ok:raise AssertionError(name)
+    if not ok:
+        (OUT/'failure.json').write_text(json.dumps({'checks':checks},ensure_ascii=False,indent=2))
+        raise AssertionError(name)
 def port():
     with socket.socket() as s:s.bind(('127.0.0.1',0));return s.getsockname()[1]
 with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
@@ -52,7 +54,6 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
     server.socket=sslctx.wrap_socket(server.socket,server_side=True)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     mock="window.google={accounts:{id:{initialize:(x)=>{window.__login=x;},renderButton:(el)=>{const b=document.createElement('button');b.textContent='TEST GOOGLE';b.id='fixture-signin';b.onclick=()=>window.__login.callback({credential:window.__credential});el.appendChild(b);}}}};"
-    # Same group image as production; no generated/replacement avatar imagery.
     shutil.copyfile(ROOT/'review/isegye-group-hero.webp',ROOT/'auth/background.webp')
     def token(nonce,subject,email,**changes):
         claims={'iss':'https://accounts.google.com','aud':client,'sub':subject,'email':email,'email_verified':True,'iat':int(time.time()),'exp':int(time.time())+3600,'nonce':nonce,'name':'DO_NOT_STORE','picture':'https://example.test/private.jpg'}
@@ -103,7 +104,9 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('designated verified administrator sees site','PROTECTED_SITE_FIXTURE' in op.content())
             status=owner.request.get(url+'/auth/status').json()
             check('first administrator signup enables construction',status['administrator'] and status['maintenance'] and status['allowed'])
-            response=gp.goto(url+'/');check('anonymous receives construction only',response.status==503 and '현재 사이트는 공사중입니다.' in gp.locator('h1').inner_text().replace('\n','').replace('  ',' '))
+            response=gp.goto(url+'/')
+            check('anonymous maintenance HTTP status',response.status==503)
+            check('anonymous receives construction wording','현재 사이트는 공사중입니다.' in ' '.join(gp.locator('h1').inner_text().split()))
             check('construction background loads',guest.request.get(url+'/auth/background.webp').status==200)
             check('member is blocked after owner signup',member.request.get(url+'/').status==503)
             for path in ('/src/app.js','/_isegye_releases/'+release+'/src/app.js','/_isegye_idol/_isegye_releases/'+release+'/index.html','/.auth-private/accounts.json','/.auth-private/config.json','/access.php'):
@@ -133,7 +136,7 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('corrupt store never fails open',guest.request.get(url+'/').status==503 and 'PROTECTED_SITE_FIXTURE' not in guest.request.get(url+'/').text())
             (private/'accounts.json').write_text(saved)
             browser.close()
-        (OUT/'browser.json').write_text(json.dumps({'scope':'loopback TLS; synthetic Google-signed fixtures only; no real Google users','passed':len(checks),'total':len(checks),'checks':checks},ensure_ascii=False,indent=2))
+        (OUT/'browser.json').write_text(json.dumps({'scope':'loopback TLS; synthetic RSA-signed Google-claim fixtures only; no real Google users','passed':len(checks),'total':len(checks),'checks':checks},ensure_ascii=False,indent=2))
         print(json.dumps({'passed':len(checks),'total':len(checks)}))
     finally:
         php.terminate();php.wait(timeout=5);server.shutdown()
