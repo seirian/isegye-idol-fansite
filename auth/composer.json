@@ -1,0 +1,8 @@
+{
+  "name": "isegye/private-google-access",
+  "description": "Server-verified Google identity and first-administrator maintenance gate",
+  "type": "project",
+  "require": {"php": ">=8.2", "ext-curl": "*", "ext-openssl": "*", "firebase/php-jwt": "7.1.0"},
+  "config": {"allow-plugins": false, "sort-packages": true},
+  "autoload": {"classmap": ["Store.php", "GoogleVerifier.php", "Session.php", "View.php", "Gateway.php"]}
+}

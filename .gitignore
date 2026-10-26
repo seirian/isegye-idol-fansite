@@ -12,3 +12,13 @@ site.tar.gz
 
 # Rebuilt from checksum-pinned public Genie originals.
 /review/portraits/*.webp
+
+# Never version live account/config/session data or generated auth dependencies.
+/auth/vendor/
+/auth/background.webp
+/auth-bundle/
+.auth-private/
+.auth-runtime/
+auth-source.zip
+auth-preflight.json
+auth-stage.json
