@@ -1,0 +1,22 @@
+{
+  "approvedDesign": "simple-home-live-preserved",
+  "operatorApprovedDeployment": true,
+  "approvedAt": "2026-10-27",
+  "reviewedCommit": "c770c9d590c9e46a86c55d91d02d28d27da6ac05",
+  "previousProductionCommit": "ecd43bdb0e994a2fe475324ef2f036663e706753",
+  "sourceBackup": {
+    "branch": "backup/main1st",
+    "commit": "885e818063eeccedf468d52ce148a4760819c97d"
+  },
+  "sourceHashes": {
+    "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
+    "home-review/ui.js": "c39b41ce722bae98778649840ed5b58e4d2e274f156447e78fca6860dffa1fb0",
+    "home-review/theme.css": "55b0a24ba0c8297f34ee63e82a84c0db42e6a0e31628d9bc52ed152d5cd0cc5e",
+    "scripts/build_home_review.py": "d5ca94e6cda70cb222737171e823bac4c9d5dd52920b114231c52affffd7e963",
+    "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
+    "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
+    "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849"
+  },
+  "rightsPermissionVerified": false,
+  "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure."
+}

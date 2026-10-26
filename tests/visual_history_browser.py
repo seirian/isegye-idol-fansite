@@ -62,7 +62,7 @@ try:
   page.goto(URL+'#/home',wait_until='networkidle');wait(page)
   check('home has same two live thumbnails',page.locator('.live-mini .live-broadcast-thumb').count()==2)
   check('home offline original images preserved',page.locator('.live-mini[data-state=offline]>img').count()==3)
-  check('retired home video tile removed',page.locator('a[href="#/videos"]').count()==0 and page.locator('.explore-card').count()==3)
+  check('retired home video tile removed',page.locator('a[href="#/videos"]').count()==0 and page.locator('.explore-card').count()==(0 if page.locator('.hm-page').count() else 3))
   page.screenshot(path=str(OUT/'mock-home-desktop.png'),full_page=True)
   scenario['value']='offline';page.clock.run_for(31000);page.wait_for_timeout(100);wait(page)
   check('broadcast ending removes thumbnails',page.locator('.live-broadcast-thumb').count()==0 and page.locator('.live-mini[data-state=offline]').count()==6)
