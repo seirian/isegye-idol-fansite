@@ -27,15 +27,31 @@ jobs:
         env:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
         run: test "$PRODUCTION_PAUSED" != 'true'
+      - name: Validate registered Google Web Client ID
+        env:
+          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
+        run: |
+          python -c "import os,re; assert re.fullmatch(r'[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com',os.environ.get('ISEGYE_GOOGLE_CLIENT_ID','').strip()), 'Google Web Client ID missing or malformed'; print('Registered client identifier format verified; value not logged')"
+      - name: Install and verify pinned authentication library
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          php tests/auth/store_test.php
+          php tests/auth/jwt_test.php
       - name: Validate source, isolation and rollback
         run: |
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated build and browser tools
+        timeout-minutes: 6
         run: |
           python -m venv /tmp/archive-browser-tests
-          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0
-          /tmp/archive-browser-tests/bin/python -m playwright install --with-deps chromium
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 cryptography
+          bash scripts/ci_browser_install.sh /tmp/archive-browser-tests/bin/python
+      - name: Verify authentication using local test identities only
+        run: /tmp/archive-browser-tests/bin/python tests/auth/browser.py
+      - name: Build credential-free authentication runtime
+        run: python scripts/build_auth_bundle.py
       - name: Refresh public data and verify reviewed music sources
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
@@ -50,19 +66,20 @@ jobs:
           RELEASE_MODE: production
           RELEASE_OUT: test-results/production-candidate
         run: /tmp/archive-browser-tests/bin/python scripts/verify_release_v04.py
-      - name: Deploy isolated release and verify live site with rollback
-        run: /tmp/archive-browser-tests/bin/python scripts/deploy_release_v04.py
+      - name: Activate Google access without pre-registering the administrator
+        run: /tmp/archive-browser-tests/bin/python scripts/deploy_google_access.py
         env:
           PRODUCTION_ENABLED: 'true'
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
       - name: Save credential-free release report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: isegye-production-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            inour-report.json
+            auth-deployment.json
             dist/build-info.json
             test-results/
           if-no-files-found: warn

@@ -1,0 +1,38 @@
+name: Retire legacy public preview publishers
+on:
+  push:
+    branches: [develop, main]
+    paths: ['.github/workflows/retire-public-previews.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-retire-legacy-previews
+  cancel-in-progress: false
+jobs:
+  retire:
+    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Disable only the four superseded public Pages publishers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p report
+          for file in second-preview.yml readability-preview.yml live-preview.yml home-preview.yml; do
+            endpoint="repos/seirian/isegye-idol-fansite/actions/workflows/$file"
+            gh api --method PUT "$endpoint/disable"
+            gh api "$endpoint" --jq '{path: .path, state: .state}' > "report/$file.json"
+            test "$(gh api "$endpoint" --jq .state)" = disabled_manually
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: legacy-preview-retirement-${{ github.sha }}
+          path: report/
+          retention-days: 14
