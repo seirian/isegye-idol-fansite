@@ -1,0 +1,39 @@
+name: Authentication hosting preflight
+on:
+  push:
+    branches: ['feature/google-access']
+    paths: ['.github/workflows/auth-preflight.yml', 'scripts/auth_host_preflight.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/google-access'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export source without credentials
+        run: git archive --format=zip HEAD -o auth-source.zip
+      - name: Install SFTP transport
+        run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
+      - name: Inspect PHP capabilities with a temporary isolated probe only
+        env:
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.ISEGYE_GOOGLE_CLIENT_SECRET }}
+        run: python scripts/auth_host_preflight.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: auth-preflight-${{ github.run_id }}
+          path: |
+            auth-preflight.json
+            auth-source.zip
+          retention-days: 14
