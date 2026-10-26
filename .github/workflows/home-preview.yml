@@ -26,6 +26,7 @@ jobs:
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated review tools
+        timeout-minutes: 5
         run: |
           python -m venv /tmp/home-tools
           /tmp/home-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
@@ -43,6 +44,7 @@ jobs:
           HOME_REAL_CHECK: 'true'
         run: |
           /tmp/home-tools/bin/python tests/home_simple_browser.py
+          /tmp/home-tools/bin/python tests/home_capture.py
           python -m http.server 4199 --bind 127.0.0.1 --directory home-dist >/tmp/home-http.log 2>&1 &
           server=$!
           trap 'kill "$server"' EXIT
@@ -106,6 +108,7 @@ jobs:
           /tmp/home-check/bin/pip install playwright==1.56.0
           /tmp/home-check/bin/python -m playwright install --with-deps chromium
           /tmp/home-check/bin/python tests/home_simple_browser.py
+          /tmp/home-check/bin/python tests/home_capture.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
