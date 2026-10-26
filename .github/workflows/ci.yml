@@ -26,11 +26,20 @@ jobs:
         run: |
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Validate Google access library and storage
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          php tests/auth/store_test.php
+          php tests/auth/jwt_test.php
       - name: Install isolated build and browser dependencies
+        timeout-minutes: 6
         run: |
           python -m venv /tmp/release-tools
-          /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0
+          /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0 cryptography
           /tmp/release-tools/bin/python -m playwright install --with-deps chromium
+      - name: Test first-administrator access with local synthetic identities only
+        run: /tmp/release-tools/bin/python tests/auth/browser.py
       - name: Refresh public channel snapshots and verify selected music links
         run: |
           /tmp/release-tools/bin/python scripts/refresh_catalog_videos.py
@@ -65,21 +74,15 @@ jobs:
           name: browser-review-${{ github.sha }}
           path: test-results/
           retention-days: 14
-      - name: Preserve published review URLs alongside develop
+      - name: Replace public preview mirrors with authenticated-origin notice
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
-        run: |
-          mkdir -p /tmp/isegye-pages/second /tmp/isegye-pages/previews/feature-readability /tmp/isegye-pages/previews/feature-live /tmp/isegye-pages/previews/feature-home-simple
-          cp -a dist/. /tmp/isegye-pages/
-          cp -a readability-dist/. /tmp/isegye-pages/second/
-          cp -a readability-dist/. /tmp/isegye-pages/previews/feature-readability/
-          cp -a dist/. /tmp/isegye-pages/previews/feature-live/
-          cp -a dist/. /tmp/isegye-pages/previews/feature-home-simple/
+        run: python scripts/build_pages_notice.py
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.ENABLE_PAGES_PREVIEW == 'true'
         with:
           path: /tmp/isegye-pages/
   pages-preview:
-    name: Develop only - GitHub Pages preview
+    name: Develop only - authenticated origin notice
     needs: test-build
     concurrency:
       group: isegye-pages-publish
@@ -100,26 +103,11 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Install public site verifier
-        run: |
-          python -m venv /tmp/pages-verifier
-          /tmp/pages-verifier/bin/pip install playwright==1.56.0
-          /tmp/pages-verifier/bin/python -m playwright install --with-deps chromium
-      - name: Verify published develop and retained review URL
-        env:
-          RELEASE_URL: https://seirian.github.io/isegye-idol-fansite/
-          RELEASE_MODE: preview
-          RELEASE_OUT: test-results/pages
-        run: |
-          /tmp/pages-verifier/bin/python scripts/verify_release_v04.py
-          RELEASE_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-live/ RELEASE_OUT=test-results/pages-feature /tmp/pages-verifier/bin/python tests/release_v04_browser.py
-          RELEASE_URL=https://seirian.github.io/isegye-idol-fansite/previews/feature-home-simple/ RELEASE_OUT=test-results/pages-home /tmp/pages-verifier/bin/python tests/release_v04_browser.py
+      - name: Verify no public application mirror remains
+        run: python tests/pages_access_notice.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: pages-live-${{ github.sha }}
-          path: |
-            test-results/pages/
-            test-results/pages-feature/
-            test-results/pages-home/
+          name: pages-notice-${{ github.sha }}
+          path: test-results/pages-notice/
           retention-days: 14

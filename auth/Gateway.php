@@ -79,7 +79,6 @@ final class Gateway
                 Session::login($registered['key']);
                 self::respond(200, '{"ok":true}', 'application/json; charset=utf-8');
             } catch (\Throwable) {
-                // Never log credentials, provider claims or exception messages.
                 self::respond(401, '{"ok":false,"error":"login_failed"}', 'application/json; charset=utf-8');
             }
             return;
@@ -96,6 +95,7 @@ final class Gateway
         }
         if (in_array($path, ['/auth/login','/auth/privacy'], true)) {
             header("Content-Security-Policy: default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/; img-src 'self' data: https://*.gstatic.com; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'");
+            header('Referrer-Policy: strict-origin-when-cross-origin');
             if ($path === '/auth/privacy') self::respond(200, View::privacy());
             elseif ($access['role'] !== null) self::respond(200, View::account($access['role'], Session::csrf()));
             else self::respond(200, View::login($this->config['clientId'], Session::issueNonce(), Session::csrf()));
@@ -107,7 +107,6 @@ final class Gateway
             self::respond(503, View::maintenance($access['role'] !== null)); return;
         }
         if ($this->hasSession && ($path === '/' || $path === '/index.html')) Session::touch();
-        // Only canonical, allowlisted app paths. No old-release, PHP, source or private-directory URLs.
         $relative = ltrim($path, '/');
         if ($relative === '') $relative = 'index.html';
         $allowed = in_array($relative, ['index.html','robots.txt','build-info.json'], true) ||

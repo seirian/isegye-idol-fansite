@@ -1,8 +1,8 @@
-name: Google access - isolated tests and inactive storage
+name: Google access - isolated security tests
 on:
   push:
     branches: ['feature/google-access']
-    paths: ['auth/**', 'tests/auth/**', 'scripts/build_auth_bundle.py', 'scripts/stage_auth.py', '.github/workflows/auth-review.yml']
+    paths: ['auth/**', 'tests/auth/**', 'scripts/build_auth_bundle.py', '.github/workflows/auth-review.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,15 +28,17 @@ jobs:
           php tests/auth/store_test.php
           php tests/auth/jwt_test.php
       - name: Install browser tools
-        timeout-minutes: 5
+        timeout-minutes: 6
         run: |
           python -m venv /tmp/auth-check
           /tmp/auth-check/bin/pip install --disable-pip-version-check playwright==1.56.0 cryptography
           /tmp/auth-check/bin/python -m playwright install --with-deps chromium
-      - name: Test registration, gate activation and privacy with synthetic identities
+      - name: Test registration and first administrator with local synthetic identities only
         run: /tmp/auth-check/bin/python tests/auth/browser.py
-      - name: Build credential-free inactive runtime
-        run: python scripts/build_auth_bundle.py
+      - name: Build credential-free runtime and export source for verification
+        run: |
+          python scripts/build_auth_bundle.py
+          git archive --format=zip -o test-results/auth/source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: auth-runtime-${{ github.sha }}
@@ -47,36 +49,5 @@ jobs:
         if: always()
         with:
           name: auth-tests-${{ github.sha }}
-          path: |
-            test-results/auth/
-            auth/composer.lock
-          retention-days: 14
-  stage:
-    needs: test
-    if: github.ref == 'refs/heads/feature/google-access'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    concurrency:
-      group: isegye-inour-production
-      cancel-in-progress: false
-    environment: production
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@v4
-        with:
-          name: auth-runtime-${{ github.sha }}
-          path: auth-bundle
-      - run: python -m pip install --disable-pip-version-check --no-input paramiko==5.0.0
-      - name: Prepare private empty membership storage without enabling login or maintenance
-        env:
-          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
-          ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
-        run: python scripts/stage_auth.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: auth-stage-${{ github.run_id }}-${{ github.run_attempt }}
-          path: auth-stage.json
+          path: test-results/auth/
           retention-days: 14

@@ -7,7 +7,7 @@ final class View
     public static function page(string $title, string $content, string $extra = ''): string
     {
         return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">'
+            . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="strict-origin-when-cross-origin">'
             . '<title>' . self::e($title) . ' · ISEGYE!</title><link rel="stylesheet" href="/auth/style.css">' . $extra
             . '</head><body class="access-page"><div class="access-backdrop" aria-hidden="true"></div>'
             . '<header class="access-brand"><a href="/">ISEGYE<span>!</span></a><span>이세계아이돌 비공식 팬사이트</span></header>'
