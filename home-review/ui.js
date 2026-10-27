@@ -1,4 +1,8 @@
 /* A simple front door beneath the UNCHANGED liveHomeView. All content comes from existing data. */
+function homeShortcutPortrait(m) {
+ const profile = HOME_SOOP_PROFILES[m.id];
+ return `<div class="portrait ${m.tone} hm-soop-portrait" data-home-soop-profile="${e(m.id)}"><img src="./assets/soop-profiles/${m.id}.webp?v=${profile.version}" width="144" height="144" alt="${e(m.name)} SOOP 프로필 이미지" loading="eager" decoding="async" data-home-soop-image><span class="portrait-fallback" aria-hidden="true">${e(m.name)}</span></div>`;
+}
 let homeMember = 'all';
 let homeMusicType = 'original';
 function homeVideoCard(v) {
@@ -16,7 +20,7 @@ function homeMusicContent() {
 }
 function homeSimpleView() {
  const upcoming = homeUpcoming(records, kstDate());
- return liveHomeView() + `<div class="hm-page"><section class="hm-intro" aria-labelledby="hm-title"><div class="hm-intro-copy"><p class="hm-eyebrow">ISEGYE IDOL</p><h1 id="hm-title">오늘의 이세돌</h1><p class="hm-description">방송부터 새 영상, 음악까지 한눈에.</p><a class="text-link" href="#/members">처음 오셨나요? 멤버 소개 ${icon('arrow')}</a></div><img class="hm-group" src="./assets/isegye-group-hero.webp?v=3ce98e06f795" width="800" height="450" alt="이세계아이돌 여섯 멤버의 단체 일러스트" decoding="async" fetchpriority="high"><nav class="hm-members" aria-label="멤버별 소개 바로가기">${MEMBERS.map(m=>`<a class="hm-member ${m.tone}" href="#/record/${m.id}" data-home-member-link="${m.id}">${portrait(m)}<span>${e(m.name)}</span>${icon('arrow')}</a>`).join('')}</nav></section>
+ return liveHomeView() + `<div class="hm-page"><section class="hm-intro" aria-labelledby="hm-title"><div class="hm-intro-copy"><p class="hm-eyebrow">ISEGYE IDOL</p><h1 id="hm-title">오늘의 이세돌</h1><p class="hm-description">방송부터 새 영상, 음악까지 한눈에.</p><a class="text-link" href="#/members">처음 오셨나요? 멤버 소개 ${icon('arrow')}</a></div><img class="hm-group" src="./assets/isegye-group-hero.webp?v=3ce98e06f795" width="800" height="450" alt="이세계아이돌 여섯 멤버의 단체 일러스트" decoding="async" fetchpriority="high"><nav class="hm-members" aria-label="멤버별 소개 바로가기">${MEMBERS.map(m=>`<a class="hm-member ${m.tone}" href="#/record/${m.id}" data-home-member-link="${m.id}">${homeShortcutPortrait(m)}<span>${e(m.name)}</span>${icon('arrow')}</a>`).join('')}</nav></section>
  <section class="hm-section" aria-labelledby="hm-video-title"><header class="hm-section-head"><div><h2 id="hm-video-title">최근 영상</h2><p>본채널·음악 채널의 최근 공개 영상</p></div><a class="text-link" href="#/members">채널 모아보기 ${icon('arrow')}</a></header><div class="hm-filters" role="group" aria-label="최근 영상 멤버 선택">${[['all','전체'],...MEMBERS.map(m=>[m.id,m.name])].map(([id,name])=>`<button type="button" data-home-member="${id}" aria-pressed="${homeMember===id}" aria-controls="hm-videos">${name}</button>`).join('')}</div><div id="hm-videos">${homeVideoContent()}</div><p class="sr-only" id="hm-video-status" role="status" aria-live="polite"></p></section>
  <section class="hm-section" aria-labelledby="hm-music-title"><header class="hm-section-head"><div><h2 id="hm-music-title">음악</h2><p>노래를 고르고, 영상으로 만나보세요.</p></div><a class="text-link" id="hm-all-music" href="#/music">전체 ${CATALOG.music.songs.length}개 ${icon('arrow')}</a></header><div class="hm-filters" role="group" aria-label="홈 음악 종류 선택">${[['original','오리지널'],['cover','커버'],['remake','리메이크']].map(([id,name])=>`<button type="button" data-home-music="${id}" aria-pressed="${homeMusicType===id}" aria-controls="hm-music">${name}</button>`).join('')}</div><div id="hm-music">${homeMusicContent()}</div><p class="sr-only" id="hm-music-status" role="status" aria-live="polite"></p></section>
  <nav class="hm-more" aria-label="일정과 활동 기록"><a href="#/schedule"><span class="hm-more-icon">${icon('calendar')}</span><div><h2>소식·일정</h2><p>${upcoming.length ? `${formatDate(upcoming[0].date)} · ${e(upcoming[0].title)}` : '날짜별 발매·행사 기록 보기'}</p></div>${icon('arrow')}</a><a href="#/history"><span class="hm-more-icon">${icon('clock')}</span><div><h2>활동 기록</h2><p>2021년 오디션부터 · ${HISTORY.events.length}개 주요 기록</p></div>${icon('arrow')}</a></nav></div>`;
@@ -39,5 +43,6 @@ document.addEventListener('click', event=>{
 });
 document.addEventListener('error', event=>{
  const img=event.target;
+ if(img instanceof HTMLImageElement && img.matches('[data-home-soop-image]')) {img.hidden=true;img.parentElement.dataset.imageError='true';}
  if(img instanceof HTMLImageElement && img.matches('[data-home-image]')) {img.hidden=true;img.parentElement.dataset.imageError='true';}
 }, true);

@@ -10,13 +10,21 @@
   },
   "sourceHashes": {
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
-    "home-review/ui.js": "c39b41ce722bae98778649840ed5b58e4d2e274f156447e78fca6860dffa1fb0",
-    "home-review/theme.css": "55b0a24ba0c8297f34ee63e82a84c0db42e6a0e31628d9bc52ed152d5cd0cc5e",
-    "scripts/build_home_review.py": "d5ca94e6cda70cb222737171e823bac4c9d5dd52920b114231c52affffd7e963",
+    "home-review/ui.js": "65b604633b441d95696c7b6891e8bc5783cd0235b30340b01c4e54074b16f6f3",
+    "home-review/theme.css": "f796204c3749ecc04dcd0cace5f6625ec33d78e6c2080c56193cc446e3ea879f",
+    "scripts/build_home_review.py": "89cff564b2eb1b057e35e904ca829fbd915a4e63ec001d2b3bd56c022d23a8e6",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
-    "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849"
+    "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
+    "home-review/soop-profiles.json": "3ca50bda1be2762c35e9cbcc9a57f168a28225e0d5cd6aeede31cf7fa1e88630",
+    "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7"
   },
   "rightsPermissionVerified": false,
-  "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure."
+  "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
+  "presentationUpdates": [
+    {
+      "requestedAt": "2026-10-27",
+      "scope": "Six lower home shortcuts only use current SOOP channel/search profiles, not an old-avatar selection. LIVE, member detail and group hero unchanged."
+    }
+  ]
 }

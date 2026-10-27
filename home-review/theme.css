@@ -55,3 +55,8 @@
 @media(max-width:1000px){.hm-intro{grid-template-columns:1fr 280px;padding:24px}.hm-members{grid-template-columns:repeat(3,minmax(0,1fr))}.hm-member{justify-content:start}.hm-video-grid,.hm-song-grid{gap:14px}}
 @media(max-width:640px){.hm-intro{grid-template-columns:1fr;gap:18px;padding:20px}.hm-intro-copy h1{font-size:1.8rem}.hm-description{font-size:1rem}.hm-group{max-width:400px;justify-self:center}.hm-members{grid-template-columns:repeat(auto-fit,minmax(5.3rem,1fr));gap:8px;padding-top:16px}.hm-member{flex-direction:column;gap:5px;padding:10px 4px}.hm-member>.icon{display:none}.hm-member>span{font-size:1rem}.hm-section{margin-top:30px}.hm-section-head{align-items:flex-start;gap:8px;flex-wrap:wrap}.hm-section-head h2{font-size:1.5rem}.hm-section-head p{font-size:.875rem}.hm-section-head .text-link{font-size:.875rem;min-height:44px}.hm-filters{gap:6px}.hm-filters button{padding:8px 13px}.hm-video-grid,.hm-song-grid{grid-template-columns:1fr}.hm-video h3{min-height:0}.hm-video-copy{padding:14px 16px}.hm-video-meta{margin-bottom:5px}.hm-data-note{display:block}.hm-more{grid-template-columns:1fr;gap:10px;margin-top:28px;padding-top:24px}.hm-more>a{padding:16px}.hm-song-grid .catalog-song-copy h3{font-size:1.125rem}}
 @media(prefers-reduced-motion:reduce){.hm-member{transition:none}.hm-member:hover{transform:none}}
+
+/* SOOP profile images are scoped to the six lower member shortcuts only. */
+.hm-member .hm-soop-portrait img{object-fit:contain}
+.hm-member .hm-soop-portrait .portrait-fallback{display:none}
+.hm-member .hm-soop-portrait[data-image-error=true] .portrait-fallback{display:flex;align-items:center;justify-content:center;position:absolute;inset:0;padding:2px;font-size:14px;line-height:1.4;color:var(--ink);background:var(--paper)}
