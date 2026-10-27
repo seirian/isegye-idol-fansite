@@ -4,7 +4,7 @@ from pathlib import Path
 import hashlib,json,shutil
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'auth-bundle'
-FILES=('Store.php','GoogleVerifier.php','Session.php','View.php','Gateway.php','style.css','account.css','client.js','google-client.js')
+FILES=('Store.php','GoogleVerifier.php','Session.php','View.php','Gateway.php','style.css','account.css','client.js','google-client.js','terms.html','privacy.html','legal.css')
 def main():
     vendor=ROOT/'auth/vendor'
     if not (vendor/'autoload.php').is_file():raise RuntimeError('Install pinned Composer dependencies first')

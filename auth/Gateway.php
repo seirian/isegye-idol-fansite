@@ -59,9 +59,20 @@ final class Gateway
         $path = self::path($_SERVER['REQUEST_URI'] ?? '/');
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         if (!in_array($method, ['GET','HEAD','POST'], true)) { self::respond(405, 'Method not allowed', 'text/plain'); return; }
-        $public = ['/auth/account.css'=>['account.css','text/css; charset=utf-8'], '/auth/style.css'=>['style.css','text/css; charset=utf-8'], '/auth/client.js'=>['client.js','text/javascript; charset=utf-8'],
+        $public = ['/auth/legal.css'=>['legal.css','text/css; charset=utf-8'], '/auth/account.css'=>['account.css','text/css; charset=utf-8'], '/auth/style.css'=>['style.css','text/css; charset=utf-8'], '/auth/client.js'=>['client.js','text/javascript; charset=utf-8'],
                    '/auth/google-client.js'=>['google-client.js','text/javascript; charset=utf-8'], '/auth/background.webp'=>['background.webp','image/webp']];
         if (isset($public[$path]) && $method !== 'POST') { [$file,$type]=$public[$path]; $this->sendFile($this->runtime.'/'.$file,$type); return; }
+        // Public disclosure routes never grant access, create sessions, or read account state.
+        $legalAliases = ['/terms'=>'/auth/terms', '/privacy'=>'/auth/privacy',
+            '/settings/terms-of-service'=>'/auth/terms', '/settings/privacy-policy'=>'/auth/privacy'];
+        if (isset($legalAliases[$path]) && $method !== 'POST') {
+            header('Location: ' . $legalAliases[$path], true, 308); return;
+        }
+        if (in_array($path, ['/auth/terms','/auth/privacy'], true)) {
+            if ($method === 'POST') { self::respond(405, 'Method not allowed', 'text/plain'); return; }
+            header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'");
+            self::respond(200, $path === '/auth/terms' ? View::terms() : View::privacy()); return;
+        }
         if (isset($_COOKIE['__Host-ISEGYE']) || in_array($path, ['/auth/login','/auth/google','/auth/logout'], true)) $this->session();
         $access = $this->store->access($this->hasSession ? Session::account() : null);
         if ($path === '/auth/google') {
@@ -93,11 +104,10 @@ final class Gateway
             self::respond(200, json_encode(['authenticated'=>$access['role']!==null,'administrator'=>$access['role']==='admin',
                 'maintenance'=>$access['maintenance'],'allowed'=>$access['allowed']], JSON_THROW_ON_ERROR), 'application/json; charset=utf-8'); return;
         }
-        if (in_array($path, ['/auth/login','/auth/privacy'], true)) {
+        if ($path === '/auth/login') {
             header("Content-Security-Policy: default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/; img-src 'self' data: https://*.gstatic.com; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'");
             header('Referrer-Policy: strict-origin-when-cross-origin');
-            if ($path === '/auth/privacy') self::respond(200, View::privacy());
-            elseif ($access['role'] !== null) self::respond(200, View::account($access['role'], Session::csrf()));
+            if ($access['role'] !== null) self::respond(200, View::account($access['role'], Session::csrf()));
             else self::respond(200, View::login($this->config['clientId'], Session::issueNonce(), Session::csrf()));
             return;
         }

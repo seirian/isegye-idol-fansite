@@ -75,6 +75,19 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('public root remains before administrator',gp.goto(url+'/').status==200 and 'PROTECTED_SITE_FIXTURE' in gp.content())
             check('public visit does not create member cookie',not guest.cookies())
             check('before admin there is no construction text','현재 사이트는' not in gp.content())
+            # Policy reading is public before/after maintenance and is not registration.
+            for kind, count in [('terms',16),('privacy',13)]:
+                response=gp.goto(url+'/auth/'+kind)
+                check('policy before admin '+kind,response.status==200 and gp.locator('[data-policy="'+kind+'"]').count()==1)
+                check('complete numbered policy '+kind,gp.locator('.legal-body>section').count()==count+1)
+                check('policy has version '+kind,gp.locator('[data-version="1.0"]').count()==1)
+                check('policy has no Google script '+kind,gp.locator('script').count()==0)
+                check('policy does not set member cookies '+kind,not guest.cookies())
+                check('policy HEAD has no body '+kind,guest.request.head(url+'/auth/'+kind).body()==b'')
+                check('policy is read-only '+kind,guest.request.post(url+'/auth/'+kind,data={}).status==405)
+            for alias,target in [('/terms','/auth/terms'),('/privacy','/auth/privacy'),('/settings/terms-of-service','/auth/terms'),('/settings/privacy-policy','/auth/privacy')]:
+                response=guest.request.get(url+alias,max_redirects=0)
+                check('policy alias '+alias,response.status==308 and response.headers.get('location')==target)
             def prepare(page,subject,email,**changes):
                 page.goto(url+'/auth/login');page.locator('#fixture-signin').wait_for()
                 nonce=page.locator('#google-signin').get_attribute('data-nonce')
@@ -115,6 +128,26 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('owner direct legacy release URL also blocked',owner.request.get(url+'/_isegye_releases/'+release+'/src/app.js').status==404)
             check('privacy publicly reachable during maintenance',guest.request.get(url+'/auth/privacy').status==200)
             check('no-cache on maintenance','no-store' in response.headers['cache-control'])
+            for ctx in (guest,member,owner):
+                for kind in ('terms','privacy'):
+                    r=ctx.request.get(url+'/auth/'+kind)
+                    check('legal access during maintenance '+kind,r.status==200 and 'data-policy="'+kind+'"' in r.text())
+            for kind in ('terms','privacy'):
+                gp.goto(url+'/auth/'+kind)
+                check('active policy tab '+kind,gp.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='/auth/'+kind)
+                check('policy anchors resolve '+kind,gp.locator('.legal-toc a').evaluate_all('(xs)=>xs.every(x=>document.getElementById(x.hash.slice(1)))'))
+                for width in (320,390,768,1440):
+                    gp.set_viewport_size({'width':width,'height':900})
+                    check('policy no overflow '+kind+str(width),gp.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+                    check('policy readable font '+kind+str(width),gp.locator('.legal-document').evaluate('(x)=>parseFloat(getComputedStyle(x).fontSize)>=16'))
+                gp.set_viewport_size({'width':1440,'height':1000});gp.screenshot(path=str(OUT/(kind+'-desktop.png')),full_page=True)
+                gp.set_viewport_size({'width':390,'height':844});gp.screenshot(path=str(OUT/(kind+'-mobile.png')),full_page=True)
+                # Enlarge only the test DOM through CSSOM; keep the production CSP unchanged.
+                gp.locator('.legal-document').evaluate("(x)=>{x.style.fontSize='32px'}")
+                check('policy 200 percent body text applied '+kind,gp.locator('.legal-document').evaluate('(x)=>parseFloat(getComputedStyle(x).fontSize)===32'))
+                check('policy 200 percent no overflow '+kind,gp.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+            gp.goto(url+'/')
+
             for width in (320,390,768,1440):
                 gp.set_viewport_size({'width':width,'height':900});gp.goto(url+'/')
                 check(f'maintenance {width} no overflow',gp.evaluate('document.documentElement.scrollWidth<=innerWidth'))
@@ -133,6 +166,7 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             for forbidden in ('owner.fixture@gmail.com','member.fixture@gmail.com','owner-subject','member-subject','DO_NOT_STORE',credential,good):check('identity not persisted '+forbidden[:24],forbidden not in raw)
             check('only two actual fixture accounts created',len(json.loads(saved)['accounts'])==2)
             (private/'accounts.json').write_text('invalid')
+            check('legal disclosure survives corrupt account data',guest.request.get(url+'/auth/privacy').status==200 and guest.request.get(url+'/auth/terms').status==200)
             check('corrupt store never fails open',guest.request.get(url+'/').status==503 and 'PROTECTED_SITE_FIXTURE' not in guest.request.get(url+'/').text())
             (private/'accounts.json').write_text(saved)
             browser.close()
