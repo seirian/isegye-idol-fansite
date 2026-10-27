@@ -64,6 +64,9 @@ try:
             check('legal version '+kind,page.locator('[data-version="1.0"]').count()==1)
             check('legal table present '+kind,page.locator('table caption').count()>0)
             check('public legal text has no scripts '+kind,page.locator('script').count()==0)
+            check('legal top navigation omits account link '+kind,page.locator('.legal-navigation a[href="/auth/login"]').count()==0)
+            check('legal operator label '+kind,page.locator('.legal-meta dd').first.inner_text()=='운영자')
+            check('legal operator nickname removed '+kind,'seirian' not in page.locator('.legal-document').inner_text().replace('seirian@gmail.com',''))
             check('legal active tab '+kind,page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='/auth/'+kind)
             check('legal table of contents '+kind,page.locator('.legal-toc a').evaluate_all('(xs)=>xs.every(x=>document.getElementById(x.hash.slice(1)))'))
             for width in (320,390,768,1440):
@@ -76,8 +79,13 @@ try:
             r=c.request.get(URL+alias,max_redirects=0)
             check('legal canonical alias '+alias,r.status==308 and r.headers.get('location')==target)
         page.goto(URL+'/',wait_until='networkidle')
-        check('terms footer reachable from current home',page.locator('a[href="/auth/terms"],a[href="https://isegye-idol.kr/auth/terms"]').count()>0)
-        check('privacy footer reachable from current home',page.locator('a[href="/auth/privacy"],a[href="https://isegye-idol.kr/auth/privacy"]').count()>0)
+        if legal_before['maintenance']:
+            check('maintenance omits terms and privacy links',page.locator('a[href="/auth/terms"],a[href="/auth/privacy"],a[href="https://isegye-idol.kr/auth/terms"],a[href="https://isegye-idol.kr/auth/privacy"]').count()==0)
+            check('maintenance retains login entry',page.locator('a[href="/auth/login"]').count()==1)
+            page.set_viewport_size({'width':1440,'height':1000});page.screenshot(path=str(OUT/'maintenance-clean-desktop.png'),full_page=True)
+            page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(OUT/'maintenance-clean-mobile.png'),full_page=True)
+        else:
+            check('home footer contains only the two legal links',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침'])
         for suffix in ('/.auth-private/accounts.json','/.auth-private/config.json','/access.php','/_isegye_releases/r000000000000/index.html','/_mir_site/index.html'):
             response=c.request.get(URL+suffix)
             check('private or legacy URL denied '+suffix,response.status in (403,404,503))

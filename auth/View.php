@@ -4,14 +4,15 @@ namespace Isegye\Access;
 final class View
 {
     public static function e(string $text): string { return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-    public static function page(string $title, string $content, string $extra = '', string $layout = ''): string
+    public static function page(string $title, string $content, string $extra = '', string $layout = '', bool $legalLinks = true): string
     {
+        $footer = '비공식 팬사이트' . ($legalLinks ? ' · <a href="/auth/terms">이용약관</a> · <a href="/auth/privacy"><strong>개인정보처리방침</strong></a>' : '');
         return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="strict-origin-when-cross-origin">'
             . '<title>' . self::e($title) . ' · ISEGYE!</title><link rel="stylesheet" href="/auth/style.css">' . $extra
             . '</head><body class="access-page ' . self::e($layout) . '"><div class="access-backdrop" aria-hidden="true"></div>'
             . '<header class="access-brand"><a href="/">ISEGYE<span>!</span></a><span>이세계아이돌 비공식 팬사이트</span></header>'
-            . '<main class="access-main">' . $content . '</main><footer class="access-footer">비공식 팬사이트 · <a href="/auth/terms">이용약관</a> · <a href="/auth/privacy"><strong>개인정보처리방침</strong></a></footer></body></html>';
+            . '<main class="access-main">' . $content . '</main><footer class="access-footer">' . $footer . '</footer></body></html>';
     }
     public static function maintenance(bool $signedIn = false): string
     {
@@ -19,7 +20,7 @@ final class View
             . '<p class="access-kicker">조금 더 좋은 모습으로 만나요</p><h1>현재 사이트는 <br>공사중입니다.</h1>'
             . '<p class="access-description">이세계아이돌의 소식을 더 편하게 만날 수 있도록<br class="wide-only"> 사이트를 준비하고 있어요.</p>'
             . '<div class="access-divider" aria-hidden="true"><span></span>✦<span></span></div>'
-            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>');
+            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', false);
     }
     public static function login(string $clientId, string $nonce, string $csrf): string
     {
@@ -51,7 +52,7 @@ final class View
             $tabs .= '<a href="/auth/' . $id . '"' . ($id === $kind ? ' aria-current="page"' : '') . '>' . $label . '</a>';
         }
         $tabs .= '</nav>';
-        return self::page($title, '<div class="legal-shell" id="document-top"><div class="legal-navigation"><a href="/">← 사이트로</a><a href="/auth/login">로그인 · 계정</a></div>'
+        return self::page($title, '<div class="legal-shell" id="document-top"><div class="legal-navigation"><a href="/">← 사이트로</a></div>'
             . $tabs . '<article class="legal-document" data-policy="' . $kind . '" data-version="1.0">' . file_get_contents($file) . '</article></div>',
             '<link rel="stylesheet" href="/auth/legal.css">', 'legal-page');
     }
