@@ -1,0 +1,58 @@
+name: Commit verified legal presentation patch
+on:
+  push:
+    branches: ['feature/legal-cleanup']
+    paths: ['.github/workflows/legal-cleanup-commit.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  commit:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/legal-cleanup'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: legal-cleanup-preparation-40449974422
+          run-id: 40449974422
+          github-token: ${{ github.token }}
+          path: /tmp/isegye-prepared
+      - name: Validate reviewed patch and exact source scope
+        run: |
+          echo '088524974dd24974489857dd41d27088d181e123912493028a55434a6e1a022e  /tmp/isegye-prepared/changes.patch' | sha256sum -c -
+          git apply --check /tmp/isegye-prepared/changes.patch
+          git apply /tmp/isegye-prepared/changes.patch
+          git diff --check
+          python - <<'PY'
+          import subprocess
+          expected={'auth/View.php','auth/terms.html','auth/privacy.html','src/app.js','second/compose.py','tests/auth/browser.py','tests/auth/production_browser.py','tests/test_legal_presentation.py','docs/LEGAL-POLICIES.md'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())|set(subprocess.check_output(['git','ls-files','--others','--exclude-standard']).decode().splitlines())
+          assert changed==expected,(changed,expected)
+          subprocess.run(['git','add','--',*sorted(expected)],check=True)
+          PY
+          php -l auth/View.php
+          node --check src/app.js
+          python -m unittest discover -s tests -p 'test_legal*.py' -v
+      - name: Commit and push only this feature branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(ui): simplify maintenance, footer and policy operator labels'
+          python - <<'PY'
+          import base64,os,subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/feature/legal-cleanup'
+          env=dict(os.environ)
+          token=env.pop('GH_TOKEN')
+          env['GIT_CONFIG_COUNT']='1'
+          env['GIT_CONFIG_KEY_0']='http.https://github.com/.extraheader'
+          env['GIT_CONFIG_VALUE_0']='AUTHORIZATION: basic '+base64.b64encode(('x-access-token:'+token).encode()).decode()
+          remote=subprocess.check_output(['git','ls-remote','origin','refs/heads/feature/legal-cleanup'],env=env).decode().split()[0]
+          assert remote==os.environ['GITHUB_SHA'],'Feature branch changed; refusing push'
+          subprocess.run(['git','push','origin','HEAD:refs/heads/feature/legal-cleanup'],env=env,check=True)
+          PY
