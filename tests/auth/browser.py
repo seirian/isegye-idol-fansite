@@ -142,7 +142,9 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
                     check('policy readable font '+kind+str(width),gp.locator('.legal-document').evaluate('(x)=>parseFloat(getComputedStyle(x).fontSize)>=16'))
                 gp.set_viewport_size({'width':1440,'height':1000});gp.screenshot(path=str(OUT/(kind+'-desktop.png')),full_page=True)
                 gp.set_viewport_size({'width':390,'height':844});gp.screenshot(path=str(OUT/(kind+'-mobile.png')),full_page=True)
-                gp.add_style_tag(content='html{font-size:200%} .legal-document{font-size:200%}')
+                # Enlarge only the test DOM through CSSOM; keep the production CSP unchanged.
+                gp.locator('.legal-document').evaluate("(x)=>{x.style.fontSize='32px'}")
+                check('policy 200 percent body text applied '+kind,gp.locator('.legal-document').evaluate('(x)=>parseFloat(getComputedStyle(x).fontSize)===32'))
                 check('policy 200 percent no overflow '+kind,gp.evaluate('document.documentElement.scrollWidth<=innerWidth'))
             gp.goto(url+'/')
 
