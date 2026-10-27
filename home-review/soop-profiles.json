@@ -1,0 +1,78 @@
+{
+  "source": "SOOP",
+  "scope": "home-member-shortcuts-only",
+  "members": [
+    {
+      "id": "ine",
+      "name": "아이네",
+      "channel": "inehine",
+      "sourcePage": "https://www.sooplive.com/station/inehine",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/in/inehine/inehine.jpg",
+      "sourceSha256": "d10706e287dd04e87f3ce45d6e2f17224a3618818c40a70812b25150c0c1f033",
+      "width": 420,
+      "height": 420,
+      "checkedAt": "2026-10-27T12:11:40.047885+00:00",
+      "sourceFormat": "PNG"
+    },
+    {
+      "id": "jingburger",
+      "name": "징버거",
+      "channel": "jingburger1",
+      "sourcePage": "https://www.sooplive.com/station/jingburger1",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/ji/jingburger1/jingburger1.jpg",
+      "sourceSha256": "8962eef7a9b2a3bb4d157cc471d5e519dc02f7d96487453a03380788e8319115",
+      "width": 420,
+      "height": 415,
+      "checkedAt": "2026-10-27T12:11:40.695973+00:00",
+      "sourceFormat": "PNG"
+    },
+    {
+      "id": "lilpa",
+      "name": "릴파",
+      "channel": "lilpa0309",
+      "sourcePage": "https://www.sooplive.com/station/lilpa0309",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/li/lilpa0309/lilpa0309.jpg",
+      "sourceSha256": "d1b8add73dfdb16593599da3f9a098997d83f25cd6412e93271fa058006c4024",
+      "width": 420,
+      "height": 420,
+      "checkedAt": "2026-10-27T12:11:41.241826+00:00",
+      "sourceFormat": "PNG"
+    },
+    {
+      "id": "jururu",
+      "name": "주르르",
+      "channel": "cotton1217",
+      "sourcePage": "https://www.sooplive.com/station/cotton1217",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/co/cotton1217/cotton1217.jpg",
+      "sourceSha256": "28bf8d4455a634a40f97a04e13719d1a0ca927e2d9a524167efe6e77aa7ca366",
+      "width": 420,
+      "height": 420,
+      "checkedAt": "2026-10-27T12:11:41.801804+00:00",
+      "sourceFormat": "PNG"
+    },
+    {
+      "id": "gosegu",
+      "name": "고세구",
+      "channel": "gosegu2",
+      "sourcePage": "https://www.sooplive.com/station/gosegu2",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/go/gosegu2/gosegu2.jpg",
+      "sourceSha256": "50a86601be6f7e1ad0b4737b892f6f129776dbcda10c1c54b5c67f6dcf4712df",
+      "width": 420,
+      "height": 420,
+      "checkedAt": "2026-10-27T12:11:42.286463+00:00",
+      "sourceFormat": "JPEG"
+    },
+    {
+      "id": "viichan",
+      "name": "비챤",
+      "channel": "viichan6",
+      "sourcePage": "https://www.sooplive.com/station/viichan6",
+      "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/vi/viichan6/viichan6.jpg",
+      "sourceSha256": "9f4fcca4fedc683ee959138e70f39b3574289d78adfeb734c7528c094d2c33ae",
+      "width": 420,
+      "height": 420,
+      "checkedAt": "2026-10-27T12:11:42.748719+00:00",
+      "sourceFormat": "PNG"
+    }
+  ]
+}
