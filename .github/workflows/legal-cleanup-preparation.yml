@@ -1,0 +1,154 @@
+name: Prepare requested legal presentation cleanup
+on:
+  push:
+    branches: ['feature/legal-cleanup']
+    paths: ['.github/workflows/legal-cleanup-preparation.yml']
+permissions:
+  contents: write
+concurrency:
+  group: legal-cleanup-preparation
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/legal-cleanup'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Apply the four requested presentation changes only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          def replace(path, old, new, count=1):
+              p=Path(path);s=p.read_text()
+              assert s.count(old)==count,(path,old[:70],s.count(old))
+              p.write_text(s.replace(old,new))
+          replace('auth/View.php',"string $layout = ''): string", "string $layout = '', bool $legalLinks = true): string")
+          replace('auth/View.php',
+              "        return '<!doctype html>",
+              "        $footer = '비공식 팬사이트' . ($legalLinks ? ' · <a href=\"/auth/terms\">이용약관</a> · <a href=\"/auth/privacy\"><strong>개인정보처리방침</strong></a>' : '');\n        return '<!doctype html>")
+          replace('auth/View.php',
+              '<footer class="access-footer">비공식 팬사이트 · <a href="/auth/terms">이용약관</a> · <a href="/auth/privacy"><strong>개인정보처리방침</strong></a></footer>',
+              '<footer class="access-footer">\' . $footer . \'</footer>')
+          replace('auth/View.php',
+              "($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>');",
+              "($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', false);")
+          replace('auth/View.php','<a href="/auth/login">로그인 · 계정</a>','')
+          for name in ('terms','privacy'):
+              replace('auth/'+name+'.html','ISEGYE! 팬사이트 운영자 seirian','운영자',2)
+          replace('auth/terms.html','운영자 seirian(이하 “운영자”)이','운영자가')
+          replace('auth/privacy.html',
+              '이 방침은 로그인·공사중 화면과 사이트 하단에서 언제든지 열람할 수 있습니다.',
+              '이 방침은 로그인 화면과 사이트 하단에서 언제든지 열람할 수 있습니다. 공사중에도 로그인 화면이나 문서 주소를 통해 열람할 수 있습니다.')
+          footer='<div class="footer-links"><a href="https://isegye-idol.kr/auth/terms">이용약관</a><a href="https://isegye-idol.kr/auth/privacy"><strong>개인정보처리방침</strong></a></div>'
+          for name in ('src/app.js','second/compose.py'):
+              p=Path(name);s=p.read_text()
+              blocks=re.findall(r'<div class="footer-links">.*?</div>',s)
+              assert len(blocks)==1,name
+              for label in ('사이트 소개','운영 원칙','권리·정정 요청','이용약관','개인정보처리방침'):assert label in blocks[0],(name,label)
+              p.write_text(s.replace(blocks[0],footer))
+          replace('tests/auth/browser.py',
+              "                check('policy has no Google script '+kind,gp.locator('script').count()==0)",
+              "                check('policy has no Google script '+kind,gp.locator('script').count()==0)\n                check('policy top navigation has no account link '+kind,gp.locator('.legal-navigation a[href=\"/auth/login\"]').count()==0)\n                check('policy operator uses generic label '+kind,gp.locator('.legal-meta dd').first.inner_text()=='운영자')\n                check('policy contains no standalone operator nickname '+kind,'seirian' not in gp.locator('.legal-document').inner_text().replace('seirian@gmail.com',''))")
+          replace('tests/auth/browser.py',
+              "            check('construction background loads',guest.request.get(url+'/auth/background.webp').status==200)",
+              "            check('construction background loads',guest.request.get(url+'/auth/background.webp').status==200)\n            check('maintenance omits legal navigation',gp.locator('a[href=\"/auth/terms\"],a[href=\"/auth/privacy\"]').count()==0)\n            check('maintenance keeps Google login',gp.locator('a[href=\"/auth/login\"]').count()==1)\n            check('signed-in member maintenance also omits legal links','href=\"/auth/terms\"' not in member.request.get(url+'/').text() and 'href=\"/auth/privacy\"' not in member.request.get(url+'/').text())")
+          replace('tests/auth/production_browser.py',
+              "            check('public legal text has no scripts '+kind,page.locator('script').count()==0)",
+              "            check('public legal text has no scripts '+kind,page.locator('script').count()==0)\n            check('legal top navigation omits account link '+kind,page.locator('.legal-navigation a[href=\"/auth/login\"]').count()==0)\n            check('legal operator label '+kind,page.locator('.legal-meta dd').first.inner_text()=='운영자')\n            check('legal operator nickname removed '+kind,'seirian' not in page.locator('.legal-document').inner_text().replace('seirian@gmail.com',''))")
+          replace('tests/auth/production_browser.py',
+              "        check('terms footer reachable from current home',page.locator('a[href=\"/auth/terms\"],a[href=\"https://isegye-idol.kr/auth/terms\"]').count()>0)\n        check('privacy footer reachable from current home',page.locator('a[href=\"/auth/privacy\"],a[href=\"https://isegye-idol.kr/auth/privacy\"]').count()>0)",
+              "        if legal_before['maintenance']:\n            check('maintenance omits terms and privacy links',page.locator('a[href=\"/auth/terms\"],a[href=\"/auth/privacy\"],a[href=\"https://isegye-idol.kr/auth/terms\"],a[href=\"https://isegye-idol.kr/auth/privacy\"]').count()==0)\n            check('maintenance retains login entry',page.locator('a[href=\"/auth/login\"]').count()==1)\n            page.set_viewport_size({'width':1440,'height':1000});page.screenshot(path=str(OUT/'maintenance-clean-desktop.png'),full_page=True)\n            page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(OUT/'maintenance-clean-mobile.png'),full_page=True)\n        else:\n            check('home footer contains only the two legal links',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침'])")
+          replace('docs/LEGAL-POLICIES.md',
+              '- 로그인/계정/공사중/앱 푸터에서 두 전문으로 연결합니다.',
+              '- 로그인/계정/앱 푸터에서 두 전문으로 연결합니다. 공사중 화면에는 두 문서 링크를 표시하지 않으며 기존 배경·문구·로그인 진입을 유지합니다.')
+          p=Path('docs/LEGAL-POLICIES.md')
+          p.write_text(p.read_text()+'\n## 2026-10-27 표시 간소화\n\n운영자 요청에 따라 공사중 화면의 약관·방침 링크를 제거하고, 사이트 하단 오른쪽에는 이용약관과 개인정보처리방침만 남깁니다. 팬 가이드의 사이트 소개·운영 원칙·권리/정정 경로는 유지합니다. 전문 우측 상단의 로그인·계정 링크는 제거하고, 운영자 명칭은 “운영자”로 통일하되 문의 이메일은 보존합니다. 문서의 공사중 열람 안내만 실제 동선에 맞추며 처리 목적·항목·보유기간·권리와 인증/회원 로직은 바꾸지 않습니다.\n')
+          Path('tests/test_legal_presentation.py').write_text('''"""Owner-requested presentation cleanup; never modifies authorization."""
+          from pathlib import Path
+          import re, subprocess, unittest
+          R=Path(__file__).resolve().parents[1]
+          class PresentationTests(unittest.TestCase):
+              def render(self, call):
+                  return subprocess.check_output(['php','-r', "require 'auth/View.php'; echo Isegye\\\\Access\\\\View::"+call+';'],cwd=R).decode()
+              def test_maintenance_has_no_policy_links(self):
+                  for arg in ('true','false'):
+                      html=self.render('maintenance('+arg+')')
+                      self.assertNotIn('href="/auth/terms"',html)
+                      self.assertNotIn('href="/auth/privacy"',html)
+                      self.assertIn('href="/auth/login"',html)
+                      self.assertIn('access-backdrop',html)
+                      self.assertIn('현재 사이트는 <br>공사중입니다.',html)
+              def test_login_and_account_disclosures_remain(self):
+                  for call in ("login('client','nonce','csrf')", "account('admin','csrf')", "account('member','csrf')"):
+                      html=self.render(call)
+                      self.assertIn('href="/auth/terms"',html)
+                      self.assertIn('href="/auth/privacy"',html)
+              def test_policy_navigation_and_generic_operator(self):
+                  for kind in ('terms','privacy'):
+                      html=self.render(kind+'()')
+                      nav=re.search(r'<div class="legal-navigation">(.*?)</div>',html).group(1)
+                      self.assertNotIn('/auth/login',nav)
+                      self.assertIn('href="/"',nav)
+                      self.assertNotIn('seirian',html.replace('seirian@gmail.com',''))
+                      self.assertIn('<dt>운영자</dt><dd>운영자</dd>',html)
+                      self.assertIn('mailto:seirian@gmail.com',html)
+              def test_both_shells_have_exactly_two_footer_links(self):
+                  for name in ('src/app.js','second/compose.py'):
+                      html=(R/name).read_text()
+                      footer=re.search(r'<div class="footer-links">(.*?)</div>',html).group(1)
+                      self.assertEqual(re.findall(r'href="([^"]+)"',footer),['https://isegye-idol.kr/auth/terms','https://isegye-idol.kr/auth/privacy'])
+                      for label in ('사이트 소개','운영 원칙','권리·정정 요청'):self.assertNotIn(label,footer)
+              def test_public_policy_notice_matches_navigation(self):
+                  text=(R/'auth/privacy.html').read_text()
+                  self.assertNotIn('로그인·공사중 화면과 사이트 하단',text)
+                  self.assertIn('공사중에도 로그인 화면이나 문서 주소',text)
+          if __name__=='__main__':unittest.main()
+          ''')
+          PY
+      - name: Check exact change scope and syntax
+        run: |
+          git diff --check
+          php -l auth/View.php
+          node --check src/app.js
+          python -m py_compile second/compose.py tests/auth/browser.py tests/auth/production_browser.py tests/test_legal_presentation.py
+          python -m unittest discover -s tests -p 'test_legal*.py' -v
+          python - <<'PY'
+          import subprocess
+          expected={'auth/View.php','auth/terms.html','auth/privacy.html','src/app.js','second/compose.py','tests/auth/browser.py','tests/auth/production_browser.py','tests/test_legal_presentation.py','docs/LEGAL-POLICIES.md'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())|set(subprocess.check_output(['git','ls-files','--others','--exclude-standard']).decode().splitlines())
+          assert changed==expected,(changed,expected)
+          PY
+      - name: Commit only the approved feature changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add auth/View.php auth/terms.html auth/privacy.html src/app.js second/compose.py tests/auth/browser.py tests/auth/production_browser.py tests/test_legal_presentation.py docs/LEGAL-POLICIES.md
+          git commit -m 'fix(ui): simplify maintenance, footer and policy operator labels'
+          mkdir -p preparation-result
+          git archive HEAD -o preparation-result/source.zip
+          git diff HEAD^ HEAD > preparation-result/changes.patch
+          git rev-parse HEAD > preparation-result/commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: legal-cleanup-preparation-${{ github.run_id }}
+          path: preparation-result/
+          retention-days: 7
+      - name: Push feature branch only with unchanged-head check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feature/legal-cleanup'
+          python - <<'PY'
+          import os,subprocess
+          env=dict(os.environ)
+          env['GIT_CONFIG_COUNT']='1'
+          env['GIT_CONFIG_KEY_0']='http.https://github.com/.extraheader'
+          env['GIT_CONFIG_VALUE_0']='AUTHORIZATION: bearer '+env.pop('GH_TOKEN')
+          remote=subprocess.check_output(['git','ls-remote','origin','refs/heads/feature/legal-cleanup'],env=env).decode().split()[0]
+          assert remote==os.environ['GITHUB_SHA'],'Feature branch changed; refusing push'
+          subprocess.run(['git','push','origin','HEAD:refs/heads/feature/legal-cleanup'],env=env,check=True)
+          PY
