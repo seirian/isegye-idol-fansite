@@ -1,0 +1,82 @@
+name: Home SOOP profiles - read-only inspection
+on:
+  push:
+    branches: ['feature/home-soop-profiles']
+    paths: ['.github/workflows/home-soop-profiles-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install public-image inspection tools
+        run: |
+          python -m venv /tmp/soop-profile-inspection
+          /tmp/soop-profile-inspection/bin/pip install pillow==11.3.0 playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/soop-profile-inspection/bin/python
+      - name: Read public channel profile images and search results
+        run: |
+          /tmp/soop-profile-inspection/bin/python - <<'PY'
+          from pathlib import Path
+          from datetime import datetime,timezone
+          from urllib.request import Request,urlopen
+          from urllib.parse import urlsplit,quote
+          import json,hashlib,io,time
+          from PIL import Image
+          from playwright.sync_api import sync_playwright
+          out=Path('test-results/home-soop-sources');out.mkdir(parents=True,exist_ok=True)
+          channels=[('ine','아이네','inehine'),('jingburger','징버거','jingburger1'),('lilpa','릴파','lilpa0309'),('jururu','주르르','cotton1217'),('gosegu','고세구','gosegu2'),('viichan','비챤','viichan6')]
+          def get(url,limit):
+              for attempt in range(3):
+                  try:
+                      with urlopen(Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.sooplive.com/'}),timeout=20) as r:
+                          data=r.read(limit+1)
+                          assert len(data)<=limit and r.status==200
+                          return data,r.geturl()
+                  except Exception:
+                      if attempt==2:raise
+                      time.sleep(1)
+          rows=[]
+          for mid,name,channel in channels:
+              api='https://chapi.sooplive.co.kr/api/'+channel+'/station'
+              data,_=get(api,1048576);payload=json.loads(data);station=payload.get('station',{})
+              assert station.get('user_id')==channel and name in station.get('user_nick',''), 'Channel identity mismatch'
+              image=payload.get('profile_image') or station.get('profile_image')
+              assert isinstance(image,str), 'No official profile image field'
+              image='https:'+image if image.startswith('//') else image
+              host=urlsplit(image).hostname or ''
+              assert urlsplit(image).scheme=='https' and any(host==d or host.endswith('.'+d) for d in ('sooplive.co.kr','sooplive.com','afreecatv.com'))
+              raw,final=get(image,4194304)
+              im=Image.open(io.BytesIO(raw));im.load()
+              assert min(im.size)>=48 and max(im.size)<=4096
+              (out/(mid+'.original')).write_bytes(raw)
+              im.convert('RGB').save(out/(mid+'.webp'),'WEBP',quality=92,method=6)
+              rows.append({'id':mid,'name':name,'channel':channel,'nickname':station['user_nick'],'api':api,'profileImage':image,'finalImage':final,'originalSha256':hashlib.sha256(raw).hexdigest(),'webpSha256':hashlib.sha256((out/(mid+'.webp')).read_bytes()).hexdigest(),'width':im.width,'height':im.height,'checkedAt':datetime.now(timezone.utc).isoformat()})
+          (out/'profiles.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2)+'\n')
+          with sync_playwright() as p:
+              browser=p.chromium.launch()
+              page=browser.new_page(viewport={'width':1440,'height':1000},locale='ko-KR')
+              for row in rows:
+                  try:
+                      url='https://www.sooplive.com/search?szType=bj&szKeyword='+quote(row['name'])
+                      page.goto(url,wait_until='domcontentloaded',timeout=30000);page.wait_for_timeout(4000)
+                      row['searchUrl']=url
+                      row['searchImages']=page.locator('img').evaluate_all('(xs)=>xs.map(x=>({src:x.currentSrc||x.src,alt:x.alt,link:x.closest("a")?.href||""})).filter(x=>/LOGO|profile|station/i.test(x.src+" "+x.link))')
+                      page.screenshot(path=str(out/(row['id']+'-search.png')),full_page=True)
+                  except Exception as e:row['searchError']=type(e).__name__
+              browser.close()
+          (out/'profiles.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps({'profiles':len(rows),'source':'official SOOP channel profile_image; search evidence included'},ensure_ascii=False))
+          PY
+          git archive HEAD -o test-results/home-soop-sources/source.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: home-soop-sources-${{ github.sha }}
+          path: test-results/home-soop-sources/
+          retention-days: 7
