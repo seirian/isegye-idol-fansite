@@ -1,0 +1,36 @@
+name: Apply reviewed legal source integration once
+on:
+  push:
+    branches: ['feature/legal-documents']
+    paths: ['.github/workflows/legal-apply-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: legal-source-integration
+  cancel-in-progress: false
+jobs:
+  apply:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/legal-documents'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply only reviewed source edits with preimage and output hashes
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feature/legal-documents'
+          python scripts/legal_apply_once.py
+          node --check src/app.js
+          php -l auth/View.php
+          php -l auth/Gateway.php
+          python -m unittest discover -s tests -p 'test_*.py'
+          npm test
+      - name: Record source changes on the same feature branch without deployment
+        run: |
+          git add src/app.js second/compose.py tests/auth/browser.py tests/auth/production_browser.py
+          git rm scripts/legal_apply_once.py .github/workflows/legal-apply-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(legal): connect policy routes and add read-only browser coverage'
+          git push origin HEAD:refs/heads/feature/legal-documents
