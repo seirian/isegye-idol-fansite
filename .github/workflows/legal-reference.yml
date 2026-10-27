@@ -1,0 +1,61 @@
+name: Legal reference - read-only inspection
+on:
+  push:
+    branches: ['feature/legal-documents']
+    paths: ['.github/workflows/legal-reference.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install browser for public document inspection
+        run: |
+          python -m venv /tmp/legal-browser
+          /tmp/legal-browser/bin/pip install playwright==1.56.0
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt 2>/dev/null || true
+          /tmp/legal-browser/bin/python -m playwright install --with-deps chromium
+      - name: Read only the requested public documents and anonymous access state
+        run: |
+          mkdir -p test-results/legal-reference
+          /tmp/legal-browser/bin/python - <<'PY'
+          from pathlib import Path
+          from datetime import datetime,timezone
+          import json
+          from playwright.sync_api import sync_playwright
+          out=Path('test-results/legal-reference'); results=[]
+          with sync_playwright() as p:
+              browser=p.chromium.launch()
+              ctx=browser.new_context(viewport={'width':1440,'height':1000},locale='ko-KR')
+              page=ctx.new_page()
+              for key,url in [('settings','https://viichan.kr/settings'),('terms','https://viichan.kr/settings/terms-of-service'),('privacy','https://viichan.kr/settings/privacy-policy')]:
+                  try:
+                      response=page.goto(url,wait_until='networkidle',timeout=45000)
+                      page.wait_for_timeout(1500)
+                      text=page.locator('body').inner_text()
+                      (out/(key+'.txt')).write_text(text)
+                      (out/(key+'.html')).write_text(page.content())
+                      page.screenshot(path=str(out/(key+'.png')),full_page=True)
+                      results.append({'key':key,'url':url,'status':response.status,'headings':page.locator('h1,h2,h3').all_text_contents(),'textLength':len(text)})
+                  except Exception as e:results.append({'key':key,'error':type(e).__name__})
+              for key,url in [('live-privacy','https://isegye-idol.kr/auth/privacy'),('live-status','https://isegye-idol.kr/auth/status')]:
+                  try:
+                      response=ctx.request.get(url,timeout=30000)
+                      (out/(key+'.txt')).write_text(response.text())
+                      results.append({'key':key,'status':response.status})
+                  except Exception as e:results.append({'key':key,'error':type(e).__name__})
+              browser.close()
+          (out/'result.json').write_text(json.dumps({'checkedAt':datetime.now(timezone.utc).isoformat(),'results':results},ensure_ascii=False,indent=2))
+          PY
+          git archive HEAD -o test-results/legal-reference/source.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: legal-reference-${{ github.sha }}
+          path: test-results/legal-reference/
+          retention-days: 7
