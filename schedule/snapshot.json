@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Asia/Seoul",
+  "generatedAt": "2026-10-30T00:58:55+00:00",
+  "sources": [
+    {
+      "id": "cafe-members",
+      "label": "이세돌 멤버 공지",
+      "kind": "official",
+      "url": "https://cafe.naver.com/f-e/cafes/27842958/menus/345?viewType=L",
+      "mode": "reviewed_snapshot",
+      "lastAttemptAt": null,
+      "lastSuccessAt": "2026-10-30T00:58:55+00:00",
+      "state": "snapshot",
+      "detail": "초기 확인 자료 · 카페 자동 크롤링 미사용"
+    },
+    {
+      "id": "cafe-agency",
+      "label": "패러블 카페 공지",
+      "kind": "official",
+      "url": "https://cafe.naver.com/f-e/cafes/27842958/menus/1250",
+      "mode": "reviewed_snapshot",
+      "lastAttemptAt": null,
+      "lastSuccessAt": "2026-10-30T00:58:55+00:00",
+      "state": "snapshot",
+      "detail": "초기 확인 자료 · 카페 자동 크롤링 미사용"
+    },
+    {
+      "id": "fan-roundup",
+      "label": "팬 정리 · 뱅온정보",
+      "kind": "fan",
+      "url": "https://cafe.naver.com/steamindiegame/22137397",
+      "mode": "reviewed_snapshot",
+      "lastAttemptAt": null,
+      "lastSuccessAt": "2026-10-30T00:58:55+00:00",
+      "state": "snapshot",
+      "detail": "초기 확인 자료 · 카페 자동 크롤링 미사용"
+    },
+    {
+      "id": "parable-web",
+      "label": "패러블 공식 뉴스룸",
+      "kind": "official",
+      "url": "https://parable-asia.com/newsroom/",
+      "mode": "automatic",
+      "lastAttemptAt": "2026-10-30T00:58:55+00:00",
+      "lastSuccessAt": null,
+      "state": "error",
+      "detail": "이번 수집 실패 · 이전 자료 유지",
+      "errorCode": "not_yet_run"
+    },
+    {
+      "id": "naver-search",
+      "label": "왁물원 새 글 검색",
+      "kind": "unverified",
+      "url": "https://cafe.naver.com/steamindiegame",
+      "mode": "search_api",
+      "lastAttemptAt": "2026-10-30T00:58:55+00:00",
+      "lastSuccessAt": null,
+      "state": "needs_setup",
+      "detail": "네이버 검색 API 설정 필요",
+      "errorCode": "api_key_required"
+    }
+  ],
+  "events": [
+    {
+      "id": "post-7919db5815491071-2026-10-29",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22136013",
+      "title": "[징버거] 오늘은 짧뱅??",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-29T10:06:27.337000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "제목에 명시된 날짜 (작성일 기준 상대 날짜)",
+      "date": "2026-10-29",
+      "time": null,
+      "type": "broadcast",
+      "certainty": "tentative",
+      "status": "scheduled",
+      "dateBasis": "title"
+    },
+    {
+      "id": "post-9c729d51aec71498-2026-10-28",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22133090",
+      "title": "[징버거] 오늘은 휴뱅할게용",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-28T07:46:25.113000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "제목에 명시된 날짜 (작성일 기준 상대 날짜)",
+      "date": "2026-10-28",
+      "time": null,
+      "type": "break",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "dateBasis": "title"
+    },
+    {
+      "id": "post-0763f2fbe2f1d8ba-2026-10-27",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22131584",
+      "title": "[주르르] 오늘 휴르르로 변경~~~!!!!!",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-27T13:02:57.147000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "제목에 명시된 날짜 (작성일 기준 상대 날짜)",
+      "date": "2026-10-27",
+      "time": null,
+      "type": "break",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "dateBasis": "title"
+    },
+    {
+      "id": "post-b1549499e3af68c4-2026-10-27",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22131133",
+      "title": "[고세구] 오늘은 짧뱅으로 일찍 왔다 갈 예정!",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-27T09:18:39.803000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "제목에 명시된 날짜 (작성일 기준 상대 날짜)",
+      "date": "2026-10-27",
+      "time": null,
+      "type": "broadcast",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "dateBasis": "title"
+    },
+    {
+      "id": "post-d31a78069aba2d9f-2026-10-26",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22128448",
+      "title": "[주르르] 오늘도 뱅온루루",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-26T09:36:23.033000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "제목에 명시된 날짜 (작성일 기준 상대 날짜)",
+      "date": "2026-10-26",
+      "time": null,
+      "type": "broadcast",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "dateBasis": "title"
+    }
+  ],
+  "news": [
+    {
+      "id": "post-f346d9cc9d035605",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22136104",
+      "title": "[릴파] 아!",
+      "members": [
+        "lilpa"
+      ],
+      "publishedAt": "2026-10-29T10:26:30.423000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-7919db5815491071",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22136013",
+      "title": "[징버거] 오늘은 짧뱅??",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-29T10:06:27.337000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-2f37ee68a5262db0",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22134108",
+      "title": "[고세구] 아침 세구로 오도록 하겠습니다!",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-28T15:25:10.227000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-07f39eaf0c4fff9f",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22133702",
+      "title": "[비챤] 으앙",
+      "members": [
+        "viichan"
+      ],
+      "publishedAt": "2026-10-28T11:38:05.150000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-9d7ed5863c44d33b",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22133120",
+      "title": "[주르르] 로좋소 면접!!!!!",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-28T08:03:28.813000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-9c729d51aec71498",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22133090",
+      "title": "[징버거] 오늘은 휴뱅할게용",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-28T07:46:25.113000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-f12336e4fe6af21f",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22132386",
+      "title": "[주르르] 지연이라매 아",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-27T22:34:09.270000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-0763f2fbe2f1d8ba",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22131584",
+      "title": "[주르르] 오늘 휴르르로 변경~~~!!!!!",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-27T13:02:57.147000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-b1549499e3af68c4",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22131133",
+      "title": "[고세구] 오늘은 짧뱅으로 일찍 왔다 갈 예정!",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-27T09:18:39.803000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-0cfa7d5dc882f583",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22130908",
+      "title": "[징버거] 7시 할로윈코스프레 참가!",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-27T08:35:03.553000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-c96c4f116ec52597",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22130780",
+      "title": "[챠니] 넘 걱정하지 말구 봐~!",
+      "members": [
+        "viichan"
+      ],
+      "publishedAt": "2026-10-27T07:38:19.960000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-d31a78069aba2d9f",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22128448",
+      "title": "[주르르] 오늘도 뱅온루루",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-26T09:36:23.033000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-e37894d0d18e94fa",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22127942",
+      "title": "[징버거] 오랜만에 뵙겠습니닷",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-26T07:23:28.627000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-32897a3722ac2134",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22125788",
+      "title": "[비챤] 챤니티 와땨아",
+      "members": [
+        "viichan"
+      ],
+      "publishedAt": "2026-10-25T09:37:52.007000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-7bd5f0ac2aba6c1a",
+      "sourceId": "cafe-members",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22123356",
+      "title": "[주르르] 쭐하하하하하!!!!!!",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-24T09:11:42.703000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-9180bbf38fc2ee52",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22096118",
+      "title": "이세계아이돌 (ISEGYE IDOL) 공식 Berriz 커뮤니티 오픈 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-14T05:00:09.260000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-6bb99b77ac1c5533",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22069116",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 발매 기념 영상통화 팬사인회 이벤트 당첨자 안내 (애플뮤직)",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-02T09:02:31+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-167d59a899882368",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22062875",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 발매 기념 영상통화 팬사인회 이벤트 안내 (애플뮤직)",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-30T06:00:17.470000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-7e2d49517eedfae3",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22058071",
+      "title": "이세계아이돌 (ISEGYE IDOL) 'SOOPER MATCH 이세돌 vs 이세돌 : 흑막의 그림자' 방송 일정 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-09-29T07:08:28.837000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-e18e3a92cdb9268b",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22052710",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 음원 발매 및 Official MV 공개 안내",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-28T09:00:06.770000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-b50ec73058697936",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22052048",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 발매 기념 라이브 안내",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-28T03:00:08.420000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-142ac1864a0ae09f",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22044062",
+      "title": "고세구 (GOSEGU) ‘고양이가 세상을 구한다!’ MV TEASER 공개",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-24T15:00:30.133000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-d2907bb20f99f882",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22041519",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 앨범 배송 일정 안내",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-23T10:30:01.323000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-5ef13b03bef4b5ed",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22039909",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] CONCEPT PHOTO 공개",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-22T15:00:01.567000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-35572e2b27d7b972",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22036069",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] CONCEPT ILLUSTRATION 공개",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-20T15:00:09.537000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-a34474c9306ef850",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22031437",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] HIGHLIGHT MEDLEY 공개",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-18T15:00:12.350000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-f089a8da113f32e5",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22029491",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] TRACK LIST 공개",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-17T15:00:02.033000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-da05ae7a4ae00d3b",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22021656",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 예약 판매 안내",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-14T09:00:03.487000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-0fec03229bba1383",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22019869",
+      "title": "고세구 (GOSEGU) The 1st Single Album [NO CAT, NO LIFE!] 발매 안내",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-13T15:00:20.153000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-9aa384829549d6ed",
+      "sourceId": "cafe-agency",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22013956",
+      "title": "2026년 하반기 이세계아이돌 (ISEGYE IDOL) 주요 활동 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-09-11T09:00:46.467000+00:00",
+      "checkedAt": "2026-10-30T00:58:55+00:00",
+      "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    }
+  ],
+  "forecasts": [
+    {
+      "id": "post-3e954f01217b8b96-ine",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "아이네 · 휴방 예상",
+      "members": [
+        "ine"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "tentative",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    },
+    {
+      "id": "post-3e954f01217b8b96-jingburger",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "징버거 · 방송 여부 미정",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "unknown",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    },
+    {
+      "id": "post-3e954f01217b8b96-lilpa",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "릴파 · 방송 여부 미정",
+      "members": [
+        "lilpa"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "unknown",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    },
+    {
+      "id": "post-3e954f01217b8b96-jururu",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "주르르 · 방송 예정 · 팬 정리",
+      "members": [
+        "jururu"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "tentative",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    },
+    {
+      "id": "post-3e954f01217b8b96-gosegu",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "고세구 · 확인된 정보 없음",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "unknown",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    },
+    {
+      "id": "post-3e954f01217b8b96-viichan",
+      "sourceId": "fan-roundup",
+      "sourceUrl": "https://cafe.naver.com/steamindiegame/22137397",
+      "title": "비챤 · 방송 여부 미정",
+      "members": [
+        "viichan"
+      ],
+      "publishedAt": "2026-10-30T09:07:00+09:00",
+      "checkedAt": "2026-10-30T00:55:50+00:00",
+      "date": "2026-10-30",
+      "time": null,
+      "certainty": "unknown",
+      "type": "broadcast",
+      "status": "reference",
+      "dateBasis": "roundup_title",
+      "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
+    }
+  ]
+}

@@ -12,12 +12,17 @@
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
     "home-review/ui.js": "65b604633b441d95696c7b6891e8bc5783cd0235b30340b01c4e54074b16f6f3",
     "home-review/theme.css": "f796204c3749ecc04dcd0cace5f6625ec33d78e6c2080c56193cc446e3ea879f",
-    "scripts/build_home_review.py": "89cff564b2eb1b057e35e904ca829fbd915a4e63ec001d2b3bd56c022d23a8e6",
+    "scripts/build_home_review.py": "9eef783f6f96bfc4ed4268ec398774de8b36e3c297dc1de0819dd94b1ba8524f",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
     "home-review/soop-profiles.json": "3ca50bda1be2762c35e9cbcc9a57f168a28225e0d5cd6aeede31cf7fa1e88630",
-    "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7"
+    "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
+    "scripts/compose_schedule.py": "ea4279729ae301f82e04df82f403b8926648d1287ed3311f4c1b6800b8c31672",
+    "schedule/core.js": "8aa5b80888b35cb9ac5ee297bea94091c406b4d33efd5b6feda10ec3f9079a57",
+    "schedule/ui.js": "384bde2f453ea1aaf085eefc4b838ebd5963c8bdff8792726313791df203effe",
+    "schedule/theme.css": "cc2d795d435696312496b851510873cb087fd27059cfa6baa3f99c8719d4dd71",
+    "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -25,6 +30,10 @@
     {
       "requestedAt": "2026-10-27",
       "scope": "Six lower home shortcuts only use current SOOP channel/search profiles, not an old-avatar selection. LIVE, member detail and group hero unchanged."
+    },
+    {
+      "requestedAt": "2026-10-30",
+      "scope": "Calendar-first news/schedule, scoped permitted source refresh, official/fan/search separation; retain LIVE, home shortcuts, auth and legal cleanup."
     }
   ]
 }

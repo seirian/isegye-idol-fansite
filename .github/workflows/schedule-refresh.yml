@@ -1,0 +1,45 @@
+name: Schedule - hourly permitted-source refresh
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Production - isolated inour SFTP deployment']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Check data rules and data-only publication boundary
+        run: python -m unittest discover -s tests -p 'test_schedule*.py' -v
+      - name: Install pinned SFTP client
+        run: |
+          python -m venv /tmp/schedule-refresh
+          /tmp/schedule-refresh/bin/pip install paramiko==5.0.0
+      - name: Collect permitted sources and atomically publish private snapshot
+        run: /tmp/schedule-refresh/bin/python scripts/publish_schedule_feed.py
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          ISEGYE_NAVER_CLIENT_ID: ${{ secrets.ISEGYE_NAVER_CLIENT_ID }}
+          ISEGYE_NAVER_CLIENT_SECRET: ${{ secrets.ISEGYE_NAVER_CLIENT_SECRET }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: schedule-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: schedule-publication.json
+          retention-days: 14
