@@ -1,0 +1,65 @@
+name: Assemble toolbar accessibility fix
+on:
+  push:
+    branches: [feature/schedule-toolbar]
+    paths: [.github/workflows/toolbar-a11y-patch.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/schedule-toolbar'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Apply checked UI labels only and create unreferenced review commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import os,json,hashlib,base64,subprocess
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          hashes={
+           'schedule/ui.js':('d785f42be3eb9d820a0fc8960e9ad2b335c3033bf071f6de500c5492366f529f','c11802b3faa0fe3481c5279b01578ae40b1bc5aec86b9c4addf608a65b235d35'),
+           'tests/schedule_toolbar_browser.py':('acac2bbc00e6abb18bab02feff59f43a9ac7d268a77062b0625f05ef3e668e8b','4bb5d0cd0e5064c0e1383bcee3b2d20c6aefbe62a5d924527bb06c91832df195'),
+           'review/home-release.json':('e724925b99758f71138c6d8f13033dbdcc037bdb6c83844d1aab810d220f2796','04a4a3d42b3bd7eeb02e491b849e3cd39053d8836470a1e2dcb4fb0b9dfa619d')}
+          contents={}
+          def replace(s,a,b):
+              assert s.count(a)==1,'Ambiguous patch'
+              return s.replace(a,b,1)
+          for name,(before,after) in hashes.items():
+              p=Path(name);raw=p.read_bytes();assert hashlib.sha256(raw).hexdigest()==before,name
+              s=raw.decode()
+              if name=='schedule/ui.js':
+                  for key,label in [('member','멤버'),('source','출처'),('kind','종류')]:
+                      s=replace(s,f'<select id="schedule-{key}" data-filter="{key}">',f'<select id="schedule-{key}" aria-label="{label}" data-filter="{key}">')
+              elif name.endswith('_browser.py'):
+                  s=replace(s,"page.evaluate('(v)=>document.documentElement.dataset.theme=v',theme)","page.evaluate('(v)=>{document.documentElement.dataset.theme=v;window.scrollTo(0,0)}',theme)")
+                  s=replace(s,"check('no failure banner outside details','갱신 확인 실패' not in page.locator('#main').inner_text())","check('no failure banner outside details',not page.locator('.sc-refresh-status').is_visible() and page.locator('.sc-sync').count()==0)")
+              else:s=replace(s,hashes['schedule/ui.js'][0],hashes['schedule/ui.js'][1])
+              contents[name]=s.encode();assert hashlib.sha256(contents[name]).hexdigest()==after,name
+              p.write_bytes(contents[name])
+          subprocess.run(['python','-m','unittest','discover','-s','tests','-p','test_schedule_toolbar.py','-v'],check=True)
+          repo=os.environ['GITHUB_REPOSITORY'];assert repo=='seirian/isegye-idol-fansite'
+          def post(path,data):
+              q=Request('https://api.github.com/repos/'+repo+path,data=json.dumps(data).encode(),method='POST',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+              with urlopen(q,timeout=30) as r:return json.load(r)
+          entries=[]
+          for name,raw in contents.items():
+              sha=post('/git/blobs',{'content':base64.b64encode(raw).decode(),'encoding':'base64'})['sha']
+              entries.append({'path':name,'mode':'100644','type':'blob','sha':sha})
+          entries.append({'path':'.github/workflows/toolbar-a11y-patch.yml','mode':'100644','type':'blob','sha':None})
+          base=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
+          tree=post('/git/trees',{'base_tree':base,'tree':entries})['sha']
+          commit=post('/git/commits',{'message':'Give calendar selects explicit accessible names and verify collapsed error visibility','tree':tree,'parents':[os.environ['GITHUB_SHA']]})['sha']
+          report={'parent':os.environ['GITHUB_SHA'],'tree':tree,'commit':commit,'branchMoved':False,'productionTouched':False}
+          Path('toolbar-a11y.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: toolbar-a11y
+          path: toolbar-a11y.json
+          retention-days: 3
