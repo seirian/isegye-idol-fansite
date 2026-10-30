@@ -39,7 +39,7 @@ try:
   check('home review metadata',meta['review']=='home-simple' and meta['operatorApprovedDeployment']==APPROVED)
   check('exact commit',meta['commit']==os.getenv('GITHUB_SHA',meta['commit']))
   check('expected indexing mode',page.locator('meta[name=robots]').get_attribute('content')==('index,follow' if MODE=='production' else 'noindex,nofollow') and page.locator('link[rel=canonical]').count()==(1 if MODE=='production' else 0))
-  check('seven menus unchanged',page.locator('[data-nav]').count()==7)
+  check('six primary menus, fan guide in footer',page.locator('[data-nav]').count()==6)
   check('LIVE is first visible section',page.locator('#main>section').first.get_attribute('class')=='live-home')
   check('six LIVE statuses retained',page.locator('.live-mini').count()==6)
   check('live thumbnails and offline portraits unchanged',page.locator('.live-mini[data-state=live] .live-broadcast-thumb').count()==2 and page.locator('.live-mini[data-state=offline]>img').count()==4)

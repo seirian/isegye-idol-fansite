@@ -50,7 +50,7 @@ try:
   meta=c.request.get(URL+'build-info.json').json()
   check('artifact commit matches',meta['commit']==os.environ.get('GITHUB_SHA',meta['commit']))
   check('visual history build marker',meta['visualHistory']['historyItems']==55)
-  check('seven menus and no video menu',page.locator('[data-nav]').count()==7 and page.locator('[data-nav=videos]').count()==0)
+  check('six menus and no video menu',page.locator('[data-nav]').count()==6 and page.locator('[data-nav=videos]').count()==0)
   check('two current broadcast thumbnails',page.locator('.live-card .live-broadcast-thumb').count()==2)
   check('offline and unknown retain portraits',page.locator('.live-card:not([data-state=live]) .live-card-art>img').count()==4 and page.locator('.live-card:not([data-state=live]) .live-broadcast-thumb').count()==0)
   check('official thumbnail host and ID mapping',page.locator('[data-member=ine] .live-broadcast-thumb').get_attribute('src').startswith('https://liveimg.sooplive.com/m/123456789?v='))
