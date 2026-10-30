@@ -1,0 +1,11 @@
+/* Reflow the surrounding shell only on the calendar at large text/small widths.
+   Do not hide overflow: enlarged text and all controls must remain reachable. */
+@media(max-width:640px){
+ body:has(.sc-page) .header-inner{flex-wrap:wrap}
+ body:has(.sc-page) .announcement{flex-wrap:wrap;gap:8px}
+ .layout:has(.sc-page) .heading-row>div{min-width:0;overflow-wrap:anywhere}
+ .layout:has(.sc-page) .footer-brand strong{display:inline-block;max-width:100%;overflow-wrap:anywhere}
+ .layout:has(.sc-page) .footer-brand strong .icon{position:static;vertical-align:middle;margin-left:8px}
+ .layout:has(.sc-page) .footer-bottom>div{min-width:0;overflow-wrap:anywhere}
+ .layout:has(.sc-page) .footer-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
