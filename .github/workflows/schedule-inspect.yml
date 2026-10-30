@@ -1,0 +1,69 @@
+name: Schedule sources - public read-only inspection
+on:
+  push:
+    branches: ['feature/schedule-feed']
+    paths: ['.github/workflows/schedule-inspect.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Export source and inspect the three supplied public pages
+        run: |
+          mkdir -p inspection
+          git archive HEAD -o inspection/source.zip
+          python -m venv /tmp/schedule-browser
+          /tmp/schedule-browser/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/schedule-browser/bin/python
+          /tmp/schedule-browser/bin/python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          from pathlib import Path
+          from datetime import datetime, timezone
+          from urllib.parse import urlsplit
+          import json
+          out=Path('inspection'); results=[]; network=[]
+          def shape(value, depth=0):
+              if depth>5:return type(value).__name__
+              if isinstance(value,dict):return {k:shape(v,depth+1) for k,v in value.items() if k.lower() not in ('memberkey','userid','memberid','email','ip','token','authorization','cookie')}
+              if isinstance(value,list):return [shape(x,depth+1) for x in value[:1]]
+              return type(value).__name__
+          with sync_playwright() as p:
+              b=p.chromium.launch();c=b.new_context(locale='ko-KR',viewport={'width':1440,'height':1000});page=c.new_page()
+              def receive(response):
+                  if 'apis.naver.com/' in response.url and 'cafe' in response.url and 'json' in response.headers.get('content-type',''):
+                      try:
+                          value=response.json(); network.append({'url':response.url,'status':response.status,'shape':shape(value)})
+                      except Exception:pass
+              page.on('response',receive)
+              for key,url in [('idol','https://cafe.naver.com/f-e/cafes/27842958/menus/345?viewType=L'),('parable','https://cafe.naver.com/f-e/cafes/27842958/menus/1250'),('fan','https://cafe.naver.com/steamindiegame/22137397')]:
+                  try:
+                      r=page.goto(url,wait_until='domcontentloaded',timeout=35000);page.wait_for_timeout(5000)
+                      frames=[]
+                      for f in page.frames:
+                          try:
+                              text=f.locator('body').inner_text(timeout=3000)
+                              links=f.locator('a[href]').evaluate_all('(xs)=>xs.map(x=>({text:(x.innerText||x.textContent||" ").trim().slice(0,150),href:x.href})).filter(x=>x.text&&(/articles|steamindiegame|ArticleRead/.test(x.href))).slice(0,60)')
+                              frames.append({'url':f.url,'text':text[:10000],'links':links})
+                          except Exception:pass
+                      results.append({'source':key,'url':url,'status':r.status,'frames':frames})
+                      page.screenshot(path=str(out/(key+'.png')),full_page=True)
+                  except Exception as e:results.append({'source':key,'error':type(e).__name__})
+              try:
+                  r=c.request.get('https://cafe.naver.com/robots.txt',timeout=20000)
+                  (out/'robots.txt').write_text(r.text()[:20000])
+              except Exception:pass
+              b.close()
+          (out/'inspection.json').write_text(json.dumps({'checkedAt':datetime.now(timezone.utc).isoformat(),'sources':results,'observedPublicResponses':network},ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: schedule-inspection-${{ github.run_id }}
+          path: inspection/
+          retention-days: 3
