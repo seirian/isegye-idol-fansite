@@ -113,15 +113,17 @@ def read_public(now):
    try:
     visit(NOTICE)
     page.wait_for_function(r'''()=>[...document.querySelectorAll('a[href]')].some(a=>/\/isegyeidol\/notice\/\d+\/?$/.test(a.href))''',timeout=15000)
-    previous=-1;stable=0
+    # Virtualized lists can unmount earlier rows as scrolling proceeds.
+    # Accumulate each visible batch instead of reading only the final viewport.
+    previous=-1;stable=0;news={}
     for _ in range(8):
-     count=page.locator('a[href*="/isegyeidol/notice/"]').count();stable=stable+1 if count==previous else 0
+     links=page.locator('a[href*="/isegyeidol/notice/"]').evaluate_all('(xs)=>xs.map(x=>({url:x.href,text:x.innerText}))')
+     for link in links:
+      row=notice_row(link,now)
+      if row:news[row['id']]=row
+     count=len(news);stable=stable+1 if count==previous else 0
      if stable>=2:break
      previous=count;page.evaluate('window.scrollTo(0,document.body.scrollHeight)');page.wait_for_timeout(900)
-    links=page.locator('a[href*="/isegyeidol/notice/"]').evaluate_all('(xs)=>xs.map(x=>({url:x.href,text:x.innerText}))');news={}
-    for link in links:
-     row=notice_row(link,now)
-     if row:news[row['id']]=row
     if not news:raise BerrizError('no_public_notices')
     result['berriz-notice']={'news':list(news.values()),'events':[],'coverage':{'mode':'public_list','count':len(news),'complete':False},'detail':'공개 공식 공지 목록 확인 · 본문·팬 글 수집 안 함'}
    except Exception as e:result['berriz-notice']={'error':str(e) if isinstance(e,BerrizError) else 'public_browser_unavailable'}

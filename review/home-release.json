@@ -27,7 +27,7 @@
     "scripts/notice_policy.py": "e1bcfcf3b346329787960f69ac3263350debd84525fb7474fbb5be9648e2db9b",
     "schedule/approved-notices.json": "ca384f767a55e0dbc72c9972904bfe0f34a8ecb6dda6b69f1b1fab845ceaeb03",
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
-    "scripts/berriz_feed.py": "9d00e8a0c05455c6f9a832a3a51788dd188485754fb15bec60a35ae6d9ceb3a4"
+    "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
