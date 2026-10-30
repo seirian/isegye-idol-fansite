@@ -116,6 +116,21 @@ final class Gateway
             header("Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
             self::respond(503, View::maintenance($access['role'] !== null)); return;
         }
+        if ($path === '/api/schedule') {
+            // No additional member fields or third-party calls. Existing access gate above applies.
+            $candidates = [$this->root . '/.schedule-feed/current.json', $this->release() . '/src/schedule.json'];
+            foreach ($candidates as $file) {
+                if (!is_file($file) || is_link($file) || realpath($file) !== $file || filesize($file) > 2097152) continue;
+                try {
+                    $raw = file_get_contents($file);
+                    $feed = json_decode($raw, true, 32, JSON_THROW_ON_ERROR);
+                    if (($feed['schemaVersion'] ?? null) !== 1 || ($feed['timezone'] ?? '') !== 'Asia/Seoul') continue;
+                    if (!isset($feed['events'], $feed['news'], $feed['forecasts'], $feed['sources'])) continue;
+                    self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                } catch (\Throwable) { continue; }
+            }
+            self::respond(503, '{"error":"schedule_unavailable"}', 'application/json; charset=utf-8'); return;
+        }
         if ($this->hasSession && ($path === '/' || $path === '/index.html')) Session::touch();
         $relative = ltrim($path, '/');
         if ($relative === '') $relative = 'index.html';

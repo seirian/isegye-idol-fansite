@@ -56,6 +56,9 @@ try:
         page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(OUT/'login-mobile.png'),full_page=True)
         check('privacy available',c.request.get(URL+'/auth/privacy').status==200)
         legal_before=c.request.get(URL+'/auth/status').json()
+        if legal_before['maintenance']:
+            check('anonymous schedule API remains protected',c.request.get(URL+'/api/schedule').status==503)
+        check('private schedule store not public',c.request.get(URL+'/.schedule-feed/current.json').status in (403,404,503))
         for kind,count in [('terms',16),('privacy',13)]:
             response=page.goto(URL+'/auth/'+kind,wait_until='networkidle')
             check('public full legal document '+kind,response.status==200 and page.locator('[data-policy="'+kind+'"]').count()==1)

@@ -44,6 +44,7 @@ jobs:
         run: |
           /tmp/release-tools/bin/python scripts/refresh_catalog_videos.py
           /tmp/release-tools/bin/python scripts/check_music_video_sources.py
+          python scripts/schedule_feed.py --previous schedule/snapshot.json
       - name: Build approved simple-home release
         env:
           PYTHON: /tmp/release-tools/bin/python
