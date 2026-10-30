@@ -16,7 +16,8 @@ with sync_playwright() as pw:
     page.route('https://**', lambda route: route.abort())
     page.goto((root/'dist/review.html').as_uri(), wait_until='load')
     page.locator('#main h1').wait_for(timeout=5000)
-    assert page.locator('.nav a').count() == 7
+    assert page.locator('.nav a').count() == 6
+    assert page.locator('.footer-links a[href="#/guide"]').count() == 1
     simple = page.locator('.hm-page').count() == 1
     assert page.locator('.hm-member' if simple else '.stage-lineup .polaroid').count() == 6
     assert page.locator('.hm-members img' if simple else '.stage-lineup img').evaluate_all('(els)=>els.length===6&&els.every(e=>e.complete&&e.naturalWidth>100)')
@@ -46,4 +47,4 @@ with sync_playwright() as pw:
     assert page.locator('.live-mini[data-state=offline]').count() == 0, 'Unavailable services must not imply broadcast ended'
     context.close()
     browser.close()
-print('PASS: standalone file://, 7 menus, six portraits, Korean initials, album tracks, bookmarks, mobile, external services blocked, local artwork retained.')
+print('PASS: standalone file://, 6 primary menus and footer guide, six portraits, Korean initials, album tracks, bookmarks, mobile, external services blocked, local artwork retained.')

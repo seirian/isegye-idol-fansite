@@ -64,7 +64,9 @@ class BrowserSmoke(unittest.TestCase):
     def test_01_home_and_navigation(self):
         simple = self.page.locator('.hm-page').count() == 1
         self.assertIn('오늘의 이세돌' if simple else '오늘도', self.page.locator('#main h1').inner_text())
-        self.assertEqual(self.page.locator('.nav a').count(), 7)
+        self.assertEqual(self.page.locator('.nav a').count(), 6)
+        self.assertEqual(self.page.locator('.nav [data-nav=guide]').count(), 0)
+        self.assertEqual(self.page.locator('.footer-links a[href="#/guide"]').count(), 1)
         self.assertEqual(self.page.locator('.hm-member' if simple else '.member-card').count(), 6)
         self.assertEqual(self.page.locator('.hm-song-grid [data-song]' if simple else '.music-card').count(), 3)
         self.page.screenshot(path=str(OUT / 'home-desktop.png'), full_page=True)
