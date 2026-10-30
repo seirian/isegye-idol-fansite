@@ -1,0 +1,9 @@
+# Integrated policy presentation (2026-10-31)
+
+Terms and privacy are normal application routes (`#/terms`, `#/privacy`) sharing the header, navigation, footer, and the existing `isegye:theme:second` setting, like the fan guide. Ordinary clicks on canonical legal links are handled locally. Modified clicks and JavaScript-free browsing preserve the existing public `/auth/terms` and `/auth/privacy` destinations. No iframe, duplicate account lookup, or extra network request is needed to read the in-site documents.
+
+The build embeds the existing `auth/terms.html` and `auth/privacy.html` verbatim. The complete body, versions, dates, contact address, and section identifiers are unchanged. Contents links use the document route with a validated section identifier so back/forward does not leave the application. Browser-only settings deletion remains available on privacy.
+
+Public disclosure URLs remain available during maintenance and before login. Their presentation now uses the same branding, six navigation destinations, and compact terms/privacy/guide footer rather than the authentication card. They intentionally stay script-free under the existing restrictive CSP. Native radio controls offer automatic/system, light, and dark presentation without saving a cookie or creating a member session. This public-page selection is local to the document; persistent in-site theme remains the existing app preference.
+
+No Gateway, account storage, credentials, shared router, maintenance page, legal body, ingestion rule, schedule data, LIVE renderer, or workflow is changed. Public navigation links do not bypass the existing content gate. Test canonical body hashes and full DOM equivalence, site-shell continuity, light/dark readability, 320–1440px and enlarged text, contents/deep-link history, public no-script theme controls, and unchanged authentication behavior before deployment.
