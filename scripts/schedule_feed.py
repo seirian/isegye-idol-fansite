@@ -19,6 +19,9 @@ ROOT=Path(__file__).resolve().parents[1]
 KST=timezone(timedelta(hours=9))
 AGENT='IsegyeSchedule/1.0 (+https://isegye-idol.kr/auth/terms)'
 LIMIT=2*1024*1024
+# API Hub migration: credentials must never be sent to the legacy endpoint.
+NAVER_SEARCH_URL='https://naverapihub.apigw.ntruss.com/search/v1/cafearticle'
+NAVER_SEARCH_HEADER_NAMES=('X-NCP-APIGW-API-KEY-ID','X-NCP-APIGW-API-KEY')
 MEMBERS={'ine':'아이네','jingburger':'징버거','lilpa':'릴파','jururu':'주르르','gosegu':'고세구','viichan':'비챤'}
 SOURCES=[
  {'id':'cafe-members','label':'이세돌 멤버 공지','kind':'official','url':'https://cafe.naver.com/f-e/cafes/27842958/menus/345?viewType=L','mode':'reviewed_snapshot'},
@@ -58,8 +61,11 @@ def source_url(url):
 
 def request(url,headers=None):
  p=urlsplit(url)
- if p.scheme!='https' or p.hostname not in ('parable-asia.com','openapi.naver.com') or p.username or p.password:raise FeedError('source_not_allowed')
- if p.hostname=='openapi.naver.com' and p.path!='/v1/search/cafearticle.json':raise FeedError('source_not_allowed')
+ if p.scheme!='https' or p.hostname not in ('parable-asia.com','naverapihub.apigw.ntruss.com') or p.username or p.password or p.port not in (None,443) or p.fragment:raise FeedError('source_not_allowed')
+ hub=p.hostname=='naverapihub.apigw.ntruss.com'
+ if hub and p.path!='/search/v1/cafearticle':raise FeedError('source_not_allowed')
+ # Parable is public and never receives API credentials. No redirects are followed.
+ if headers and (not hub or set(k.lower() for k in headers)!={k.lower() for k in NAVER_SEARCH_HEADER_NAMES}):raise FeedError('credential_destination_not_allowed')
  req=Request(url,headers={'User-Agent':AGENT,'Accept':'application/json,application/rss+xml,text/html',**(headers or {})})
  try:
   with build_opener(NoRedirect).open(req,timeout=20) as response:
@@ -67,7 +73,18 @@ def request(url,headers=None):
    if len(raw)>LIMIT:raise FeedError('response_too_large')
    if response.status!=200:raise FeedError('http_'+str(response.status))
    return raw
- except HTTPError as err:raise FeedError('http_'+str(err.code)) from None
+ except HTTPError as err:
+  reason='http_'+str(err.code)
+  if hub:
+   # Gateway errors are nested; Search errors are flat. Keep only safe codes.
+   # Never persist response bodies, error messages, request headers or keys.
+   try:
+    payload=json.loads(err.read(16384))
+    detail=payload.get('error',payload) if isinstance(payload,dict) else None
+    code=str(detail.get('errorCode','')) if isinstance(detail,dict) else ''
+    if re.fullmatch(r'(?:[0-9]{3}|SE[0-9]{2})',code):reason+='_api_'+code
+   except Exception:pass
+  raise FeedError(reason) from None
 
 class HTML(HTMLParser):
  def __init__(self,content):
@@ -247,13 +264,15 @@ def parable(fetch,now):
 def naver_search(fetch,now):
  client=os.getenv('ISEGYE_NAVER_CLIENT_ID','').strip();secret=os.getenv('ISEGYE_NAVER_CLIENT_SECRET','').strip()
  if not client or not secret:raise FeedError('api_key_required')
- headers={'X-Naver-Client-Id':client,'X-Naver-Client-Secret':secret}
+ if not all(33<=ord(c)<=126 for c in client+secret):raise FeedError('invalid_api_key_format')
+ headers=dict(zip(NAVER_SEARCH_HEADER_NAMES,(client,secret)))
  found={}
  for query in ['이세계아이돌 왁물원 공지','이세돌 뱅온정보']+[n+' 왁물원 방송' for n in MEMBERS.values()]:
-  u='https://openapi.naver.com/v1/search/cafearticle.json?'+urlencode({'query':query,'display':20,'sort':'date'})
+  u=NAVER_SEARCH_URL+'?'+urlencode({'query':query,'display':20,'start':1,'sort':'date','format':'json'})
   data=json.loads(fetch(u,headers=headers))
-  if not isinstance(data.get('items'),list):raise FeedError('search_schema_changed')
+  if not isinstance(data,dict) or not isinstance(data.get('items'),list) or len(data['items'])>100:raise FeedError('search_schema_changed')
   for x in data['items']:
+   if not isinstance(x,dict):raise FeedError('search_schema_changed')
    url=source_url(x.get('link',''))
    if not url or urlsplit(url).hostname!='cafe.naver.com':continue
    # Search API has no trustworthy author/menu or item publication timestamps.
