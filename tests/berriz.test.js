@@ -1,0 +1,11 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {scheduleSafeUrl,scheduleBerrizApproved,schedulePriority,scheduleCalendarItems,scheduleMergeEvents,scheduleNoticeEvent,scheduleFiltered} from '../schedule/core.js';
+const notice={id:'berriz-notice-2673',sourceId:'berriz-notice',sourceUrl:'https://berriz.in/ko/isegyeidol/notice/2673/',title:'아이네 공식 안내',date:'2026-10-27',type:'notice',members:['ine'],time:null};
+const event={id:'berriz-calendar-one',calendarId:'one',sourceId:'berriz-calendar',sourceUrl:'https://berriz.in/ko/isegyeidol/calendar/',title:'공식 일정',date:'2026-10-27',time:'18:00',type:'event',dateBasis:'official_calendar',members:['ine']};
+test('official Berriz menus only',()=>{assert.ok(scheduleSafeUrl(notice.sourceUrl));for(const u of ['https://berriz.in/ko/other/notice/1/','https://berriz.in/ko/isegyeidol/board/1/','https://berriz.in/ko/isegyeidol/notice/1/?foo=1'])assert.equal(scheduleSafeUrl(u),null);});
+test('verified source identity required',()=>{assert.equal(scheduleBerrizApproved(notice),true);assert.equal(scheduleBerrizApproved({...notice,id:'wrong'}),false);assert.equal(scheduleBerrizApproved({...event,calendarId:'two'}),false);});
+test('agency notices precede calendar and member posts',()=>{const other={...notice,id:'member',sourceId:'cafe-members',sourceUrl:'https://cafe.naver.com/steamindiegame/1',time:'01:00'};assert.deepEqual(scheduleCalendarItems([other,event,notice]).map(x=>x.sourceId),['berriz-notice','berriz-calendar','cafe-members']);});
+test('source badge priority survives publication wrapper',()=>assert.equal(schedulePriority(scheduleNoticeEvent({...notice,publishedAt:'2026-10-27T00:00:00+09:00'})),0));
+test('two calendar IDs on same day are not collapsed',()=>{const other={...event,id:'berriz-calendar-two',calendarId:'two'};assert.equal(scheduleCalendarItems(scheduleMergeEvents([event,other],[])).length,2);});
+test('same calendar ID is deduplicated',()=>assert.equal(scheduleCalendarItems([event,{...event}]).length,1));
+test('official filter includes Berriz without general users',()=>assert.equal(scheduleFiltered([event,notice,{...event,sourceId:'fan-roundup'}],{source:'berriz'}).length,2));
