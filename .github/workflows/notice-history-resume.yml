@@ -1,0 +1,51 @@
+name: Approved notices - finish remaining public history pages
+on:
+  push:
+    branches: ['feature/approved-notice-history']
+    paths: ['.github/workflows/notice-history-resume.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Resume only unfinished public listing pages; no login or private content
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m venv /tmp/notices
+          /tmp/notices/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/notices/bin/python
+          gh api repos/seirian/isegye-idol-fansite/actions/artifacts/12956883153/zip > /tmp/history-checkpoint.zip
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,re,textwrap
+          raw=Path('/tmp/history-checkpoint.zip').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()=='05ed882cc54b47b3223329a75e84826f23ab190ce456941df16d307c23e60115'
+          out=Path('notice-history');out.mkdir(exist_ok=True)
+          with zipfile.ZipFile('/tmp/history-checkpoint.zip') as z:
+              assert set(z.namelist())=={'notices.json','coverage.json'}
+              for name in z.namelist(): (out/name).write_bytes(z.read(name))
+          workflow=Path('.github/workflows/notice-history-backfill.yml').read_text()
+          code=textwrap.dedent(re.search(r'(?ms)^          import json,time,re,hashlib,math\n.*?(?=^          PY$)',workflow).group())
+          def change(old,new):
+              global code
+              assert code.count(old)==1,old
+              code=code.replace(old,new)
+          change('accepted={}', "checkpoint=json.loads((out/'notices.json').read_text())\nreport=json.loads((out/'coverage.json').read_text())\nreport['resumedAt']=datetime.now(timezone.utc).isoformat()\nreport['resumeFromPage']=447\naccepted={r['articleId']:r for r in checkpoint['notices']}\ndeadline=time.monotonic()+600")
+          change("        board={'menu':menu,'pagesRead':0,'rowsSeen':0,'finished':False};report['boards'].append(board)", "        board=next((x for x in report['boards'] if x['menu']==menu),None)\n        if board and board['finished']:continue\n        if board is None:\n            board={'menu':menu,'pagesRead':0,'rowsSeen':0,'finished':False};report['boards'].append(board)\n        start_page=board['pagesRead']+1")
+          change('        for number in range(1,501):', "        for number in range(start_page,501):\n            if time.monotonic()>deadline:\n                board['stopReason']='bounded_review_time_limit';save();break")
+          Path('/tmp/resume-public-notices.py').write_text(code)
+          PY
+          /tmp/notices/bin/python /tmp/resume-public-notices.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: approved-notice-history-final-${{ github.run_id }}
+          path: notice-history/
+          retention-days: 7
