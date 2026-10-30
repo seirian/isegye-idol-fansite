@@ -10,6 +10,9 @@ def check(name,ok):
  if not ok:raise AssertionError(name)
 def settle(p):p.wait_for_timeout(120)
 def bg(p):return p.locator('.legal-document').evaluate('(x)=>getComputedStyle(x).backgroundColor')
+def public_html_handler(body):
+ def handle(route):route.fulfill(body=body,content_type='text/html; charset=utf-8')
+ return handle
 def intact(p,k):
  return p.locator('.legal-document').evaluate('(el,source)=>{const x=document.createElement("article");x.innerHTML=source;return el.innerHTML===x.innerHTML}',(R/'auth'/f'{k}.html').read_text())
 try:
@@ -64,7 +67,7 @@ try:
   pub=b.new_context(viewport={'width':1440,'height':1000},locale='ko-KR',color_scheme='dark')
   for kind in ('terms','privacy'):
    html=subprocess.check_output(['php','-r',"require 'auth/View.php';echo Isegye\\Access\\View::"+kind+'();'],cwd=R).decode()
-   pub.route('**/auth/'+kind,lambda route,body=html:route.fulfill(body=body,content_type='text/html; charset=utf-8'))
+   pub.route('**/auth/'+kind,public_html_handler(html))
   pub.route('**/auth/legal.css',lambda r:r.fulfill(body=(R/'auth/legal.css').read_text(),content_type='text/css'))
   p=pub.new_page();p.on('pageerror',lambda e:errors.append(str(e)))
   for kind in ('terms','privacy'):
