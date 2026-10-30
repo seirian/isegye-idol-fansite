@@ -11,3 +11,15 @@ test('dedup same observation',()=>{const r=seed().events[0];assert.equal(schedul
 test('no stale claim',()=>assert.equal(scheduleStale({checkedAt:'2026-01-01T00:00:00Z'},Date.parse('2026-10-30')),true));
 test('fan confirmed rejected',()=>{const s=seed();s.forecasts[0].certainty='confirmed';assert.throws(()=>scheduleValidate(s));});
 test('invalid time rejected',()=>{const s=seed();s.events[0].time='25:99';assert.throws(()=>scheduleValidate(s));});
+import {scheduleApprovedRows,scheduleNoticeEvent,schedulePostedDate} from '../schedule/core.js';
+test('search and unknown cafe authors never visible',()=>{
+ const url='https://cafe.naver.com/steamindiegame/123';const allowed=new Map([[url,'cafe-members']]);
+ const rows=[{sourceId:'naver-search',sourceUrl:url},{sourceId:'cafe-members',sourceUrl:url},{sourceId:'cafe-members',sourceUrl:'https://cafe.naver.com/steamindiegame/22133027'},{sourceId:'fan-roundup',sourceUrl:'https://cafe.naver.com/steamindiegame/22133865'}];
+ assert.deepEqual(scheduleApprovedRows(rows,allowed),[rows[1]]);
+});
+test('designated fan post only',()=>assert.equal(scheduleApprovedRows([{sourceId:'fan-roundup',sourceUrl:'https://cafe.naver.com/steamindiegame/22137397'}],new Map()).length,1));
+test('publication archive is not a broadcast appointment',()=>{
+ const r=scheduleNoticeEvent({id:'1',publishedAt:'2021-08-25T16:00:00Z'});
+ assert.equal(r.date,'2021-08-26');assert.equal(r.type,'notice');assert.equal(r.dateBasis,'publication');assert.equal(r.time,null);
+});
+test('publication KST boundary',()=>assert.equal(schedulePostedDate('2026-10-29T16:00:00Z'),'2026-10-30'));

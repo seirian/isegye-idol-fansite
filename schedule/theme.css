@@ -15,3 +15,11 @@
 /* Override the inherited square calendar cells on narrow viewports. */
 .sc-page,.sc-layout>*{min-width:0}.sc-grid>.sc-day{aspect-ratio:auto;width:100%;max-width:100%}.sc-sync>div{min-width:0}.sc-news .section-head{flex-wrap:wrap;gap:12px}.sc-news .section-head h2{min-width:0;flex-wrap:wrap}.sc-news .section-head small{white-space:normal}.sc-filters label{max-width:100%}
 .sc-grid>.sc-day.selected{background:#a9244a;color:#fff;border-color:#a9244a}.sc-day.selected .sc-day-count,.sc-day.selected .sc-chip,.sc-day.selected .sc-extra{color:inherit}.sc-day.selected .sc-chip{background:#ffffff1f;border-color:#fff}
+/* Notice history is a publication record, visually distinct from event dates. */
+.sc-coverage{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:1rem;margin:0 0 18px;color:var(--muted)}
+.sc-coverage b{color:var(--ink)}
+.sc-filters input[type=month]{min-width:0;max-width:100%;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+.sc-chip.notice{border-inline-start:3px solid var(--muted)}
+.sc-notice-record{border-inline-start:3px solid var(--line);padding-inline-start:14px}
+.sc-notice-record small{display:block}
+@media(max-width:640px){.sc-filters label{min-width:0}.sc-filters input[type=month]{width:100%}.sc-coverage{font-size:.875rem}.sc-coverage span{line-height:1.6}}
