@@ -36,3 +36,16 @@ export function scheduleMergeEvents(staticRows,dynamicRows) {
  return [...out.values()].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'99:99').localeCompare(b.time||'99:99')||a.title.localeCompare(b.title));
 }
 export function scheduleCurrentForecasts(rows,date) {return rows.filter(x=>x.date===date);}
+
+// Search matches cannot prove the writer. Deny them even in a stale server snapshot.
+export function scheduleApprovedRows(rows, approvedSources) {
+ return rows.filter(r=>r.sourceId==='parable-web'&&scheduleSafeUrl(r.sourceUrl)?.startsWith('https://parable-asia.com/')||
+  r.sourceId==='fan-roundup'&&r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'||
+  ['cafe-members','cafe-agency'].includes(r.sourceId)&&approvedSources.get(r.sourceUrl)===r.sourceId);
+}
+export function schedulePostedDate(publishedAt) {
+ const date=new Date(publishedAt);return Number.isFinite(+date)?date.toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}):null;
+}
+export function scheduleNoticeEvent(row) {
+ return {...row,id:'notice-'+row.id,date:schedulePostedDate(row.publishedAt),time:null,type:'notice',certainty:'confirmed',status:'published',dateBasis:'publication',detail:'공지 게시일 기준 기록 · 실제 방송·행사일과 다를 수 있습니다.'};
+}

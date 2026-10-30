@@ -98,23 +98,23 @@ class Hub(unittest.TestCase):
         self.assertEqual(len(rows),1);self.assertEqual(rows[0]['sourceId'],'naver-search')
         self.assertIsNone(rows[0]['publishedAt']);self.assertNotIn('date',rows[0]);self.assertNotIn('description',rows[0])
         self.assertNotIn('<b>',rows[0]['title'])
-    def test_search_failure_preserves_last_good_news_and_success_time(self):
+    def test_old_search_hits_are_removed_even_when_upstream_fails(self):
         old=json.loads((ROOT/'schedule/seed.json').read_text())
         item=f.public_item('naver-search','https://cafe.naver.com/steamindiegame/991','아이네 소식',None,NOW)
         old['news'].append(item)
         next(x for x in old['sources'] if x['id']=='naver-search')['lastSuccessAt']=NOW
         with patch.dict(os.environ,ENV):
             result=f.collect(old,fetch=lambda *a,**kw:(_ for _ in ()).throw(f.FeedError('http_429')),now='2026-10-30T05:23:19Z')
-        row=next(x for x in result['news'] if x['id']==item['id'])
-        self.assertEqual(row['checkedAt'],NOW)
+        self.assertFalse(any(x['id']==item['id'] for x in result['news']))
         status=next(x for x in result['sources'] if x['id']=='naver-search')
-        self.assertEqual(status['state'],'error');self.assertEqual(status['lastSuccessAt'],NOW)
+        self.assertEqual(status['state'],'restricted')
+        self.assertIsNone(status['lastSuccessAt'])
     def test_publication_reports_only_aggregate_source_counts(self):
         from test_schedule_feed import FeedRemote,seed
         value=seed();value['news'].append(f.public_item('naver-search','https://cafe.naver.com/steamindiegame/991','아이네 소식',None,NOW))
         result=pub.publish(FeedRemote(),lambda **kw:value)
         self.assertEqual(result['naverSearchProvider'],'NAVER API HUB')
-        self.assertEqual(result['newsCountsBySource']['naver-search'],1)
+        self.assertEqual(result['newsCountsBySource']['naver-search'],0)
         self.assertEqual(sum(result['newsCountsBySource'].values()),result['counts']['news'])
         self.assertFalse(result['accountStoreReadOrWritten']);self.assertTrue(result['protectedFilesUnchanged'])
         self.assertNotIn('아이네 소식',json.dumps(result,ensure_ascii=False))

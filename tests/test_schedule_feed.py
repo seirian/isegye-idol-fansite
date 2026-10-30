@@ -44,7 +44,7 @@ class Rules(unittest.TestCase):
   def fetch(url,**kwargs):calls.append(url);raise f.FeedError('blocked')
   with patch.dict(os.environ,{'ISEGYE_NAVER_CLIENT_ID':'','ISEGYE_NAVER_CLIENT_SECRET':''}):v=f.collect(fetch=fetch,now=NOW)
   self.assertTrue(all('cafe.naver.com' not in x and 'apis.naver.com' not in x for x in calls))
-  self.assertEqual(next(x for x in v['sources'] if x['id']=='naver-search')['state'],'needs_setup')
+  self.assertEqual(next(x for x in v['sources'] if x['id']=='naver-search')['state'],'restricted')
  def test_network_policy_rejects_cafe_internal(self):
   for url in ('https://cafe.naver.com/steamindiegame/1','https://apis.naver.com/cafe-web/x','http://parable-asia.com/'):
    with self.assertRaises(f.FeedError):f.request(url)
