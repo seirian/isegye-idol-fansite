@@ -30,6 +30,10 @@ def compose(app,css,out,meta):
     js=core+'\nconst SCHEDULE_SEED='+serial(snapshot)+';\nconst NOTICE_ARCHIVE='+serial(history)+';\n'+(ROOT/'schedule/ui.js').read_text()
     if app.count('shell();render();')!=1:raise ValueError('Schedule insertion anchor changed')
     app=app.replace('shell();render();',js+'\nshell();render();')
+    before="window.addEventListener('hashchange',()=>{closeMenu();if(location.hash==='#main'){document.getElementById('main').focus();return;}render({focus:true});});"
+    after="window.addEventListener('hashchange',event=>{closeMenu();if(location.hash==='#main'){document.getElementById('main').focus();return;}if(scheduleRouteChanged(event))return;render({focus:true});});"
+    if app.count(before)!=1:raise ValueError('Schedule route anchor changed')
+    app=app.replace(before,after,1)
     css+='\n'+(ROOT/'schedule/theme.css').read_text()
     (out/'src/schedule.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2)+'\n')
     meta['scheduleFeed']={'schemaVersion':1,'calendarFirst':True,'officialAnnouncementBlock':False,
@@ -37,5 +41,8 @@ def compose(app,css,out,meta):
         'generatedAt':snapshot['generatedAt'],'cafeCrawling':False,'unverifiedSearchPublished':False,
         'publicationPolicy':'approved-authors-only-v1','noticeHistory':{'count':len(history['rows']),
         'titleDatedEvents':len(history['events']),'start':history['start'],'end':history['end'],
-        'completePublicListings':history['completePublicListings'],'bodiesReviewed':False}}
+        'completePublicListings':history['completePublicListings'],'bodiesReviewed':False},
+        'calendarUX':{'dateSelectionPreservesViewport':True,'sameSourceSameDayMerged':True,
+        'breaksIncludedInNotices':True,'recentNewsPanel':False,'selectedDayBelow':True,
+        'visibleItemsPerDay':4,'memberColors':True}}
     return app,css
