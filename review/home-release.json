@@ -20,7 +20,7 @@
     "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
     "scripts/compose_schedule.py": "f2849f097bd0c2b4dbc672cd987ec72ab53af5a56a4121581eb78bf00dcf4c31",
     "schedule/core.js": "52295342cdc059211b7f015eb7f198ab7b22e7e9779373ff359c66434e871057",
-    "schedule/ui.js": "d785f42be3eb9d820a0fc8960e9ad2b335c3033bf071f6de500c5492366f529f",
+    "schedule/ui.js": "c11802b3faa0fe3481c5279b01578ae40b1bc5aec86b9c4addf608a65b235d35",
     "schedule/theme.css": "6799137a181acc8b8c3c1e68ee2c0709bbddf2a8e29c1f1594267231038576d6",
     "schedule/accessibility.css": "0c53009dfa46b30941a961debc8ef2ecc3e004f3f724084be3f4ea66dc41a8ef",
     "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc",

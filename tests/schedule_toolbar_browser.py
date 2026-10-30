@@ -36,7 +36,7 @@ try:
   check('no old importance wording','소속사 중요 공지' not in page.locator('#main').inner_text())
   check('agency legend shortened',page.locator('.sc-legend .sc-important').inner_text()=='★ 소속사 공지')
   for theme in ['light','dark']:
-   page.evaluate('(v)=>document.documentElement.dataset.theme=v',theme)
+   page.evaluate('(v)=>{document.documentElement.dataset.theme=v;window.scrollTo(0,0)}',theme)
    page.screenshot(path=str(OUT/('toolbar-'+theme+'-desktop.png')),full_page=False)
    page.locator('.sc-filters').screenshot(path=str(OUT/('controls-'+theme+'.png')))
    page.locator('.footer-links').screenshot(path=str(OUT/('footer-'+theme+'.png')))
@@ -58,7 +58,7 @@ try:
   page.locator('[data-schedule-refresh]').click();settled(page)
   check('error stays in source details','갱신 확인 실패' in page.locator('.sc-sources').inner_text())
   page.locator('.sc-sources summary').click()
-  check('no failure banner outside details','갱신 확인 실패' not in page.locator('#main').inner_text())
+  check('no failure banner outside details',not page.locator('.sc-refresh-status').is_visible() and page.locator('.sc-sync').count()==0)
   for width in [320,390,768,1024,1440]:
    page.set_viewport_size({'width':width,'height':1000});settled(page)
    check('page reflows '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
