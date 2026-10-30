@@ -34,7 +34,11 @@ try:
   check('old verified release preserved','NO CAT, NO LIFE!' in page.locator('.calendar-layout').inner_text())
   page.goto(URL+'#/schedule?month=2026-10&date=2026-10-30',wait_until='networkidle')
   for width in (320,390,768,1440):
-   page.set_viewport_size({'width':width,'height':900});check('no overflow '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+   page.set_viewport_size({'width':width,'height':900})
+   if page.evaluate('document.documentElement.scrollWidth>innerWidth'):
+    page.screenshot(path=str(OUT/('overflow-'+str(width)+'.png')),full_page=True)
+    (OUT/('overflow-'+str(width)+'.json')).write_text(json.dumps(page.locator('body *').evaluate_all('(xs)=>xs.map(x=>({tag:x.tagName,cls:x.className,left:x.getBoundingClientRect().left,right:x.getBoundingClientRect().right})).filter(x=>x.right>innerWidth+1||x.left< -1)'),ensure_ascii=False))
+   check('no overflow '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
   page.evaluate('document.documentElement.dataset.theme="dark"');page.screenshot(path=str(OUT/'calendar-dark.png'),full_page=True)
   page.set_viewport_size({'width':390,'height':844});page.evaluate('document.documentElement.dataset.theme="light"');page.screenshot(path=str(OUT/'calendar-mobile.png'),full_page=True)
   page.locator('.sc-page').evaluate("x=>x.style.fontSize='32px'");check('200 percent no overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))

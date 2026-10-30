@@ -21,7 +21,7 @@
     "scripts/compose_schedule.py": "ea4279729ae301f82e04df82f403b8926648d1287ed3311f4c1b6800b8c31672",
     "schedule/core.js": "8aa5b80888b35cb9ac5ee297bea94091c406b4d33efd5b6feda10ec3f9079a57",
     "schedule/ui.js": "384bde2f453ea1aaf085eefc4b838ebd5963c8bdff8792726313791df203effe",
-    "schedule/theme.css": "108027e5134508e06c75863f209a11287360c5d7748c8c919e64ef6b63856d71",
+    "schedule/theme.css": "5b0693d670e2c7d120b22625956eaf387d08d247fabc9003dcd3c087cea10dca",
     "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc"
   },
   "rightsPermissionVerified": false,
