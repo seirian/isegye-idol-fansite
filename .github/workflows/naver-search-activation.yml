@@ -1,0 +1,34 @@
+name: Start fresh schedule refresh after API key registration
+on:
+  push:
+    branches: ['chore/naver-search-activation']
+    paths: ['.github/workflows/naver-search-activation.yml']
+permissions:
+  actions: write
+jobs:
+  start:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/chore/naver-search-activation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Start existing data-only main workflow with current secret bindings
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request, urllib.error
+          endpoint = 'https://api.github.com/repos/seirian/isegye-idol-fansite/actions/workflows/schedule-refresh.yml/dispatches'
+          request = urllib.request.Request(endpoint, method='POST', data=json.dumps({'ref':'main'}).encode(), headers={
+              'Authorization':'Bearer '+os.environ.pop('GH_TOKEN'),
+              'Accept':'application/vnd.github+json',
+              'Content-Type':'application/json',
+              'X-GitHub-Api-Version':'2022-11-28',
+          })
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  assert response.status == 204, 'Unexpected dispatch status'
+              print(json.dumps({'dispatched':True,'workflow':'schedule-refresh.yml','ref':'main','siteSourceChanged':False,'userSecretsRead':False}))
+          except urllib.error.HTTPError as error:
+              print(json.dumps({'dispatched':False,'httpStatus':error.code}))
+              raise SystemExit(1)
+          PY
