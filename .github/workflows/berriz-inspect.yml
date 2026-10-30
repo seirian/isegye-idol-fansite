@@ -1,0 +1,64 @@
+name: Berriz public-source inspection
+on:
+  push:
+    branches: [feature/berriz-official]
+    paths: [.github/workflows/berriz-inspect.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Prepare isolated public browser
+        run: |
+          python -m venv /tmp/berriz-inspect
+          /tmp/berriz-inspect/bin/pip install playwright==1.56.0
+          /tmp/berriz-inspect/bin/playwright install --with-deps chromium
+      - name: Read only the two requested public pages
+        run: |
+          mkdir -p inspection
+          git archive --format=zip HEAD > inspection/source.zip
+          /tmp/berriz-inspect/bin/python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          import json, urllib.request
+          out=Path('inspection')
+          def robots(host):
+              try:
+                  with urllib.request.urlopen('https://'+host+'/robots.txt',timeout=20) as r:
+                      return {'status':r.status,'text':r.read(100000).decode('utf-8','replace')}
+              except Exception as e:return {'error':type(e).__name__}
+          result={'robots':{'berriz.in':robots('berriz.in')},'pages':[],'requests':[]}
+          with sync_playwright() as p:
+              b=p.chromium.launch()
+              c=b.new_context(locale='ko-KR',viewport={'width':1440,'height':1000})
+              page=c.new_page()
+              def response(r):
+                  u=urlsplit(r.url)
+                  if (u.hostname or '').endswith('berriz.in') and r.request.resource_type in ('xhr','fetch'):
+                      result['requests'].append({'url':r.url,'status':r.status,'method':r.request.method,'type':r.headers.get('content-type','')})
+              page.on('response',response)
+              for kind in ['notice','calendar']:
+                  url='https://berriz.in/ko/isegyeidol/'+kind+'/'
+                  r=page.goto(url,wait_until='domcontentloaded',timeout=45000)
+                  page.wait_for_timeout(10000)
+                  text=page.locator('body').inner_text()
+                  result['pages'].append({'kind':kind,'url':page.url,'status':r.status,'text':text,'links':page.locator('a[href]').evaluate_all('(xs)=>xs.map(x=>({text:x.innerText,url:x.href})).filter(x=>x.url.includes("berriz.in"))'),'scripts':page.locator('script[src]').evaluate_all('(xs)=>xs.map(x=>x.src)')})
+                  page.screenshot(path=str(out/(kind+'.png')),full_page=True)
+              for host in sorted({urlsplit(x['url']).hostname for x in result['requests']}):
+                  if host!='berriz.in':result['robots'][host]=robots(host)
+              b.close()
+          (out/'inspection.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
+          print(json.dumps({'pageCount':len(result['pages']),'requestCount':len(result['requests']),'credentialUse':False}))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: berriz-public-inspection
+          path: inspection/
+          retention-days: 3
