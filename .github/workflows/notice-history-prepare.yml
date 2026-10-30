@@ -10,7 +10,7 @@ jobs:
   prepare:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/approved-notice-history'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -19,51 +19,39 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import hashlib,base64,zlib,subprocess,json
-          expected={'0':'27a9978d0e76f3189869644d093aa4d212cf10534182cf79239541a23d5b7b1e','1a':'01e70001806062dabe658e1934e4bb44eaa28404283bcf7de0ccf83b760574cc','1b':'f61f32ef90f07abf234f1c428a1e450779f533c26744bad1fbe5f13671507a01','2a':'6ba4c20d1d43ba5b24b2dff90544db97f40c7dcc1f4b5a2eea081de5d9549822','2b':'ecae4be8f501fce65712a729060b3b21c3dc610c03858dbb092e9f88a19fec30','3a':'97bb0429123ca78865a3092a7e8274b5facaa6c010f09150a065f96268bcb035','3b':'d838f5c05df6060b92b6f880aa0f9b65853e3b8b5d5b569b75097a345984756d'}
-          parts=[]
-          for tag,digest in expected.items():
-              text=Path('.work/notice-change.'+tag).read_text().strip()
-              actual=hashlib.sha256(text.encode()).hexdigest()
-              print(json.dumps({'segment':tag,'hashMatches':actual==digest}))
-              assert actual==digest,'Patch transport mismatch: '+tag
-              parts.append(text)
+          import hashlib,base64,zlib,subprocess
+          parts=[Path('.work/notice-change.'+tag).read_text().strip() for tag in ('0','1a','1b','2a','2b','3a','3b')]
           raw=zlib.decompress(base64.b64decode(''.join(parts),validate=True))
-          assert hashlib.sha256(raw).hexdigest()=='ff58e5f0b0007785e0015a04af12eb9d965e6a5d679ae7a214d49781f2d5f086'
+          assert hashlib.sha256(raw).hexdigest()=='ff58e5f0b0007785e0015a04af12eb9d965e6a5d679ae7a214d49781f2d5f086','Patch bytes differ'
           Path('/tmp/notice.diff').write_bytes(raw)
           subprocess.run(['git','apply','--check','/tmp/notice.diff'],check=True)
           subprocess.run(['git','apply','/tmp/notice.diff'],check=True)
           PY
-      - name: Import only the reviewed listing artifact from this repository
+      - name: Import the completed, checksum-verified listing archive
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          gh api repos/seirian/isegye-idol-fansite/actions/artifacts/12956254268/zip > /tmp/approved-history.zip
+          python scripts/import_notice_history.py /tmp/approved-history.zip f0e0022c39fe3361952231688623858a3535ccd4deea2372e1260891dbcc4ae9
           python - <<'PY'
-          import json,subprocess,time,hashlib
+          import json
           from pathlib import Path
-          target=None
-          for attempt in range(16):
-              result=json.loads(subprocess.check_output(['gh','api','repos/seirian/isegye-idol-fansite/actions/runs/41007284895/artifacts']))
-              candidates=[a for a in result['artifacts'] if a['name']=='approved-notice-history-41007284895' and not a['expired']]
-              if candidates:target=candidates[0];break
-              time.sleep(15)
-          assert target is not None,'Public history artifact is not ready; no source commit'
-          expected=target['digest'].removeprefix('sha256:')
-          with open('/tmp/approved-history.zip','wb') as output:
-              subprocess.run(['gh','api','repos/seirian/isegye-idol-fansite/actions/artifacts/'+str(target['id'])+'/zip'],stdout=output,check=True)
-          subprocess.run(['python','scripts/import_notice_history.py','/tmp/approved-history.zip',expected],check=True)
-          Path('notice-import-report.json').write_text(json.dumps({'sourceRun':41007284895,'artifactId':target['id'],'artifactSha256':expected,'dataOnly':True}))
+          data=json.loads(Path('schedule/approved-notices.json').read_text())
+          coverage=json.loads(Path('schedule/notice-history-coverage.json').read_text())
+          assert coverage['complete'] is True and len(data['notices'])==7249
+          assert [(x['menu'],x['pagesRead']) for x in coverage['boards']]==[(345,480),(1250,5)]
+          Path('notice-import-report.json').write_text(json.dumps({'sourceRun':41009729297,'artifactId':12956254268,'artifactSha256':'f0e0022c39fe3361952231688623858a3535ccd4deea2372e1260891dbcc4ae9','acceptedCount':7249,'completePublicListings':True,'articleBodiesReviewed':False}))
           PY
-      - name: Run local regressions and remove one-time helper workflows
+      - name: Run regressions and remove one-time helper workflows
         run: |
           npm test > /tmp/notice-node-tests.txt 2>&1
           python -m unittest discover -s tests -p 'test_*.py' -v > /tmp/notice-python-tests.txt 2>&1
           rm -f .work/notice-change.*
-          rm -f .github/workflows/notice-history-inspect.yml .github/workflows/notice-history-backfill.yml .github/workflows/notice-history-prepare.yml
-          git add scripts/notice_policy.py scripts/compose_schedule.py scripts/schedule_feed.py scripts/publish_schedule_feed.py scripts/import_notice_history.py schedule/core.js schedule/ui.js schedule/theme.css schedule/approved-notices.json schedule/notice-history-coverage.json review/home-release.json tests/test_schedule_feed.py tests/test_schedule_api_hub.py tests/test_notice_policy.py tests/schedule.test.js tests/schedule_browser.py docs/SCHEDULE-INGESTION.md .work .github/workflows/notice-history-inspect.yml .github/workflows/notice-history-backfill.yml .github/workflows/notice-history-prepare.yml
+          rm -f .github/workflows/notice-history-inspect.yml .github/workflows/notice-history-backfill.yml .github/workflows/notice-history-resume.yml .github/workflows/notice-history-prepare.yml
+          git add scripts/notice_policy.py scripts/compose_schedule.py scripts/schedule_feed.py scripts/publish_schedule_feed.py scripts/import_notice_history.py schedule/core.js schedule/ui.js schedule/theme.css schedule/approved-notices.json schedule/notice-history-coverage.json review/home-release.json tests/test_schedule_feed.py tests/test_schedule_api_hub.py tests/test_notice_policy.py tests/schedule.test.js tests/schedule_browser.py docs/SCHEDULE-INGESTION.md .work .github/workflows/notice-history-inspect.yml .github/workflows/notice-history-backfill.yml .github/workflows/notice-history-resume.yml .github/workflows/notice-history-prepare.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'fix(schedule): publish approved authors only and archive public notice history'
+          git commit -m 'fix(schedule): publish approved authors only and archive 7249 public notices'
           git push origin HEAD:feature/approved-notice-history
           git archive --format=zip --output=notice-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
