@@ -14,3 +14,4 @@
 
 /* Override the inherited square calendar cells on narrow viewports. */
 .sc-page,.sc-layout>*{min-width:0}.sc-grid>.sc-day{aspect-ratio:auto;width:100%;max-width:100%}.sc-sync>div{min-width:0}.sc-news .section-head{flex-wrap:wrap;gap:12px}.sc-news .section-head h2{min-width:0;flex-wrap:wrap}.sc-news .section-head small{white-space:normal}.sc-filters label{max-width:100%}
+.sc-grid>.sc-day.selected{background:#a9244a;color:#fff;border-color:#a9244a}.sc-day.selected .sc-day-count,.sc-day.selected .sc-chip,.sc-day.selected .sc-extra{color:inherit}.sc-day.selected .sc-chip{background:#ffffff1f;border-color:#fff}
