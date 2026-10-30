@@ -117,7 +117,10 @@ class BrowserSmoke(unittest.TestCase):
         self.page.get_by_role('button', name='다음 달', exact=True).click()
         self.page.wait_for_timeout(100)
         self.assertIn('2026년 10월', self.page.locator('.calendar-header').inner_text())
-        self.assertIn('등록된 일정이 없어요', self.page.locator('.calendar-layout').inner_text())
+        # A fixed day before the first public notice must remain empty, regardless of today's date.
+        self.go('#/schedule?month=2021-08&date=2021-08-01')
+        self.assertIn('등록된 일정·공지가 없어요', self.page.locator('.calendar-layout').inner_text())
+        self.assertEqual(self.page.locator('.sc-day-list [data-schedule-record-type]').count(), 0)
 
     def test_06_mobile_and_theme(self):
         self.page.set_viewport_size({'width': 390, 'height': 844})
