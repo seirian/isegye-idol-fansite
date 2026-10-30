@@ -12,7 +12,7 @@
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
     "home-review/ui.js": "65b604633b441d95696c7b6891e8bc5783cd0235b30340b01c4e54074b16f6f3",
     "home-review/theme.css": "f796204c3749ecc04dcd0cace5f6625ec33d78e6c2080c56193cc446e3ea879f",
-    "scripts/build_home_review.py": "e220c4416fba49dd264d5d7f2084d799db99c49b5ea8d93cd8938d37c008b976",
+    "scripts/build_home_review.py": "bb152c8af4fd07a9c900ca63e4ce364ebf9d2c1c54d9c073225d8adbf2f14bc9",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
@@ -29,7 +29,11 @@
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
     "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
     "scripts/compose_footer_navigation.py": "9e187e12a7d2e47a0cd74cd26c05c93d6fbea46577cfd53196407db2aec6a7f6",
-    "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5"
+    "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5",
+    "scripts/compose_legal_documents.py": "e1772f76b0837cccc7e7d72832de375908c09ead078dd681831aa7b91167772c",
+    "legal/ui.js": "765f1b4e8a6e0a6083865b8b91fdedd565c450706c6806941acc267e700617b1",
+    "auth/legal.css": "5929b3033096f5384fc1fd80b109b3ed3bb15f2532769e2ec0d334f6dd3837f9",
+    "auth/View.php": "fc7675c62bb3d550b754f3a954d202a1958c06b70f93a8296edda7b358ed0eac"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -57,6 +61,10 @@
     {
       "requestedAt": "2026-10-30",
       "scope": "Remove calendar source status banner; uniform responsive filter toolbar; shorten agency badge; relocate fan guide from primary navigation to compact legal footer. Data, priority, viewport, auth and hosting preserved."
+    },
+    {
+      "requestedAt": "2026-10-31",
+      "scope": "Show unchanged terms and privacy inside the shared fan-guide-style app shell with existing dark theme; preserve public read-only policy routes, and restyle their script-free renderer with light/dark controls. No legal text, maintenance, accounts or ingestion changes."
     }
   ]
 }

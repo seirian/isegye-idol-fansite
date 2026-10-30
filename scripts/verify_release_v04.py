@@ -22,6 +22,7 @@ def main():
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
     suites.append(('berriz','tests/berriz_browser.py',{'BERRIZ_URL':url,'BERRIZ_OUT':str(out/'berriz')}))
     suites.append(('toolbar','tests/schedule_toolbar_browser.py',{'TOOLBAR_URL':url,'TOOLBAR_OUT':str(out/'toolbar')}))
+    suites.append(('legal-shell','tests/legal_shell_browser.py',{'LEGAL_SHELL_URL':url,'LEGAL_SHELL_OUT':str(out/'legal-shell')}))
     try:
         if 'RELEASE_URL' not in os.environ:
             server=subprocess.Popen([sys.executable,'-m','http.server','4199','--bind','127.0.0.1','--directory','dist'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
