@@ -56,7 +56,7 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
           /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
-          python scripts/schedule_feed.py --previous schedule/snapshot.json
+          /tmp/archive-browser-tests/bin/python scripts/schedule_feed.py --previous schedule/snapshot.json
       - name: Build approved simple home with LIVE preserved
         run: npm run build
         env:

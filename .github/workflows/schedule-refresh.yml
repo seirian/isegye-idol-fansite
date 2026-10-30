@@ -25,10 +25,11 @@ jobs:
           persist-credentials: false
       - name: Check data rules and data-only publication boundary
         run: python -m unittest discover -s tests -p 'test_schedule*.py' -v
-      - name: Install pinned SFTP client
+      - name: Install pinned SFTP and public-page reader
         run: |
           python -m venv /tmp/schedule-refresh
-          /tmp/schedule-refresh/bin/pip install paramiko==5.0.0
+          /tmp/schedule-refresh/bin/pip install paramiko==5.0.0 playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/schedule-refresh/bin/python
       - name: Collect permitted sources and atomically publish private snapshot
         run: /tmp/schedule-refresh/bin/python scripts/publish_schedule_feed.py
         env:

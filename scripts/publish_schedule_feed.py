@@ -59,6 +59,8 @@ def publish(remote,collect=feed.collect):
                 'sources':{s['id']:s['state'] for s in value['sources']},
                 'newsCountsBySource':{s['id']:sum(n['sourceId']==s['id'] for n in value['news']) for s in value['sources']},
                 'naverSearchProvider':'NAVER API HUB',
+                'berrizCounts':{s:sum(r['sourceId']==s for k in ('news','events') for r in value[k]) for s in ('berriz-notice','berriz-calendar')},
+                'berrizCoverage':{s['id']:s.get('coverage') for s in value['sources'] if s['id'].startswith('berriz-')},
                 'publicationPolicy':'approved-authors-only-v1',
                 'removedUnapprovedRows':removed,
                 'previousSnapshotSanitized':bool(old),

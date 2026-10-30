@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "timezone": "Asia/Seoul",
-  "generatedAt": "2026-10-30T00:58:55+00:00",
+  "generatedAt": "2026-10-30T12:44:58+00:00",
   "sources": [
     {
       "id": "cafe-members",
@@ -42,26 +42,136 @@
       "kind": "official",
       "url": "https://parable-asia.com/newsroom/",
       "mode": "automatic",
-      "lastAttemptAt": "2026-10-30T00:58:55+00:00",
-      "lastSuccessAt": null,
-      "state": "error",
-      "detail": "이번 수집 실패 · 이전 자료 유지",
-      "errorCode": "not_yet_run"
+      "lastAttemptAt": "2026-10-30T12:44:58+00:00",
+      "lastSuccessAt": "2026-10-30T12:44:58+00:00",
+      "state": "ok",
+      "detail": "자동 수집 완료"
     },
     {
       "id": "naver-search",
       "label": "왁물원 새 글 검색",
       "kind": "unverified",
       "url": "https://cafe.naver.com/steamindiegame",
-      "mode": "search_api",
-      "lastAttemptAt": "2026-10-30T00:58:55+00:00",
+      "mode": "disabled_unverified",
+      "lastAttemptAt": null,
       "lastSuccessAt": null,
-      "state": "needs_setup",
-      "detail": "네이버 검색 API 설정 필요",
-      "errorCode": "api_key_required"
+      "state": "restricted",
+      "detail": "작성자가 확인되지 않은 검색 글은 수집·표시하지 않습니다."
+    },
+    {
+      "id": "berriz-notice",
+      "label": "베리즈 · 소속사 중요 공지",
+      "kind": "official",
+      "url": "https://berriz.in/ko/isegyeidol/notice/",
+      "mode": "public_browser",
+      "lastAttemptAt": "2026-10-30T12:44:58+00:00",
+      "lastSuccessAt": "2026-10-30T12:44:58+00:00",
+      "state": "ok",
+      "detail": "공개 공식 공지 목록 확인 · 본문·팬 글 수집 안 함",
+      "coverage": {
+        "mode": "public_list",
+        "count": 8,
+        "complete": false
+      }
+    },
+    {
+      "id": "berriz-calendar",
+      "label": "베리즈 · 공식 캘린더",
+      "kind": "official",
+      "url": "https://berriz.in/ko/isegyeidol/calendar/",
+      "mode": "public_browser",
+      "lastAttemptAt": "2026-10-30T12:44:58+00:00",
+      "lastSuccessAt": "2026-10-30T12:44:58+00:00",
+      "state": "ok",
+      "detail": "공개 캘린더 확인 · 2026-09 ~ 2026-12 · 한국 시간",
+      "coverage": {
+        "months": [
+          "2026-09",
+          "2026-10",
+          "2026-11",
+          "2026-12"
+        ],
+        "complete": true
+      }
     }
   ],
   "events": [
+    {
+      "id": "berriz-calendar-6acf0c8230c3dcddaf47c7f9",
+      "calendarId": "6acf0c8230c3dcddaf47c7f9",
+      "sourceId": "berriz-calendar",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/calendar/",
+      "title": "HAPPY JINGBURGER DAY",
+      "members": [
+        "jingburger"
+      ],
+      "publishedAt": null,
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "date": "2026-10-08",
+      "time": null,
+      "type": "anniversary",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "allDay": true,
+      "startAt": "2026-10-08T00:00:00+09:00",
+      "endAt": null,
+      "dateBasis": "official_calendar",
+      "detail": "베리즈 공식 캘린더의 일정 · 한국 시간(KST) · 종일"
+    },
+    {
+      "id": "berriz-calendar-6ad1e9a0e6d8846564293704",
+      "calendarId": "6ad1e9a0e6d8846564293704",
+      "sourceId": "berriz-calendar",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/calendar/",
+      "title": "이세계아이돌 (ISEGYE IDOL) The 2nd Mini Album [Across Dimensions] ALBUM RELEASE",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": null,
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "date": "2026-11-09",
+      "time": "18:00",
+      "type": "release",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "allDay": false,
+      "startAt": "2026-11-09T18:00:00+09:00",
+      "endAt": null,
+      "dateBasis": "official_calendar",
+      "detail": "베리즈 공식 캘린더의 일정 · 한국 시간(KST)"
+    },
+    {
+      "id": "berriz-calendar-6acf0aef834065fdaaf6dbfb",
+      "calendarId": "6acf0aef834065fdaaf6dbfb",
+      "sourceId": "berriz-calendar",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/calendar/",
+      "title": "DEBUT ANNIVERSARY",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": null,
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "date": "2026-12-17",
+      "time": null,
+      "type": "anniversary",
+      "certainty": "confirmed",
+      "status": "scheduled",
+      "allDay": true,
+      "startAt": "2026-12-17T00:00:00+09:00",
+      "endAt": null,
+      "dateBasis": "official_calendar",
+      "detail": "베리즈 공식 캘린더의 일정 · 한국 시간(KST) · 종일"
+    },
     {
       "id": "post-7919db5815491071-2026-10-29",
       "sourceId": "cafe-members",
@@ -287,6 +397,19 @@
       "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
     },
     {
+      "id": "berriz-notice-2673",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2673/",
+      "title": "[안내] 아이네 활동·스케줄 관련 공식 안내",
+      "members": [
+        "ine"
+      ],
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
       "id": "post-d31a78069aba2d9f",
       "sourceId": "cafe-members",
       "sourceUrl": "https://cafe.naver.com/steamindiegame/22128448",
@@ -335,6 +458,126 @@
       "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
     },
     {
+      "id": "berriz-notice-2650",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2650/",
+      "title": "[안내] 아티스트 권리침해 관련 법적 대응 진행 상황 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
+      "id": "post-0d3f4861504f88fe",
+      "sourceId": "parable-web",
+      "sourceUrl": "https://parable-asia.com/%ea%b3%a0%ec%84%b8%ea%b5%ac-sbosegu-baseball-online-%ea%b3%b5%ec%8b%9d-md-%ec%b6%9c%ec%8b%9c/",
+      "title": "고세구, SBO(Segu Baseball Online) 공식 MD 출시",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-10-19T04:52:11+00:00",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "패러블 공식 발표"
+    },
+    {
+      "id": "berriz-notice-2611",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2611/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) OFFICIAL FANCLUB 'IFARI' 모집 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-19T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
+      "id": "berriz-notice-2607",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2607/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) The 2nd Mini Album [Across Dimensions] 발매 기념 예약 판매 특전 증정 이벤트 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-19T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
+      "id": "berriz-notice-2596",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2596/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) The 2nd Mini Album [Across Dimensions] 예약 판매 안내 (+판매처 URL 추가)",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
+      "id": "berriz-notice-2593",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2593/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) The 2nd Mini Album [Across Dimensions] 발매 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
+      "id": "berriz-notice-2586",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2586/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) 피규어 프로젝트 관련 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
+    },
+    {
       "id": "post-9180bbf38fc2ee52",
       "sourceId": "cafe-agency",
       "sourceUrl": "https://cafe.naver.com/steamindiegame/22096118",
@@ -350,6 +593,24 @@
       "publishedAt": "2026-10-14T05:00:09.260000+00:00",
       "checkedAt": "2026-10-30T00:58:55+00:00",
       "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "berriz-notice-2572",
+      "sourceId": "berriz-notice",
+      "sourceUrl": "https://berriz.in/ko/isegyeidol/notice/2572/",
+      "title": "[안내] 이세계아이돌 (ISEGYE IDOL) 공식 커뮤니티 오픈 및 이용 안내",
+      "members": [
+        "ine",
+        "jingburger",
+        "lilpa",
+        "jururu",
+        "gosegu",
+        "viichan"
+      ],
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "publicationPrecision": "day",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "베리즈 공식 공지 · 게시일 기준 · 전문은 원문에서 확인"
     },
     {
       "id": "post-6bb99b77ac1c5533",
@@ -391,6 +652,18 @@
       "publishedAt": "2026-09-29T07:08:28.837000+00:00",
       "checkedAt": "2026-10-30T00:58:55+00:00",
       "detail": "공개 목록의 작성자·권한 확인 · 본문 일정 미확인"
+    },
+    {
+      "id": "post-5fe56fbcc4011090",
+      "sourceId": "parable-web",
+      "sourceUrl": "https://parable-asia.com/%ea%b3%a0%ec%84%b8%ea%b5%ac-gosegu-the-1st-single-album-no-cat-no-life-%eb%b0%9c%eb%a7%a4/",
+      "title": "고세구 (GOSEGU), The 1st Single Album ‘NO CAT, NO LIFE!’ 발매",
+      "members": [
+        "gosegu"
+      ],
+      "publishedAt": "2026-09-28T09:00:24+00:00",
+      "checkedAt": "2026-10-30T12:44:58+00:00",
+      "detail": "패러블 공식 발표"
     },
     {
       "id": "post-e18e3a92cdb9268b",
@@ -639,5 +912,6 @@
       "dateBasis": "roundup_title",
       "detail": "팬이 정리한 참고 정보이며 공식 확정 일정·실제 LIVE 상태가 아닙니다."
     }
-  ]
+  ],
+  "publicationPolicy": "approved-authors-only-v1"
 }
