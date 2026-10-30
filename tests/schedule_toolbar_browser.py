@@ -1,0 +1,80 @@
+"""Calendar controls/footer regression on the composed deployment candidate."""
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+import json,os
+R=Path(__file__).resolve().parents[1];OUT=Path(os.getenv('TOOLBAR_OUT',str(R/'test-results/toolbar')));OUT.mkdir(parents=True,exist_ok=True)
+URL=os.getenv('TOOLBAR_URL','http://127.0.0.1:4199/').rstrip('/')+'/'
+checks=[];errors=[]
+def check(name,ok):
+ checks.append({'name':name,'passed':bool(ok)})
+ if not ok:raise AssertionError(name)
+def settled(p):p.wait_for_timeout(180)
+try:
+ with sync_playwright() as pw:
+  b=pw.chromium.launch(executable_path=os.getenv('BROWSER_EXECUTABLE') or None)
+  c=b.new_context(viewport={'width':1440,'height':1000},locale='ko-KR');page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
+  seed=json.loads((R/'schedule/snapshot.json').read_text())
+  c.route('**/api/schedule',lambda r:r.fulfill(json=seed))
+  page.goto(URL+'#/schedule?month=2026-10&date=2026-10-27',wait_until='networkidle')
+  check('old source status banner absent',page.locator('.sc-sync').count()==0 and '공식 소식 확인 현황' not in page.locator('#main').inner_text())
+  check('toolbar immediately precedes archive summary',page.locator('.sc-page').evaluate('(x)=>x.firstElementChild.classList.contains("sc-filters")'))
+  check('one named filter group',page.get_by_role('group',name='일정 필터').count()==1)
+  check('three selects remain accessible',all(page.get_by_label(n,exact=True).count()==1 for n in ['멤버','출처','종류']))
+  check('four labels aligned',page.locator('.sc-filters>.sc-filter-field').evaluate_all('(xs)=>Math.max(...xs.map(x=>x.getBoundingClientRect().top))-Math.min(...xs.map(x=>x.getBoundingClientRect().top))<2'))
+  controls='.sc-filters select,.sc-filters input,.sc-filters a'
+  check('six aligned controls',page.locator(controls).count()==6)
+  def geometry():
+   return page.locator(controls).evaluate_all('(xs)=>xs.map(x=>({h:x.getBoundingClientRect().height,r:getComputedStyle(x).borderRadius,w:x.getBoundingClientRect().width,sw:x.scrollWidth,cw:x.clientWidth}))')
+  g=geometry();check('desktop control heights uniform',max(x['h'] for x in g)-min(x['h'] for x in g)<2)
+  check('all control corners match',len(set(x['r'] for x in g))==1)
+  check('manual refresh hidden by default',not page.locator('[data-schedule-refresh]').is_visible())
+  check('six main menu destinations',page.locator('[data-nav]').count()==6)
+  check('fan guide absent from main menu',page.locator('[data-nav=guide]').count()==0)
+  check('footer links exact order',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('legal links unchanged',page.locator('.footer-links a').evaluate_all('(xs)=>xs.slice(0,2).map(x=>x.href)')==['https://isegye-idol.kr/auth/terms','https://isegye-idol.kr/auth/privacy'])
+  check('compact footer gap',page.locator('.footer-links').evaluate('(x)=>parseFloat(getComputedStyle(x).columnGap)<=16'))
+  check('no old importance wording','소속사 중요 공지' not in page.locator('#main').inner_text())
+  check('agency legend shortened',page.locator('.sc-legend .sc-important').inner_text()=='★ 소속사 공지')
+  for theme in ['light','dark']:
+   page.evaluate('(v)=>document.documentElement.dataset.theme=v',theme)
+   page.screenshot(path=str(OUT/('toolbar-'+theme+'-desktop.png')),full_page=False)
+   page.locator('.sc-filters').screenshot(path=str(OUT/('controls-'+theme+'.png')))
+   page.locator('.footer-links').screenshot(path=str(OUT/('footer-'+theme+'.png')))
+  page.evaluate('document.documentElement.dataset.theme="light"')
+  page.get_by_label('멤버',exact=True).select_option('jururu');settled(page)
+  check('member filter still functional',page.locator('.sc-day-list .sc-event').evaluate_all('(xs)=>xs.length>0&&xs.every(x=>x.dataset.memberTone==="jururu")'))
+  page.get_by_label('출처',exact=True).select_option('berriz');settled(page)
+  check('source selection preserved',page.get_by_label('출처',exact=True).input_value()=='berriz')
+  page.locator('[data-first-notices]').click();settled(page)
+  check('first notice shortcut preserved','2021년 8월' in page.locator('.calendar-header').inner_text())
+  page.locator('.sc-date-tools a[href="#/schedule"]').click();settled(page)
+  check('today shortcut clears filters',page.get_by_label('멤버',exact=True).input_value()=='all')
+  page.goto(URL+'#/schedule?month=2026-10&date=2026-10-27',wait_until='networkidle')
+  day=page.locator('[data-date="2026-10-26"]');day.scroll_into_view_if_needed();y=page.evaluate('scrollY');day.click();settled(page)
+  check('date selection still preserves scroll',abs(page.evaluate('scrollY')-y)<=2)
+  page.locator('.sc-sources summary').click();page.locator('[data-schedule-refresh]').click();settled(page)
+  check('refresh remains usable in details',page.locator('.sc-sources').get_attribute('open') is not None and not page.locator('[data-schedule-refresh]').is_disabled())
+  c.unroute('**/api/schedule');c.route('**/api/schedule',lambda r:r.fulfill(status=503,body='unavailable'))
+  page.locator('[data-schedule-refresh]').click();settled(page)
+  check('error stays in source details','갱신 확인 실패' in page.locator('.sc-sources').inner_text())
+  page.locator('.sc-sources summary').click()
+  check('no failure banner outside details','갱신 확인 실패' not in page.locator('#main').inner_text())
+  for width in [320,390,768,1024,1440]:
+   page.set_viewport_size({'width':width,'height':1000});settled(page)
+   check('page reflows '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+   g=geometry();check('uniform control heights '+str(width),max(x['h'] for x in g)-min(x['h'] for x in g)<2)
+   check('controls fit their fields '+str(width),all(x['sw']<=x['cw']+1 for x in g))
+   check('footer remains three links '+str(width),page.locator('.footer-links a').count()==3)
+   if width==390:
+    page.evaluate('scrollTo(0,0)');page.screenshot(path=str(OUT/'toolbar-mobile.png'),full_page=False)
+    page.locator('.footer-links').screenshot(path=str(OUT/'footer-mobile.png'))
+  page.set_viewport_size({'width':390,'height':844});page.evaluate('document.documentElement.style.fontSize="200%"');settled(page)
+  check('enlarged text does not overflow document',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+  page.evaluate('document.documentElement.style.fontSize=""')
+  page.locator('.footer-links a[href="#/guide"]').click();settled(page)
+  check('footer opens retained fan guide',page.locator('#main a[href="#/record/fan-policy"]').count()>0)
+  check('no primary guide at mobile width',page.locator('[data-nav=guide]').count()==0)
+  check('footer remains on guide route',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('no browser exceptions',not errors);b.close()
+finally:
+ (OUT/'result.json').write_text(json.dumps({'url':URL,'passed':sum(x['passed'] for x in checks),'total':len(checks),'checks':checks,'browserErrors':errors},ensure_ascii=False,indent=2)+'\n')

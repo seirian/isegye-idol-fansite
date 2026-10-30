@@ -88,7 +88,7 @@ try:
             page.set_viewport_size({'width':1440,'height':1000});page.screenshot(path=str(OUT/'maintenance-clean-desktop.png'),full_page=True)
             page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(OUT/'maintenance-clean-mobile.png'),full_page=True)
         else:
-            check('home footer contains only the two legal links',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침'])
+            check('home footer contains legal links then fan guide',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
         for suffix in ('/.auth-private/accounts.json','/.auth-private/config.json','/access.php','/_isegye_releases/r000000000000/index.html','/_mir_site/index.html'):
             response=c.request.get(URL+suffix)
             check('private or legacy URL denied '+suffix,response.status in (403,404,503))

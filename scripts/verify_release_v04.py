@@ -21,6 +21,7 @@ def main():
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
     suites.append(('berriz','tests/berriz_browser.py',{'BERRIZ_URL':url,'BERRIZ_OUT':str(out/'berriz')}))
+    suites.append(('toolbar','tests/schedule_toolbar_browser.py',{'TOOLBAR_URL':url,'TOOLBAR_OUT':str(out/'toolbar')}))
     try:
         if 'RELEASE_URL' not in os.environ:
             server=subprocess.Popen([sys.executable,'-m','http.server','4199','--bind','127.0.0.1','--directory','dist'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

@@ -44,7 +44,7 @@ try:
   page.route('https://chapi.sooplive.co.kr/**',handler)
   page.goto(URL,wait_until='networkidle');wait_state(page)
   check('LIVE menu replaces glossary',page.locator('[data-nav=live]').count()==1 and page.locator('[data-nav=dictionary]').count()==0)
-  check('seven navigation menus after video removal',page.locator('[data-nav]').count()==7)
+  check('six primary navigation menus',page.locator('[data-nav]').count()==6)
   check('home has six live status summaries',page.locator('.live-mini').count()==6)
   check('live summary precedes hero',page.locator('.live-home').bounding_box()['y']<page.locator('.hero,.hm-intro').bounding_box()['y'])
   check('mixed home reports 2 live / 1 unknown / 3 offline',page.locator('.live-mini[data-state=live]').count()==2 and page.locator('.live-mini[data-state=unknown]').count()==1 and page.locator('.live-mini[data-state=offline]').count()==3)

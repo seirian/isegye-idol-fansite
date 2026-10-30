@@ -1,0 +1,4 @@
+/* Final shell: compact legal links and the relocated fan guide on every app route. */
+.layout .footer .footer-links{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;column-gap:14px;row-gap:4px;max-width:100%;width:auto;flex:0 1 auto;grid-template-columns:none;margin-top:0;font-size:.9375rem}
+.layout .footer .footer-links a{display:inline-flex;align-items:center;min-height:44px;padding:4px 0;white-space:nowrap;line-height:1.6}
+@media(max-width:760px){.layout .footer .footer-links{justify-content:flex-start;margin-top:12px;column-gap:12px}}

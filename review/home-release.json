@@ -12,7 +12,7 @@
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
     "home-review/ui.js": "65b604633b441d95696c7b6891e8bc5783cd0235b30340b01c4e54074b16f6f3",
     "home-review/theme.css": "f796204c3749ecc04dcd0cace5f6625ec33d78e6c2080c56193cc446e3ea879f",
-    "scripts/build_home_review.py": "9eef783f6f96bfc4ed4268ec398774de8b36e3c297dc1de0819dd94b1ba8524f",
+    "scripts/build_home_review.py": "e220c4416fba49dd264d5d7f2084d799db99c49b5ea8d93cd8938d37c008b976",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
@@ -20,14 +20,16 @@
     "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
     "scripts/compose_schedule.py": "f2849f097bd0c2b4dbc672cd987ec72ab53af5a56a4121581eb78bf00dcf4c31",
     "schedule/core.js": "52295342cdc059211b7f015eb7f198ab7b22e7e9779373ff359c66434e871057",
-    "schedule/ui.js": "14d1d541484c02f093d78de88b6683e4659d6e773e71382744f2e034e23b75b1",
-    "schedule/theme.css": "5f4a5b225db9b18987c8e4634238dcaa37f8674bd2f299a0a1ad4441843fb605",
+    "schedule/ui.js": "d785f42be3eb9d820a0fc8960e9ad2b335c3033bf071f6de500c5492366f529f",
+    "schedule/theme.css": "6799137a181acc8b8c3c1e68ee2c0709bbddf2a8e29c1f1594267231038576d6",
     "schedule/accessibility.css": "0c53009dfa46b30941a961debc8ef2ecc3e004f3f724084be3f4ea66dc41a8ef",
     "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc",
     "scripts/notice_policy.py": "e1bcfcf3b346329787960f69ac3263350debd84525fb7474fbb5be9648e2db9b",
     "schedule/approved-notices.json": "ca384f767a55e0dbc72c9972904bfe0f34a8ecb6dda6b69f1b1fab845ceaeb03",
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
-    "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001"
+    "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
+    "scripts/compose_footer_navigation.py": "9e187e12a7d2e47a0cd74cd26c05c93d6fbea46577cfd53196407db2aec6a7f6",
+    "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -51,6 +53,10 @@
     {
       "requestedAt": "2026-10-30",
       "scope": "Berriz public official notices and calendar, highest agency notice priority within the existing full-width calendar; no fan posts, membership content, login changes or recent-news panel."
+    },
+    {
+      "requestedAt": "2026-10-30",
+      "scope": "Remove calendar source status banner; uniform responsive filter toolbar; shorten agency badge; relocate fan guide from primary navigation to compact legal footer. Data, priority, viewport, auth and hosting preserved."
     }
   ]
 }
