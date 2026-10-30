@@ -1,0 +1,35 @@
+name: Naver key binding presence only
+on:
+  push:
+    branches: ['feature/naver-key-check']
+    paths: ['.github/workflows/naver-key-presence.yml']
+permissions:
+  contents: read
+jobs:
+  presence:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/naver-key-check'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Report only whether the four specific bindings exist
+        env:
+          CLIENT_ID_SECRET_PRESENT: ${{ secrets.ISEGYE_NAVER_CLIENT_ID != '' }}
+          CLIENT_SECRET_SECRET_PRESENT: ${{ secrets.ISEGYE_NAVER_CLIENT_SECRET != '' }}
+          CLIENT_ID_VARIABLE_PRESENT: ${{ vars.ISEGYE_NAVER_CLIENT_ID != '' }}
+          CLIENT_SECRET_VARIABLE_PRESENT: ${{ vars.ISEGYE_NAVER_CLIENT_SECRET != '' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          names = ('CLIENT_ID_SECRET_PRESENT','CLIENT_SECRET_SECRET_PRESENT','CLIENT_ID_VARIABLE_PRESENT','CLIENT_SECRET_VARIABLE_PRESENT')
+          report = {'checkedAt':datetime.now(timezone.utc).isoformat(), 'environment':'production', 'bindings':{key:os.environ.get(key)=='true' for key in names}, 'credentialValuesRead':False, 'siteOrAccountFilesReadOrWritten':False}
+          Path('naver-key-presence.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: naver-key-presence-${{ github.run_id }}
+          path: naver-key-presence.json
+          retention-days: 3
