@@ -3,6 +3,7 @@
 from pathlib import Path
 import base64, hashlib, json, os, re, shutil, subprocess
 import home_soop_profiles
+import compose_schedule
 ROOT=Path(__file__).resolve().parents[1]
 
 def replace_once(text, before, after):
@@ -36,6 +37,7 @@ def main():
         pattern=r'^function '+name+r'\([^\n]*'
         if re.findall(pattern,original,re.M)!=re.findall(pattern,app,re.M):raise RuntimeError('LIVE contract changed: '+name)
     css=(out/'src/styles.css').read_text()+'\n'+(ROOT/'home-review/theme.css').read_text()
+    app,css=compose_schedule.compose(app,css,out,meta)
     html=(out/'index.html').read_text()
     if 'content="noindex,nofollow"' not in html:raise RuntimeError('Preview must remain noindex')
     html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 심플 홈 검토</title>',html)

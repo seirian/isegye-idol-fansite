@@ -26,6 +26,8 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
     (base/'.htaccess').write_text('# ISEGYE-AUTH-ROOT-V1 '+release+'\n')
     (app/'index.html').write_text('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>Fixture</title></head><body><main id="app">PROTECTED_SITE_FIXTURE</main></body></html>')
     (app/'src/app.js').write_text('const PROTECTED_DATA_FIXTURE=1;')
+    schedule_fixture={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':'2026-10-30T00:00:00Z','sources':[],'events':[],'news':[],'forecasts':[]}
+    (app/'src/schedule.json').write_text(json.dumps(schedule_fixture))
     signing=base/'signing.pem';cert=base/'cert.pem'
     subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-keyout',str(signing),'-out',str(cert),'-days','1','-nodes','-subj','/CN=localhost'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     from cryptography.hazmat.primitives import serialization
@@ -75,6 +77,10 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('public root remains before administrator',gp.goto(url+'/').status==200 and 'PROTECTED_SITE_FIXTURE' in gp.content())
             check('public visit does not create member cookie',not guest.cookies())
             check('before admin there is no construction text','현재 사이트는' not in gp.content())
+            check('schedule public only before first admin',guest.request.get(url+'/api/schedule').json()==schedule_fixture)
+            check('schedule HEAD omits body',guest.request.head(url+'/api/schedule').body()==b'')
+            check('schedule API never creates cookie',not guest.cookies())
+            check('schedule POST rejected',guest.request.post(url+'/api/schedule',data={}).status==405)
             # Policy reading is public before/after maintenance and is not registration.
             for kind, count in [('terms',16),('privacy',13)]:
                 response=gp.goto(url+'/auth/'+kind)
@@ -128,6 +134,19 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('maintenance keeps Google login',gp.locator('a[href="/auth/login"]').count()==1)
             check('signed-in member maintenance also omits legal links','href="/auth/terms"' not in member.request.get(url+'/').text() and 'href="/auth/privacy"' not in member.request.get(url+'/').text())
             check('member is blocked after owner signup',member.request.get(url+'/').status==503)
+            check('schedule API blocked for anonymous during maintenance',guest.request.get(url+'/api/schedule').status==503)
+            check('schedule API blocked for member during maintenance',member.request.get(url+'/api/schedule').status==503)
+            check('schedule API authorized administrator can read fallback',owner.request.get(url+'/api/schedule').json()==schedule_fixture)
+            folder=base/'.schedule-feed';folder.mkdir(mode=0o700)
+            current={**schedule_fixture,'generatedAt':'2026-10-30T01:00:00Z'}
+            (folder/'current.json').write_text(json.dumps(current))
+            check('schedule serves stored hourly feed',owner.request.get(url+'/api/schedule').json()==current)
+            (folder/'current.json').write_text('broken')
+            check('corrupt hourly feed falls back to built snapshot',owner.request.get(url+'/api/schedule').json()==schedule_fixture)
+            (folder/'current.json').unlink();(folder/'current.json').symlink_to(private/'accounts.json')
+            check('schedule symlink not served',owner.request.get(url+'/api/schedule').json()==schedule_fixture)
+            (folder/'current.json').unlink()
+            check('private feed file cannot be opened directly',owner.request.get(url+'/.schedule-feed/current.json').status==404)
             for path in ('/src/app.js','/_isegye_releases/'+release+'/src/app.js','/_isegye_idol/_isegye_releases/'+release+'/index.html','/.auth-private/accounts.json','/.auth-private/config.json','/access.php'):
                 r=guest.request.get(url+path);check('no content leak '+path,r.status in (403,404,503) and 'PROTECTED_SITE_FIXTURE' not in r.text() and 'PROTECTED_DATA_FIXTURE' not in r.text() and config['siteKey'] not in r.text())
             check('owner can still fetch protected data',owner.request.get(url+'/src/app.js').status==200)
