@@ -34,7 +34,7 @@ def compose(app,css,out,meta):
     after="window.addEventListener('hashchange',event=>{closeMenu();if(location.hash==='#main'){document.getElementById('main').focus();return;}if(scheduleRouteChanged(event))return;render({focus:true});});"
     if app.count(before)!=1:raise ValueError('Schedule route anchor changed')
     app=app.replace(before,after,1)
-    css+='\n'+(ROOT/'schedule/theme.css').read_text()
+    css+='\n'+(ROOT/'schedule/theme.css').read_text()+'\n'+(ROOT/'schedule/accessibility.css').read_text()
     (out/'src/schedule.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2)+'\n')
     meta['scheduleFeed']={'schemaVersion':1,'calendarFirst':True,'officialAnnouncementBlock':False,
         'events':len(snapshot['events']),'news':len(snapshot['news']),'fanReferences':len(snapshot['forecasts']),
