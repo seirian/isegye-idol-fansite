@@ -16,7 +16,7 @@ try:
  with sync_playwright() as pw:
   b=pw.chromium.launch(executable_path=os.getenv('BROWSER_EXECUTABLE') or None)
   c=b.new_context(viewport={'width':1440,'height':1000},locale='ko-KR')
-  c.add_init_script("localStorage.setItem('isegye:theme:second','dark')")
+  c.add_init_script("if(!localStorage.getItem('isegye:theme:second'))localStorage.setItem('isegye:theme:second','dark')")
   page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(URL+'#/guide',wait_until='networkidle');page.evaluate('window.__legalHeader=document.querySelector(".site-header")')
   page.locator('.footer-links a').filter(has_text='이용약관').click();settle(page)
@@ -70,7 +70,7 @@ try:
   for kind in ('terms','privacy'):
    p.goto(URL+'auth/'+kind,wait_until='networkidle')
    check('public '+kind+' uses site branding',p.locator('.legal-site-header').count()==1 and p.locator('.access-backdrop').count()==0)
-   check('public '+kind+' no scripts or account actions',p.locator('script,a[href="/auth/login"]').count()==0)
+   check('public '+kind+' no scripts or account actions',p.locator('script,.legal-site-header a[href="/auth/login"],.legal-navigation a[href="/auth/login"]').count()==0)
    check('public '+kind+' OS dark mode',bg(p)=='rgb(36, 33, 48)')
    p.get_by_role('radio',name='라이트',exact=True).check();check('public '+kind+' light control',bg(p)=='rgb(255, 255, 255)')
    p.get_by_role('radio',name='다크',exact=True).check();check('public '+kind+' dark control',bg(p)=='rgb(36, 33, 48)')

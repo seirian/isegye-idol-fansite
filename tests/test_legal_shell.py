@@ -25,7 +25,10 @@ class LegalShell(unittest.TestCase):
    self.assertIn((R/'auth'/f'{kind}.html').read_text(),html)
    self.assertIn('legal-site-header',html);self.assertNotIn('<script',html)
    self.assertIn('value="dark"',html);self.assertIn('value="light"',html)
-   self.assertNotIn('access-backdrop',html);self.assertNotIn('/auth/login',html)
+   self.assertNotIn('access-backdrop',html)
+   # The unchanged privacy body intentionally explains account management.
+   shell=re.sub(r'<article class="legal-document".*?</article>','',html,flags=re.S)
+   self.assertNotIn('href="/auth/login"',shell)
  def test_existing_theme_and_clear_storage_contract(self):
   js=(R/'legal/ui.js').read_text()
   self.assertIn('data-action="clear-data"',js);self.assertNotIn('localStorage',js)
