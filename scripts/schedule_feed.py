@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 from urllib.robotparser import RobotFileParser
 import hashlib, json, os, re, time, xml.etree.ElementTree as ET
 import notice_policy
+import berriz_feed
 
 ROOT=Path(__file__).resolve().parents[1]
 KST=timezone(timedelta(hours=9))
@@ -31,6 +32,7 @@ SOURCES=[
  {'id':'parable-web','label':'패러블 공식 뉴스룸','kind':'official','url':'https://parable-asia.com/newsroom/','mode':'automatic'},
  {'id':'naver-search','label':'왁물원 새 글 검색','kind':'unverified','url':'https://cafe.naver.com/steamindiegame','mode':'disabled_unverified'},
 ]
+SOURCES += berriz_feed.SOURCES
 class FeedError(RuntimeError):pass
 class NoRedirect(HTTPRedirectHandler):
  def redirect_request(self,*args):return None
@@ -52,6 +54,7 @@ def source_url(url):
  try:
   p=urlsplit(url)
   if p.scheme not in ('https','http') or p.username or p.password or p.port not in (None,443,80):return None
+  if p.hostname=='berriz.in':return berriz_feed.canonical(url)
   if p.hostname in ('cafe.naver.com','m.cafe.naver.com'):
    match=re.fullmatch(r'/steamindiegame/(\d+)',p.path) or re.fullmatch(r'/(?:f-e|ca-fe)/cafes/27842958/articles/(\d+)',p.path)
    return 'https://cafe.naver.com/steamindiegame/'+match[1] if match else None
@@ -168,7 +171,10 @@ def public_item(source, url, title, published, checked, **extra):
 def validate(doc):
  if doc.get('schemaVersion')!=1 or doc.get('timezone')!='Asia/Seoul' or not iso(doc.get('generatedAt')):raise FeedError('invalid_snapshot')
  if len(json.dumps(doc).encode())>LIMIT:raise FeedError('snapshot_too_large')
- if not isinstance(doc.get('sources'),list) or {s.get('id') for s in doc['sources']}!={s['id'] for s in SOURCES}:raise FeedError('invalid_sources')
+ if not isinstance(doc.get('sources'),list):raise FeedError('invalid_sources')
+ source_ids=[s.get('id') for s in doc['sources']]
+ base={s['id'] for s in SOURCES[:5]}
+ if len(set(source_ids))!=len(source_ids) or not base<=set(source_ids)<= {s['id'] for s in SOURCES}:raise FeedError('invalid_sources')
  for bucket in ('events','news','forecasts'):
   rows=doc.get(bucket)
   if not isinstance(rows,list) or len(rows)>700:raise FeedError('invalid_items')
@@ -187,6 +193,7 @@ def validate(doc):
     if r.get('certainty') not in ('confirmed','tentative','unknown'):raise FeedError('invalid_certainty')
     if r['sourceId'] in ('fan-roundup','naver-search') and r['certainty']=='confirmed':raise FeedError('unverified_confirmation')
     if r.get('time') and not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d',r['time']):raise FeedError('invalid_time')
+   if r['sourceId'].startswith('berriz-') and not notice_policy.is_publishable(r):raise FeedError('invalid_berriz_source')
    if set(r)&{'body','html','email','memberKey','userId','cookie','token','comments'}:raise FeedError('unnecessary_data')
  return doc
 
@@ -199,6 +206,11 @@ def merge(previous,current):
   validate(previous)
   for key in ('news','events','forecasts'):
    byid={r['id']:r for r in previous[key]}
+   # A complete public month refresh retires removed/moved calendar entries.
+   calendar=next((s for s in current['sources'] if s['id']=='berriz-calendar'),{})
+   if calendar.get('state')=='ok':
+    months=calendar.get('coverage',{}).get('months',[])
+    byid={i:r for i,r in byid.items() if not (r['sourceId']=='berriz-calendar' and r.get('date','')[:7] in months)}
    # A successfully re-read URL replaces its previous extracted dates as well.
    fresh_urls={r['sourceUrl'] for r in current['news'] if r['checkedAt']==current['generatedAt']}
    if key in ('events','forecasts'):
@@ -286,12 +298,23 @@ def naver_search(fetch,now):
   time.sleep(.25)
  return list(found.values())
 
-def collect(previous=None,fetch=request,now=None):
+def collect(previous=None,fetch=request,now=None,berriz_reader=None):
  now=now or stamp();seed=json.loads((ROOT/'schedule/seed.json').read_text());seed=validate(seed)
  data={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':now,'sources':[], 'events':seed['events'][:],'news':seed['news'][:],'forecasts':seed['forecasts'][:]}
+ # Isolated public browser, never the authenticated fan-site session.
+ # Injected fetch in unit tests must not cause a real browser/network call.
+ reader=berriz_reader or (berriz_feed.read_public if fetch is request else None)
+ try:berriz=reader(now) if reader else {}
+ except Exception:berriz={}
  for source in SOURCES:
   s={**source,'lastAttemptAt':now,'lastSuccessAt':None,'state':'pending'}
-  if source['id']=='naver-search':
+  if source['id'].startswith('berriz-'):
+   found=berriz.get(source['id'],{})
+   if 'news' in found and 'events' in found and 'error' not in found:
+    data['news']+=found['news'];data['events']+=found['events']
+    s.update(state='ok',lastSuccessAt=now,detail=found['detail'],coverage=found['coverage'])
+   else:s.update(state='error',detail='베리즈 확인 실패 · 마지막 확인 자료 유지',errorCode=found.get('error','public_browser_unavailable'))
+  elif source['id']=='naver-search':
    s.update(state='restricted',lastAttemptAt=None,detail='작성자 미확인 검색글 수집·공개 중단')
   elif source['mode']=='reviewed_snapshot':
    s.update(state='snapshot',lastAttemptAt=None,lastSuccessAt=seed['generatedAt'],detail='초기 확인 자료 · 카페 자동 크롤링 미사용')

@@ -20,6 +20,7 @@ def main():
             ('home','tests/home_simple_browser.py',{'HOME_URL':url,'HOME_OUT':str(out/'home'),'HOME_EXPECT_MODE':mode,'HOME_EXPECT_APPROVED':'true','HOME_REAL_CHECK':'true'}),
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
+    suites.append(('berriz','tests/berriz_browser.py',{'BERRIZ_URL':url,'BERRIZ_OUT':str(out/'berriz')}))
     try:
         if 'RELEASE_URL' not in os.environ:
             server=subprocess.Popen([sys.executable,'-m','http.server','4199','--bind','127.0.0.1','--directory','dist'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

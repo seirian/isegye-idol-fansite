@@ -63,6 +63,13 @@ def is_publishable(row):
     source=row.get('sourceId'); url=row.get('sourceUrl','')
     if url in EXCLUDED_URLS: return False
     if source == 'naver-search': return False
+    if source in ('berriz-notice','berriz-calendar'):
+        from berriz_feed import canonical
+        if canonical(url,source) != url:return False
+        if source=='berriz-calendar':
+            ident=row.get('calendarId','')
+            return isinstance(ident,str) and bool(re.fullmatch(r'[A-Za-z0-9_-]{1,80}',ident)) and row.get('id')=='berriz-calendar-'+ident and row.get('dateBasis')=='official_calendar'
+        return row.get('id')=='berriz-notice-'+url.rstrip('/').split('/')[-1]
     if source in ('cafe-members','cafe-agency'):
         return reviewed_sources().get(url) == source
     if source == 'fan-roundup': return url == FAN_URL

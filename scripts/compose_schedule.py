@@ -44,5 +44,8 @@ def compose(app,css,out,meta):
         'completePublicListings':history['completePublicListings'],'bodiesReviewed':False},
         'calendarUX':{'dateSelectionPreservesViewport':True,'sameSourceSameDayMerged':True,
         'breaksIncludedInNotices':True,'recentNewsPanel':False,'selectedDayBelow':True,
-        'visibleItemsPerDay':4,'memberColors':True}}
+        'visibleItemsPerDay':4,'memberColors':True,'berrizAgencyPriority':True},
+        'berriz':{'noticeCount':sum(x['sourceId']=='berriz-notice' for x in snapshot['news']),
+                  'calendarCount':sum(x['sourceId']=='berriz-calendar' for x in snapshot['events']),
+                  'publicOnly':True,'fanBoardsCollected':False}}
     return app,css
