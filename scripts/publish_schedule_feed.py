@@ -9,6 +9,7 @@ import base64,hashlib,json,os,socket,sys
 import inour_sftp as d
 import schedule_feed as feed
 import auth_routing
+import notice_policy
 FOLDER=d.ROOT+'/.schedule-feed'
 MARKER=b'isegye-schedule-feed:v1\n'
 ALLOWED={'current.json','previous.json','.owner','.lock'}
@@ -35,15 +36,20 @@ def publish(remote,collect=feed.collect):
     remote.new(path('.lock'),lock);remote.s.chmod(path('.lock'),0o600)
     try:
         old=remote.read(path('current.json'))
-        previous=feed.validate(json.loads(old)) if old else None
-        value=feed.validate(collect(previous=previous))
+        old_value=feed.validate(json.loads(old)) if old else None
+        previous=feed.validate(notice_policy.clean_snapshot(old_value)) if old_value else None
+        removed={k:len(old_value[k])-len(previous[k]) if old_value else 0 for k in ('news','events','forecasts')}
+        value=feed.validate(notice_policy.clean_snapshot(collect(previous=previous)))
         raw=(json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode()
         d.require(remote.read(d.ROOT+'/.htaccess')==router,'Router changed during collection')
         d.require(remote.snapshot()==protected,'Protected file changed during collection')
         if old:
             backup=remote.read(path('previous.json'))
-            if backup is None:remote.new(path('previous.json'),old)
-            else:remote.replace(path('previous.json'),old,backup)
+            # The rollback snapshot must not resurrect deleted general-user posts.
+            clean_backup=(json.dumps(previous,ensure_ascii=False,indent=2)+'\n').encode()
+            if backup is None:remote.new(path('previous.json'),clean_backup)
+            else:remote.replace(path('previous.json'),clean_backup,backup)
+            d.require(remote.read(path('previous.json'))==clean_backup,'Backup cleanup differs')
             remote.s.chmod(path('previous.json'),0o600)
         remote.replace(path('current.json'),raw,old)
         remote.s.chmod(path('current.json'),0o600)
@@ -53,6 +59,11 @@ def publish(remote,collect=feed.collect):
                 'sources':{s['id']:s['state'] for s in value['sources']},
                 'newsCountsBySource':{s['id']:sum(n['sourceId']==s['id'] for n in value['news']) for s in value['sources']},
                 'naverSearchProvider':'NAVER API HUB',
+                'publicationPolicy':'approved-authors-only-v1',
+                'removedUnapprovedRows':removed,
+                'previousSnapshotSanitized':bool(old),
+                'unverifiedSearchRowsPublished':sum(r['sourceId']=='naver-search' for r in value['news']),
+                'explicitlyExcludedUrlsAbsent':not any(r['sourceUrl'] in notice_policy.EXCLUDED_URLS for k in ('news','events','forecasts') for r in value[k]),
                 'protectedFilesUnchanged':True,'accountStoreReadOrWritten':False}
     finally:remote.remove_own(path('.lock'),lock)
 

@@ -1,4 +1,4 @@
-"""Minimal, source-aware calendar data. Never infer an event date from a post date.
+"""Approved sources only; publication dates are not inferred event dates.
 
 The Cafe website AND its internal API disallow automated crawling. They are
 therefore not fetched by this collector. Official Search API is optional;
@@ -14,6 +14,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError
 from urllib.robotparser import RobotFileParser
 import hashlib, json, os, re, time, xml.etree.ElementTree as ET
+import notice_policy
 
 ROOT=Path(__file__).resolve().parents[1]
 KST=timezone(timedelta(hours=9))
@@ -28,7 +29,7 @@ SOURCES=[
  {'id':'cafe-agency','label':'패러블 카페 공지','kind':'official','url':'https://cafe.naver.com/f-e/cafes/27842958/menus/1250','mode':'reviewed_snapshot'},
  {'id':'fan-roundup','label':'팬 정리 · 뱅온정보','kind':'fan','url':'https://cafe.naver.com/steamindiegame/22137397','mode':'reviewed_snapshot'},
  {'id':'parable-web','label':'패러블 공식 뉴스룸','kind':'official','url':'https://parable-asia.com/newsroom/','mode':'automatic'},
- {'id':'naver-search','label':'왁물원 새 글 검색','kind':'unverified','url':'https://cafe.naver.com/steamindiegame','mode':'search_api'},
+ {'id':'naver-search','label':'왁물원 새 글 검색','kind':'unverified','url':'https://cafe.naver.com/steamindiegame','mode':'disabled_unverified'},
 ]
 class FeedError(RuntimeError):pass
 class NoRedirect(HTTPRedirectHandler):
@@ -191,8 +192,10 @@ def validate(doc):
 
 def merge(previous,current):
  """Retain last good source data on failure; do not restamp old observations."""
+ current=notice_policy.clean_snapshot(current)
  validate(current)
  if previous:
+  previous=notice_policy.clean_snapshot(previous)
   validate(previous)
   for key in ('news','events','forecasts'):
    byid={r['id']:r for r in previous[key]}
@@ -288,7 +291,9 @@ def collect(previous=None,fetch=request,now=None):
  data={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':now,'sources':[], 'events':seed['events'][:],'news':seed['news'][:],'forecasts':seed['forecasts'][:]}
  for source in SOURCES:
   s={**source,'lastAttemptAt':now,'lastSuccessAt':None,'state':'pending'}
-  if source['mode']=='reviewed_snapshot':
+  if source['id']=='naver-search':
+   s.update(state='restricted',lastAttemptAt=None,detail='작성자 미확인 검색글 수집·공개 중단')
+  elif source['mode']=='reviewed_snapshot':
    s.update(state='snapshot',lastAttemptAt=None,lastSuccessAt=seed['generatedAt'],detail='초기 확인 자료 · 카페 자동 크롤링 미사용')
   else:
    try:
