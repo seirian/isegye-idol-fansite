@@ -48,7 +48,12 @@ def publish(remote,collect=feed.collect):
         remote.replace(path('current.json'),raw,old)
         remote.s.chmod(path('current.json'),0o600)
         d.require(remote.read(path('current.json'))==raw,'Feed bytes differ')
-        return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),'counts':{k:len(value[k]) for k in ('events','news','forecasts')},'sources':{s['id']:s['state'] for s in value['sources']},'protectedFilesUnchanged':True,'accountStoreReadOrWritten':False}
+        return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),
+                'counts':{k:len(value[k]) for k in ('events','news','forecasts')},
+                'sources':{s['id']:s['state'] for s in value['sources']},
+                'newsCountsBySource':{s['id']:sum(n['sourceId']==s['id'] for n in value['news']) for s in value['sources']},
+                'naverSearchProvider':'NAVER API HUB',
+                'protectedFilesUnchanged':True,'accountStoreReadOrWritten':False}
     finally:remote.remove_own(path('.lock'),lock)
 
 def main():
