@@ -11,6 +11,7 @@ def compose(app,css,meta):
     bodies={kind:(ROOT/'auth'/f'{kind}.html').read_text() for kind in ('terms','privacy')}
     for kind,body in bodies.items():
         if '<script' in body.lower() or f'id="{kind}-01"' not in body:raise ValueError('Unexpected policy source')
+    app=once(app,'guide:guideView','guide:legalGuideView')
     app=once(app,'privacy:privacyView}',"privacy:()=>legalDocumentView('privacy'),terms:()=>legalDocumentView('terms')}")
     app=once(app,"privacy:'개인정보 안내'","privacy:'개인정보처리방침',terms:'이용약관'")
     # Canonical links remain useful with a new tab or without JavaScript. Normal

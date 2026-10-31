@@ -9,10 +9,14 @@ class LegalShell(unittest.TestCase):
    raw=(R/'auth'/f'{kind}.html').read_bytes()
    self.assertEqual(hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),sha)
  def test_composition(self):
-  app="const views={privacy:privacyView}; const titles={privacy:'개인정보 안내'};function render(){if(focus)document.getElementById('main').focus({preventScroll:true});}shell();render();"
+  app="const views={guide:guideView,privacy:privacyView}; const titles={privacy:'개인정보 안내'};function render(){if(focus)document.getElementById('main').focus({preventScroll:true});}shell();render();"
   meta={};out,css=legal.compose(app,'/* base */',meta)
   self.assertIn("terms:()=>legalDocumentView('terms')",out)
   self.assertIn("privacy:()=>legalDocumentView('privacy')",out)
+  self.assertIn('guide:legalGuideView',out)
+  self.assertIn("${legalNavigation('guide')}${guideView()}",out)
+  self.assertIn('${legalNavigation(kind)}',out)
+  self.assertEqual(out.count('function legalNavigation('),1)
   self.assertIn('queueMicrotask(legalDocumentMount)',out)
   self.assertTrue(meta['legalPresentation']['canonicalBodiesUnchanged'])
   for k in ('terms','privacy'):self.assertEqual(meta['legalPresentation']['sourceHashes'][k],hashlib.sha256((R/'auth'/f'{k}.html').read_bytes()).hexdigest())
