@@ -23,15 +23,31 @@ try:
   page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(URL+'#/guide',wait_until='networkidle');page.evaluate('window.__legalHeader=document.querySelector(".site-header")')
   check('guide has one shared document navigation',page.locator('#main .legal-tabs').count()==1)
-  check('guide tabs use consistent order',page.locator('.legal-tabs a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('guide tabs use consistent order',page.locator('.legal-tabs a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
   check('guide alone marked current',page.locator('.legal-tabs [aria-current="page"]').count()==1 and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/guide')
+  # Visit each information page through real links; each has one selected tab.
+  for dest in ('about','terms','privacy','guide'):
+   page.locator(f'.legal-tabs a[href="#/{dest}"]').click();settle(page)
+   check(dest+' overview and tabs',page.url==URL+'#/'+dest and page.locator('.legal-tabs a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
+   check(dest+' current destination',page.locator('.legal-tabs [aria-current="page"]').count()==1 and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/'+dest)
+   check(dest+' no announcement strip',page.locator('.preview-strip').count()==0 and page.locator('.announcement').count()==1)
+   if dest=='about':
+    check('existing about content preserved',page.locator('#main .about-grid').count()==1)
+    page.screenshot(path=str(OUT/'about-navigation-dark-desktop.png'),full_page=False)
+    page.set_viewport_size({'width':320,'height':844});settle(page)
+    check('all four about tabs fit on mobile',all(a.is_visible() for a in page.locator('.legal-tabs a').all()) and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+    page.screenshot(path=str(OUT/'about-navigation-dark-mobile.png'),full_page=False)
+    page.set_viewport_size({'width':1440,'height':1000})
+  page.locator('.footer-links a[href="#/about"]').click();settle(page)
+  check('About reachable from footer',page.url.endswith('#/about'))
+  page.locator('.legal-tabs a[href="#/guide"]').click();settle(page)
   check('guide tabs precede original heading',page.locator('.legal-tabs').bounding_box()['y']<page.locator('#main h1').bounding_box()['y'])
   check('guide content preserved',page.locator('#main h1').inner_text()=='좋아하는 마음이 오래 가도록' and page.locator('#main .cards-grid>.text-card').count()==3)
   page.screenshot(path=str(OUT/'guide-dark-desktop.png'),full_page=False)
   for width in [320,390,768,1440]:
    page.set_viewport_size({'width':width,'height':900});settle(page)
    check('guide reflows with tabs '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
-   check('guide three buttons visible '+str(width),all(x.is_visible() for x in page.locator('.legal-tabs a').all()))
+   check('guide four buttons visible '+str(width),all(x.is_visible() for x in page.locator('.legal-tabs a').all()))
    if width==390:
     page.evaluate('scrollTo(0,0)');page.screenshot(path=str(OUT/'guide-dark-mobile.png'),full_page=False)
   page.locator('[data-action=theme]').click();settle(page)
@@ -49,7 +65,7 @@ try:
   check('terms opens inside app',page.url==URL+'#/terms')
   check('site header survives policy navigation',page.evaluate('window.__legalHeader===document.querySelector(".site-header")'))
   check('shared navigation retained',page.locator('[data-nav]').count()==6)
-  check('footer order retained',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('footer order retained',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
   check('no iframe or separate access layout',page.locator('iframe,.access-page,.access-backdrop').count()==0)
   check('selected dark theme retained',page.locator('html').get_attribute('data-theme')=='dark' and bg(page)=='rgb(36, 33, 48)')
   for kind,count in [('terms',16),('privacy',13)]:
