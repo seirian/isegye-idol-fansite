@@ -39,14 +39,14 @@ try:
         check('robots metadata',page.locator('meta[name=robots]').get_attribute('content')==('index,follow' if MODE=='production' else 'noindex,nofollow'))
         if MODE=='production':
             check('canonical production URL',page.locator('link[rel=canonical]').get_attribute('href')=='https://isegye-idol.kr/')
-            check('public beta not review label', '공개 베타' in page.locator('.preview-strip').inner_text() and '검토' not in page.locator('.preview-strip').inner_text())
+            check('retired common banner absent from release',page.locator('.preview-strip').count()==0)
             check('robots file permits crawl','Allow: /' in c.request.get(URL+'robots.txt').text())
         else:check('no production canonical',page.locator('link[rel=canonical]').count()==0)
         policy=page.locator('meta[http-equiv="Content-Security-Policy"]').get_attribute('content')
         check('only needed external connections',"connect-src 'self' https://chapi.sooplive.co.kr" in policy and 'https://i.ytimg.com' in policy and 'https://liveimg.sooplive.com' in policy)
         check('no automatic video player',page.locator('iframe,video,audio').count()==0)
-        check('footer contains terms, privacy and fan guide in order',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
-        check('footer policy URLs preserved',page.locator('.footer-links a').evaluate_all('(xs)=>xs.map(x=>x.href)')==['https://isegye-idol.kr/auth/terms','https://isegye-idol.kr/auth/privacy',URL+'#/guide'])
+        check('footer contains terms, privacy and fan guide in order',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
+        check('footer policy URLs preserved',page.locator('.footer-links a').evaluate_all('(xs)=>xs.map(x=>x.href)')==['https://isegye-idol.kr/auth/terms','https://isegye-idol.kr/auth/privacy',URL+'#/guide',URL+'#/about'])
         page.locator('.hm-intro').screenshot(path=str(OUT/'soop-shortcuts-desktop.png'))
         page.locator('.footer').screenshot(path=str(OUT/'footer-desktop.png'))
         page.screenshot(path=str(OUT/'home-desktop.png'),full_page=True)
@@ -55,7 +55,7 @@ try:
         page.locator('.footer').screenshot(path=str(OUT/'footer-mobile.png'))
         for width in (320,768,1440):
             page.set_viewport_size({'width':width,'height':900})
-            check('footer three links at width '+str(width),page.locator('.footer-links a').count()==3 and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+            check('footer four links at width '+str(width),page.locator('.footer-links a').count()==4 and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
         page.evaluate('document.documentElement.dataset.theme="dark"')
         page.locator('.hm-intro').screenshot(path=str(OUT/'soop-shortcuts-dark.png'))
         for width in (320,390,768,1440):

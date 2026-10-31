@@ -32,13 +32,13 @@ def verify_sources(approval: dict) -> None:
 
 
 def production_text(text: str) -> str:
-    for anchor in ('<b>홈 구성 검토</b>', 'function homeSimpleView()',
+    for anchor in ('href="#/about">사이트소개</a>', 'function homeSimpleView()',
                    'function homeView(){return homeSimpleView();}',
                    'function liveHomeView()', 'const CATALOG=', 'const HISTORY='):
         if anchor not in text:
             raise RuntimeError('Approved home composition missing: ' + anchor)
-    text = text.replace('<b>홈 구성 검토</b><span>방송은 그대로, 탐색은 간단하게</span>',
-                        '<b>공개 베타</b><span>방송부터 새 영상, 음악까지</span>')
+    if '<div class="preview-strip">' in text:
+        raise RuntimeError('Retired site-wide banner is present')
     text = text.replace('PRIVACY IN THIS PREVIEW', 'PRIVACY')
     text = text.replace('검토판에는 비공개 접수 서버가 없습니다.', '현재 비공개 접수 서버는 없습니다.')
     return text.replace('현재 검토판의 구현 범위', '현재 공개 베타의 구현 범위')

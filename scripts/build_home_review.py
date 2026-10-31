@@ -30,7 +30,7 @@ def main():
     core=re.sub(r'^export ', '', (ROOT/'home-review/core.js').read_text(), flags=re.M)
     app=replace_once(app,'shell();render();',core+'\nconst HOME_SOOP_PROFILES='+json.dumps(shortcut_profiles)+';\n'+(ROOT/'home-review/ui.js').read_text()+'\nshell();render();')
     app=replace_once(app,"document.getElementById('main').innerHTML=html;","document.documentElement.dataset.homeActive=String(page==='home');\n document.getElementById('main').innerHTML=html;")
-    app=replace_once(app,'<b>멤버·음악 개선 검토</b><span>읽기 편하게, 더 가까이</span>','<b>홈 구성 검토</b><span>방송은 그대로, 탐색은 간단하게</span>')
+    app=replace_once(app,'<div class="preview-strip"><b>멤버·음악 개선 검토</b><span>읽기 편하게, 더 가까이</span><a href="#/about">사이트 소개 ${icon(\'arrow\')}</a></div>','')
     app=app.replace('어떤 순간을 찾고 있나요?','멤버·음악 검색')
     app=replace_once(app,'<h2>함께 채우는 기록</h2><p>잘못된 정보나 빠진 기록을 발견하셨나요? 공개된 근거와 함께 알려주세요. 확인한 뒤 수정하겠습니다.</p><a class="text-link" href="#/report">정보 제보 · 정정 요청 ${icon(\'arrow\')}</a>',
       '<h2>자료와 출처</h2><p>공개된 원문을 바탕으로 정보를 정리합니다. 각 기록에서 출처와 확인한 내용을 살펴볼 수 있습니다.</p><a class="text-link" href="#/history">활동 기록 보기 ${icon(\'arrow\')}</a>')

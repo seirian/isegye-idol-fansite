@@ -1,10 +1,13 @@
 /* Canonical public policies, rendered within the same header/footer as fan guide. */
 function legalNavigation(active){
- const tabs=[['terms','이용약관'],['privacy','개인정보처리방침'],['guide','팬가이드']];
+ const tabs=[['terms','이용약관'],['privacy','개인정보처리방침'],['guide','팬가이드'],['about','사이트소개']];
  return `<nav class="legal-tabs" aria-label="이용 안내 문서">${tabs.map(([id,label])=>`<a href="#/${id}"${id===active?' aria-current="page"':''}>${label}</a>`).join('')}</nav>`;
 }
 function legalGuideView(){
  return `<div class="legal-shell legal-in-site legal-guide">${legalNavigation('guide')}${guideView()}</div>`;
+}
+function legalAboutView(){
+ return `<div class="legal-shell legal-in-site legal-about">${legalNavigation('about')}${aboutView()}</div>`;
 }
 function legalDocumentView(kind){
  const title=kind==='terms'?'이용약관':'개인정보처리방침';
