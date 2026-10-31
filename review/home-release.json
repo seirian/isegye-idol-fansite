@@ -10,8 +10,8 @@
   },
   "sourceHashes": {
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
-    "home-review/ui.js": "65b604633b441d95696c7b6891e8bc5783cd0235b30340b01c4e54074b16f6f3",
-    "home-review/theme.css": "f796204c3749ecc04dcd0cace5f6625ec33d78e6c2080c56193cc446e3ea879f",
+    "home-review/ui.js": "74c93d6daabf3411165cff42b4d41d217ed4d324777c325013f52823f5c293e6",
+    "home-review/theme.css": "15cc0801cadd7f04450a9f2ddb41771f7abc39e1d9bf5fa34c5e67b096f38f94",
     "scripts/build_home_review.py": "1df5a68cad8eadc2d2661dfa4c433dcffe1140e18594b9703509a013bbc693c6",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
@@ -69,6 +69,10 @@
     {
       "requestedAt": "2026-10-31",
       "scope": "Add the same terms/privacy/guide navigation to the fan guide with guide marked current. Reuse shared tabs and theme; preserve guide content, legal bodies, footer, authentication and collection."
+    },
+    {
+      "requestedAt": "2026-10-31",
+      "scope": "Add landing-page space below navigation; replace the visible intro and shortcut row with the latest verified Berriz notice and next confirmed official event from the existing schedule feed. Retain group artwork and place member channel links in an expandable video-section directory."
     }
   ]
 }

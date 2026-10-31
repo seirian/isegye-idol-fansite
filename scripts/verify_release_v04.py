@@ -18,6 +18,7 @@ def main():
             ('music-sources','tests/music_sources_browser.py',{'MUSIC_URL':url,'MUSIC_OUT':str(out/'music-sources')}),
             ('group-hero','tests/group_hero_smoke.py',{'GROUP_HERO_URL':url,'GROUP_HERO_OUT_DIR':str(out/'group-hero'),'GROUP_HERO_EXPECT_MODE':mode}),
             ('home','tests/home_simple_browser.py',{'HOME_URL':url,'HOME_OUT':str(out/'home'),'HOME_EXPECT_MODE':mode,'HOME_EXPECT_APPROVED':'true','HOME_REAL_CHECK':'true'}),
+            ('home-brief','tests/home_brief_browser.py',{'HOME_URL':url,'BRIEF_OUT':str(out/'home-brief')}),
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
     suites.append(('berriz','tests/berriz_browser.py',{'BERRIZ_URL':url,'BERRIZ_OUT':str(out/'berriz')}))

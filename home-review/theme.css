@@ -60,3 +60,17 @@
 .hm-member .hm-soop-portrait img{object-fit:contain}
 .hm-member .hm-soop-portrait .portrait-fallback{display:none}
 .hm-member .hm-soop-portrait[data-image-error=true] .portrait-fallback{display:flex;align-items:center;justify-content:center;position:absolute;inset:0;padding:2px;font-size:14px;line-height:1.4;color:var(--ink);background:var(--paper)}
+
+/* Only the landing page gets breathing room below the shared navigation. */
+html[data-home-active=true] #main{padding-block-start:32px}
+.hm-intro.hm-brief{background:var(--paper);grid-template-columns:minmax(0,1fr) minmax(160px,22%);column-gap:clamp(20px,4vw,56px);padding:24px clamp(20px,3vw,36px)}
+.hm-brief h2{font-size:clamp(1.45rem,2.6vw,1.9rem);line-height:1.25;letter-spacing:-.045em;margin:4px 0 12px}
+.hm-brief .hm-group{border:1px solid var(--line);box-shadow:none}
+.hm-brief-row{display:block;min-width:0;padding:10px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.hm-brief-row strong{display:inline;font-size:1.04rem;line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}.hm-brief-row .icon{width:15px;height:15px;vertical-align:middle;color:var(--hm-accent)}
+.hm-brief-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:3px;font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.hm-brief-label{font-weight:750;color:var(--hm-accent)}.hm-brief-row:hover strong{color:var(--hm-accent);text-decoration:underline;text-underline-offset:3px}
+.hm-brief-saved,.hm-brief-empty{font-size:.875rem;color:var(--muted)}.hm-brief-saved{margin:6px 0}
+.hm-channel-links{margin-top:12px;border-block:1px solid var(--line);padding:0 4px}.hm-channel-links summary{cursor:pointer;color:var(--hm-accent);font-size:1rem;font-weight:700;line-height:1.5;padding:13px 0}.hm-channel-links .hm-members{border:0;padding:0 0 16px}
+.hm-brief-row:focus-visible,.hm-channel-links summary:focus-visible{outline:2px solid var(--hm-accent);outline-offset:3px}
+@media(max-width:640px){html[data-home-active=true] #main{padding-block-start:20px}.hm-intro.hm-brief{grid-template-columns:minmax(0,1fr);gap:12px;padding:18px}.hm-brief .hm-group{width:min(100%,190px);justify-self:center}.hm-brief-row{padding:9px 0}}
