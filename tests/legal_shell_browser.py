@@ -4,6 +4,7 @@ import json,os,subprocess
 from playwright.sync_api import sync_playwright
 R=Path(__file__).resolve().parents[1];OUT=Path(os.getenv('LEGAL_SHELL_OUT',str(R/'test-results/legal-shell')));OUT.mkdir(parents=True,exist_ok=True)
 URL=os.getenv('LEGAL_SHELL_URL','http://127.0.0.1:4199/').rstrip('/')+'/'
+DOC_TABS=['이용약관','개인정보처리방침','팬가이드','사이트소개']
 checks=[];errors=[]
 def check(name,ok):
  checks.append({'name':name,'passed':bool(ok)})
@@ -23,15 +24,31 @@ try:
   page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(URL+'#/guide',wait_until='networkidle');page.evaluate('window.__legalHeader=document.querySelector(".site-header")')
   check('guide has one shared document navigation',page.locator('#main .legal-tabs').count()==1)
-  check('guide tabs use consistent order',page.locator('.legal-tabs a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('guide tabs use consistent order',page.locator('.legal-tabs a').all_text_contents()==DOC_TABS)
   check('guide alone marked current',page.locator('.legal-tabs [aria-current="page"]').count()==1 and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/guide')
+  # Visit each information page through real links; each has one selected tab.
+  for dest in ('about','terms','privacy','guide'):
+   page.locator(f'.legal-tabs a[href="#/{dest}"]').click();settle(page)
+   check(dest+' overview and tabs',page.url==URL+'#/'+dest and page.locator('.legal-tabs a').all_text_contents()==DOC_TABS)
+   check(dest+' current destination',page.locator('.legal-tabs [aria-current="page"]').count()==1 and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/'+dest)
+   check(dest+' no announcement strip',page.locator('.preview-strip').count()==0 and page.locator('.announcement').count()==1)
+   if dest=='about':
+    check('existing about content preserved',page.locator('#main .about-grid').count()==1)
+    page.screenshot(path=str(OUT/'about-navigation-dark-desktop.png'),full_page=False)
+    page.set_viewport_size({'width':320,'height':844});settle(page)
+    check('all four about tabs fit on mobile',all(a.is_visible() for a in page.locator('.legal-tabs a').all()) and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+    page.screenshot(path=str(OUT/'about-navigation-dark-mobile.png'),full_page=False)
+    page.set_viewport_size({'width':1440,'height':1000})
+  page.locator('.footer-links a[href="#/about"]').click();settle(page)
+  check('About reachable from footer',page.url.endswith('#/about'))
+  page.locator('.legal-tabs a[href="#/guide"]').click();settle(page)
   check('guide tabs precede original heading',page.locator('.legal-tabs').bounding_box()['y']<page.locator('#main h1').bounding_box()['y'])
   check('guide content preserved',page.locator('#main h1').inner_text()=='좋아하는 마음이 오래 가도록' and page.locator('#main .cards-grid>.text-card').count()==3)
   page.screenshot(path=str(OUT/'guide-dark-desktop.png'),full_page=False)
   for width in [320,390,768,1440]:
    page.set_viewport_size({'width':width,'height':900});settle(page)
    check('guide reflows with tabs '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
-   check('guide three buttons visible '+str(width),all(x.is_visible() for x in page.locator('.legal-tabs a').all()))
+   check('guide four buttons visible '+str(width),all(x.is_visible() for x in page.locator('.legal-tabs a').all()))
    if width==390:
     page.evaluate('scrollTo(0,0)');page.screenshot(path=str(OUT/'guide-dark-mobile.png'),full_page=False)
   page.locator('[data-action=theme]').click();settle(page)
@@ -49,7 +66,7 @@ try:
   check('terms opens inside app',page.url==URL+'#/terms')
   check('site header survives policy navigation',page.evaluate('window.__legalHeader===document.querySelector(".site-header")'))
   check('shared navigation retained',page.locator('[data-nav]').count()==6)
-  check('footer order retained',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('footer order retained',page.locator('.footer-links a').all_text_contents()==DOC_TABS)
   check('no iframe or separate access layout',page.locator('iframe,.access-page,.access-backdrop').count()==0)
   check('selected dark theme retained',page.locator('html').get_attribute('data-theme')=='dark' and bg(page)=='rgb(36, 33, 48)')
   for kind,count in [('terms',16),('privacy',13)]:
@@ -85,7 +102,7 @@ try:
   check('fan guide still works',page.locator('#main a[href="#/record/fan-policy"]').count()>0)
   check('guide tabs persist after policy navigation',page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/guide')
   page.reload(wait_until='networkidle')
-  check('guide tabs survive direct reload',page.locator('.legal-tabs a').count()==3 and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/guide')
+  check('guide tabs survive direct reload',page.locator('.legal-tabs a').all_text_contents()==DOC_TABS and page.locator('.legal-tabs [aria-current="page"]').get_attribute('href')=='#/guide')
   page.locator('.footer-links a').filter(has_text='개인정보처리방침').click();settle(page)
   check('footer privacy stays inside app',page.url==URL+'#/privacy')
   page.reload(wait_until='networkidle');check('direct privacy route and theme survive reload',bg(page)=='rgb(36, 33, 48)' and intact(page,'privacy'))
@@ -99,6 +116,7 @@ try:
   for kind in ('terms','privacy'):
    p.goto(URL+'auth/'+kind,wait_until='networkidle')
    check('public '+kind+' uses site branding',p.locator('.legal-site-header').count()==1 and p.locator('.access-backdrop').count()==0)
+   check('public '+kind+' tabs and footer',p.locator('.legal-tabs a').all_text_contents()==DOC_TABS and p.locator('.legal-site-footer a').all_text_contents()==DOC_TABS)
    check('public '+kind+' no scripts or account actions',p.locator('script,.legal-site-header a[href="/auth/login"],.legal-navigation a[href="/auth/login"]').count()==0)
    check('public '+kind+' OS dark mode',bg(p)=='rgb(36, 33, 48)')
    p.get_by_role('radio',name='라이트',exact=True).check();check('public '+kind+' light control',bg(p)=='rgb(255, 255, 255)')

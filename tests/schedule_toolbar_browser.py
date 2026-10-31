@@ -30,7 +30,7 @@ try:
   check('manual refresh hidden by default',not page.locator('[data-schedule-refresh]').is_visible())
   check('six main menu destinations',page.locator('[data-nav]').count()==6)
   check('fan guide absent from main menu',page.locator('[data-nav=guide]').count()==0)
-  check('footer links exact order',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('footer links exact order',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
   check('legal links unchanged',page.locator('.footer-links a').evaluate_all('(xs)=>xs.slice(0,2).map(x=>x.href)')==['https://isegye-idol.kr/auth/terms','https://isegye-idol.kr/auth/privacy'])
   check('compact footer gap',page.locator('.footer-links').evaluate('(x)=>parseFloat(getComputedStyle(x).columnGap)<=16'))
   check('no old importance wording','소속사 중요 공지' not in page.locator('#main').inner_text())
@@ -64,7 +64,7 @@ try:
    check('page reflows '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
    g=geometry();check('uniform control heights '+str(width),max(x['h'] for x in g)-min(x['h'] for x in g)<2)
    check('controls fit their fields '+str(width),all(x['sw']<=x['cw']+1 for x in g))
-   check('footer remains three links '+str(width),page.locator('.footer-links a').count()==3)
+   check('footer remains four links '+str(width),page.locator('.footer-links a').count()==4)
    if width==390:
     page.evaluate('scrollTo(0,0)');page.screenshot(path=str(OUT/'toolbar-mobile.png'),full_page=False)
     page.locator('.footer-links').screenshot(path=str(OUT/'footer-mobile.png'))
@@ -74,7 +74,7 @@ try:
   page.locator('.footer-links a[href="#/guide"]').click();settled(page)
   check('footer opens retained fan guide',page.locator('#main a[href="#/record/fan-policy"]').count()>0)
   check('no primary guide at mobile width',page.locator('[data-nav=guide]').count()==0)
-  check('footer remains on guide route',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드'])
+  check('footer remains on guide route',page.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])
   check('no browser exceptions',not errors);b.close()
 finally:
  (OUT/'result.json').write_text(json.dumps({'url':URL,'passed':sum(x['passed'] for x in checks),'total':len(checks),'checks':checks,'browserErrors':errors},ensure_ascii=False,indent=2)+'\n')

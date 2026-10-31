@@ -52,7 +52,7 @@ class HomeReleaseTests(unittest.TestCase):
                 'homeReview': {'livePreserved': True, 'communitySubmissionBanner': False, 'sections': release.SECTIONS}}
         (source / 'build-info.json').write_text(json.dumps(meta))
         (source / 'index.html').write_text('<head><title>Review</title><meta name="robots" content="noindex,nofollow"></head>')
-        (source / 'src/app.js').write_text('// <b>홈 구성 검토</b><span>방송은 그대로, 탐색은 간단하게</span> function homeSimpleView() function homeView(){return homeSimpleView();} function liveHomeView() const CATALOG= const HISTORY=')
+        (source / 'src/app.js').write_text('// href="#/about">사이트소개</a> function homeSimpleView() function homeView(){return homeSimpleView();} function liveHomeView() const CATALOG= const HISTORY=')
         (source / 'src/data.js').write_text("const SITE={version:'0.4.0'};")
         (source / 'src/styles.css').write_text('body{}')
         (source / 'review.html').write_text('noindex offline preview')
@@ -66,12 +66,12 @@ class HomeReleaseTests(unittest.TestCase):
                 meta = release.package(src, out, 'production', self.approval())
             self.assertEqual(meta['version'], '0.5.0')
             self.assertEqual(meta['approvedHomeReview'], release.REVIEW)
-            self.assertIn('공개 베타', (out / 'src/app.js').read_text())
+            self.assertNotIn('preview-strip', (out / 'src/app.js').read_text())
             self.assertIn('index,follow', (out / 'index.html').read_text())
             self.assertIn('rel="canonical"', (out / 'index.html').read_text())
             self.assertFalse((out / 'review.html').exists())
             self.assertIn('noindex,nofollow', (src / 'index.html').read_text())
-            self.assertIn('홈 구성 검토', (src / 'src/app.js').read_text())
+            self.assertIn('사이트소개', (src / 'src/app.js').read_text())
 
     def test_preview_remains_noindex(self):
         with tempfile.TemporaryDirectory() as temp:

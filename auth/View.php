@@ -51,7 +51,7 @@ final class View
         foreach (['terms'=>'이용약관','privacy'=>'개인정보처리방침'] as $id=>$label) {
             $tabs .= '<a href="/auth/' . $id . '"' . ($id === $kind ? ' aria-current="page"' : '') . '>' . $label . '</a>';
         }
-        $tabs .= '</nav>';
+        $tabs .= '<a href="/#/guide">팬가이드</a><a href="/#/about">사이트소개</a></nav>';
         $nav = '';
         foreach (['home'=>'오늘의 이세돌','members'=>'멤버 소개','schedule'=>'소식·일정','music'=>'음악','live'=>'LIVE','history'=>'활동 기록'] as $id=>$label) {
             $nav .= '<a href="/#/' . $id . '">' . $label . '</a>';
@@ -67,7 +67,7 @@ final class View
             . '<nav class="legal-site-nav" aria-label="주 메뉴">' . $nav . '</nav></header><div class="legal-public-layout">'
             . '<main id="main"><div class="legal-shell" id="document-top"><div class="legal-navigation"><a href="/">← 사이트로</a></div>'
             . $tabs . '<article class="legal-document" data-policy="' . $kind . '" data-version="1.0">' . file_get_contents($file) . '</article></div></main>'
-            . '<footer class="legal-site-footer"><span>이세계아이돌 비공식 팬 프로젝트</span><nav aria-label="이용 안내"><a href="/auth/terms">이용약관</a><a href="/auth/privacy"><strong>개인정보처리방침</strong></a><a href="/#/guide">팬가이드</a></nav></footer></div></body></html>';
+            . '<footer class="legal-site-footer"><span>이세계아이돌 비공식 팬 프로젝트</span><nav aria-label="이용 안내"><a href="/auth/terms">이용약관</a><a href="/auth/privacy"><strong>개인정보처리방침</strong></a><a href="/#/guide">팬가이드</a><a href="/#/about">사이트소개</a></nav></footer></div></body></html>';
     }
     public static function privacy(): string { return self::document('privacy'); }
     public static function terms(): string { return self::document('terms'); }
