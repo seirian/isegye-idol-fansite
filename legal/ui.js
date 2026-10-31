@@ -1,9 +1,15 @@
 /* Canonical public policies, rendered within the same header/footer as fan guide. */
+function legalNavigation(active){
+ const tabs=[['terms','이용약관'],['privacy','개인정보처리방침'],['guide','팬가이드']];
+ return `<nav class="legal-tabs" aria-label="이용 안내 문서">${tabs.map(([id,label])=>`<a href="#/${id}"${id===active?' aria-current="page"':''}>${label}</a>`).join('')}</nav>`;
+}
+function legalGuideView(){
+ return `<div class="legal-shell legal-in-site legal-guide">${legalNavigation('guide')}${guideView()}</div>`;
+}
 function legalDocumentView(kind){
  const title=kind==='terms'?'이용약관':'개인정보처리방침';
- const tabs=[['terms','이용약관'],['privacy','개인정보처리방침'],['guide','팬가이드']];
  const tools=kind==='privacy'?`<section class="legal-storage" aria-labelledby="legal-storage-title"><h2 id="legal-storage-title">브라우저 저장정보 관리</h2><p>즐겨찾기와 화면 테마는 이 브라우저에 저장됩니다. 아래 버튼은 이 사이트의 브라우저 설정만 지우며 회원 탈퇴나 로그아웃을 대신하지 않습니다.</p><button class="button secondary" data-action="clear-data">이 사이트의 저장 정보 지우기</button></section>`:'';
- return `<div class="legal-shell legal-in-site" id="document-top" aria-label="${title}"><nav class="legal-tabs" aria-label="이용 안내 문서">${tabs.map(([id,label])=>`<a href="#/${id}"${id===kind?' aria-current="page"':''}>${label}</a>`).join('')}</nav><article class="legal-document" data-policy="${kind}" data-version="1.0">${LEGAL_DOCUMENTS[kind]}</article>${tools}</div>`;
+ return `<div class="legal-shell legal-in-site" id="document-top" aria-label="${title}">${legalNavigation(kind)}<article class="legal-document" data-policy="${kind}" data-version="1.0">${LEGAL_DOCUMENTS[kind]}</article>${tools}</div>`;
 }
 function legalDocumentMount(){
  const {parts,params}=parseRoute(location.hash),kind=parts[0],section=params.get('section');

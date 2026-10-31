@@ -30,8 +30,8 @@
     "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
     "scripts/compose_footer_navigation.py": "9e187e12a7d2e47a0cd74cd26c05c93d6fbea46577cfd53196407db2aec6a7f6",
     "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5",
-    "scripts/compose_legal_documents.py": "e1772f76b0837cccc7e7d72832de375908c09ead078dd681831aa7b91167772c",
-    "legal/ui.js": "765f1b4e8a6e0a6083865b8b91fdedd565c450706c6806941acc267e700617b1",
+    "scripts/compose_legal_documents.py": "9418a69c193e92a6ba89d9ef86e754db1f6a5ed503b54c942dc4bf84d67deaf0",
+    "legal/ui.js": "b60062eb8e32aadcc508293875658108e50ea139b30cc18ac630b7402ae25ec1",
     "auth/legal.css": "5929b3033096f5384fc1fd80b109b3ed3bb15f2532769e2ec0d334f6dd3837f9",
     "auth/View.php": "fc7675c62bb3d550b754f3a954d202a1958c06b70f93a8296edda7b358ed0eac"
   },
@@ -65,6 +65,10 @@
     {
       "requestedAt": "2026-10-31",
       "scope": "Show unchanged terms and privacy inside the shared fan-guide-style app shell with existing dark theme; preserve public read-only policy routes, and restyle their script-free renderer with light/dark controls. No legal text, maintenance, accounts or ingestion changes."
+    },
+    {
+      "requestedAt": "2026-10-31",
+      "scope": "Add the same terms/privacy/guide navigation to the fan guide with guide marked current. Reuse shared tabs and theme; preserve guide content, legal bodies, footer, authentication and collection."
     }
   ]
 }
