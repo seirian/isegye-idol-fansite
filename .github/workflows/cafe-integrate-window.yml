@@ -1,0 +1,70 @@
+name: Cafe - integrate and test October 31 backfill
+on:
+  push:
+    branches: ['feature/cafe-batch-20261031']
+    paths: ['.github/workflows/cafe-integrate-window.yml']
+permissions: {contents: write, actions: read}
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Fetch the two exact verified window artifacts
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/13164592234/zip" >/tmp/boards.zip
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/13163674940/zip" >/tmp/series.zip
+          echo '6863955f0dfed386cd5f4fe8dc58a1662ea426ce28a6cc9f8566805233fce8e3  /tmp/boards.zip' | sha256sum -c -
+          echo 'f98657d9ee70de805e28c223c6ed5baf40163ca9f0733147139e8a73df17e6c7  /tmp/series.zip' | sha256sum -c -
+          unzip -p /tmp/boards.zip cafe-review.json > cafe-review.json
+          unzip -p /tmp/series.zip fan-review.json > fan-review.json
+      - name: Read neutral forecast fields; never archive bodies or comments
+        run: |
+          python -m venv /tmp/br
+          /tmp/br/bin/pip -q install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/br/bin/python > /tmp/br.log
+          /tmp/br/bin/python scripts/review_fan_cards.py fan-review.json
+          python scripts/pack_cafe_window.py
+          mkdir -p schedule/cafe-batches
+          cp cafe-window.json schedule/cafe-batches/2026-11-03-0232.json
+      - name: Integrate the reviewed inputs with the hourly feed and the calendar allowlist
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          def edit(name,old,new):
+              p=Path(name);s=p.read_text();assert s.count(old)==1,(name,old,s.count(old));p.write_text(s.replace(old,new))
+          sf='scripts/schedule_feed.py';np='scripts/notice_policy.py';co='scripts/compose_schedule.py';cu='schedule/ui.js';cc='schedule/core.js';pub='scripts/publish_schedule_feed.py'
+          edit(np,"    return validate_archive(json.loads((ROOT/'schedule/approved-notices.json').read_text()))","    from cafe_batch import combined_history\n    return validate_archive(combined_history(json.loads((ROOT/'schedule/approved-notices.json').read_text())))")
+          edit(np,"    if source == 'fan-roundup': return url == FAN_URL","    if source == 'fan-roundup':\n        from cafe_batch import fans,PREFIX\n        return url==FAN_URL or any(url==PREFIX+str(i) for i in fans())")
+          edit(sf,' # Isolated public browser,',' import cafe_batch,cafe_batch_cards\n batch_states=cafe_batch.populate(data,now,seed)\n cafe_batch_cards.add(data,now)\n # Isolated public browser,')
+          edit(sf,"   s.update(state='snapshot',lastAttemptAt=None,lastSuccessAt=seed['generatedAt'],detail='초기 확인 자료 · 카페 자동 크롤링 미사용')","   s.update(batch_states[source['id']])")
+          edit(co,"    rows=[];events=[]","    import cafe_batch\n    observed=cafe_batch.official();\n    rows=[];events=[]")
+          edit(co,"r['publishedAt'],r['titleGeneralized']])","r['publishedAt'],r['titleGeneralized'],observed[r['articleId']][1] if r['articleId'] in observed else data['checkedAt']])")
+          edit(co,"'bodiesReviewed':False,'rows':rows,'events':events}","'bodiesReviewed':False,'rows':rows,'events':events,'fanIds':list(cafe_batch.fans()),'incrementalReviews':len(cafe_batch.windows())}")
+          edit(co,"'completePublicListings':coverage.get('complete') is True,","'completePublicListings':coverage.get('complete') is True and not cafe_batch.windows(),")
+          edit(cu,'publishedAt,generalized])','publishedAt,generalized,observedAt])');edit(cu,'checkedAt:NOTICE_ARCHIVE.checkedAt','checkedAt:observedAt||NOTICE_ARCHIVE.checkedAt')
+          edit(cu,'const noticeByArticle=',"for(const id of (NOTICE_ARCHIVE.fanIds||[]))noticeApprovedSources.set('https://cafe.naver.com/steamindiegame/'+id,'fan-roundup');\nconst noticeByArticle=")
+          edit(cc,"r.sourceId==='fan-roundup'&&r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'", "r.sourceId==='fan-roundup'&&(r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'||approvedSources.get(r.sourceUrl)==='fan-roundup')")
+          edit(pub,"                'naverSearchProvider'", "                'cafeBatchCoverage':{s['id']:s.get('coverage') for s in value['sources'] if s['id'] in ('cafe-members','cafe-agency','fan-roundup')},\n                'naverSearchProvider'")
+          edit('tests/schedule_browser.py',"  check('7249 verified notices retained','7,249' in page.locator('[data-notice-history]').inner_text())","  import sys;sys.path.insert(0,str(ROOT/'scripts'));import notice_policy\n  expected=len(notice_policy.archive()['notices']);check('original plus approved window count',expected>=7249 and f'{expected:,}' in page.locator('[data-notice-history]').inner_text())")
+          p=Path('scripts/review_fan_series.py');s=p.read_text();a=s.index("        q='뱅온정보';legacy=");z=s.index('        candidates={}',a);p.write_text(s[:a]+'        from fan_search_public_ui import search\n        page=search(ctx.new_page())\n'+s[z:])
+          p=Path('review/home-release.json');j=json.loads(p.read_text()); changed=[co,cc,cu,np];
+          for path in changed:j['sourceHashes'][path]=hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          j['presentationUpdates'].append({'requestedAt':'2026-11-03','scope':'Process reviewed public Cafe batches from 2026-10-31, with original observations, existing author rules and same-series fan reference verification. No recurring Cafe page/API crawler.'});p.write_text(json.dumps(j,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python -m unittest discover -s tests -p 'test_schedule*.py' -v
+          python -m unittest discover -s tests -p 'test_notice_policy.py' -v
+          npm test
+      - name: Commit only reviewed inputs and tested integration to the feature branch
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          git add -- scripts/notice_policy.py scripts/schedule_feed.py scripts/compose_schedule.py scripts/publish_schedule_feed.py scripts/review_fan_series.py schedule/core.js schedule/ui.js schedule/cafe-batches/2026-11-03-0232.json tests/schedule_browser.py review/home-release.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(schedule): ingest 14 verified notices and three daily roundup references'
+          gh auth setup-git
+          git push origin HEAD:refs/heads/feature/cafe-batch-20261031
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with: {name: cafe-final-result, path: cafe-window.json, retention-days: 14}
