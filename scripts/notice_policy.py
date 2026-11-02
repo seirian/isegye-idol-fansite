@@ -51,7 +51,8 @@ def validate_archive(data):
 
 @lru_cache(maxsize=1)
 def archive():
-    return validate_archive(json.loads((ROOT/'schedule/approved-notices.json').read_text()))
+    from cafe_batch import combined_history
+    return validate_archive(combined_history(json.loads((ROOT/'schedule/approved-notices.json').read_text())))
 
 @lru_cache(maxsize=1)
 def reviewed_sources():
@@ -72,7 +73,9 @@ def is_publishable(row):
         return row.get('id')=='berriz-notice-'+url.rstrip('/').split('/')[-1]
     if source in ('cafe-members','cafe-agency'):
         return reviewed_sources().get(url) == source
-    if source == 'fan-roundup': return url == FAN_URL
+    if source == 'fan-roundup':
+        from cafe_batch import fans,PREFIX
+        return url==FAN_URL or any(url==PREFIX+str(i) for i in fans())
     if source == 'parable-web':
         from urllib.parse import urlsplit
         try:

@@ -31,7 +31,8 @@ try:
   check('fan reference explicitly uncertain','팬 정리 · 미확정' in page.locator('.sc-forecast').inner_text())
   check('unverified search not displayed','검색·미검증' not in page.locator('#main').inner_text())
   check('October has 31 days',page.locator('[data-action=date]').count()==31)
-  check('7249 verified notices retained','7,249' in page.locator('[data-notice-history]').inner_text())
+  import sys;sys.path.insert(0,str(ROOT/'scripts'));import notice_policy
+  expected=len(notice_policy.archive()['notices']);check('original plus approved window count',expected>=7249 and f'{expected:,}' in page.locator('[data-notice-history]').inner_text())
   check('month input retained',page.locator('[data-schedule-month]').get_attribute('type')=='month')
   check('break removed from type choices',page.locator('[data-filter=kind] option[value=break]').count()==0)
   geometry=page.evaluate('''()=>{const a=document.querySelector('.sc-calendar').getBoundingClientRect(),b=document.querySelector('.sc-agenda').getBoundingClientRect(),r=document.querySelector('.sc-page').getBoundingClientRect();return {full:a.width/r.width,below:b.top>=a.bottom,sameWidth:Math.abs(a.width-b.width)<2}}''')

@@ -29,8 +29,8 @@ def run(start):
         b=p.chromium.launch();ctx=b.new_context(locale='ko-KR',timezone_id='Asia/Seoul'); ctx.route('**/*',lambda r:r.abort() if r.request.resource_type in ('image','media','font') else r.continue_());ref=article(ctx,ORIGINAL)
         out['referenceChecks']={k:bool(ref and ref[k]) for k in ('title','author','board','stamp')}
         if not ref or not all(ref.values()) or not TITLE.fullmatch(ref['title']):return out
-        q='뱅온정보';legacy='https://cafe.naver.com/ArticleSearchList.nhn?search.clubid=27842958&search.searchBy=1&search.sortBy=date&search.query='+quote_from_bytes(q.encode('euc-kr'));page=ctx.new_page()
-        page.goto(legacy,wait_until='domcontentloaded',timeout=25000);page.wait_for_timeout(2600)
+        from fan_search_public_ui import search
+        page=search(ctx.new_page())
         candidates={}
         for f in page.frames:
             # Only extract anchors whose visible title matches this exact series.
