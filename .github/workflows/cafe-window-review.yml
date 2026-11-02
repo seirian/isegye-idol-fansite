@@ -1,0 +1,38 @@
+name: Cafe - one-time approved window review
+on:
+  push:
+    branches: ['feature/cafe-batch-20261031']
+    paths: ['.github/workflows/cafe-window-review.yml']
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'First KST day to review (within the past 14 days)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install the existing public-page reader
+        run: |
+          python -m venv /tmp/cafe-review
+          /tmp/cafe-review/bin/pip -q install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/cafe-review/bin/python > /tmp/cafe-browser-install.log
+      - name: Review public listing metadata and one approved fan reference
+        env:
+          START: ${{ inputs.start || '2026-10-31' }}
+        run: /tmp/cafe-review/bin/python scripts/review_cafe_window.py "$START"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cafe-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: cafe-review.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Both notice windows must be verified
+        run: python -c "import json; b=json.load(open('cafe-review.json'))['boards']; assert all(b[str(m)]['state']=='reviewed' for m in (345,1250)), b"
