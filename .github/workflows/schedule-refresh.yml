@@ -25,6 +25,12 @@ jobs:
           persist-credentials: false
       - name: Check data rules and data-only publication boundary
         run: python -m unittest discover -s tests -p 'test_schedule*.py' -v
+      - name: Discover new member, agency and roundup signals using the official Search API only
+        if: vars.PRODUCTION_PAUSED != 'true' && vars.ISEGYE_SCHEDULE_PAUSED != 'true'
+        run: python scripts/cafe_batch_discovery.py
+        env:
+          ISEGYE_NAVER_CLIENT_ID: ${{ secrets.ISEGYE_NAVER_CLIENT_ID }}
+          ISEGYE_NAVER_CLIENT_SECRET: ${{ secrets.ISEGYE_NAVER_CLIENT_SECRET }}
       - name: Install pinned SFTP and public-page reader
         run: |
           python -m venv /tmp/schedule-refresh

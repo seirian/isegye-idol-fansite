@@ -58,6 +58,7 @@ def publish(remote,collect=feed.collect):
                 'counts':{k:len(value[k]) for k in ('events','news','forecasts')},
                 'sources':{s['id']:s['state'] for s in value['sources']},
                 'newsCountsBySource':{s['id']:sum(n['sourceId']==s['id'] for n in value['news']) for s in value['sources']},
+                'cafeBatchCoverage':{s['id']:s.get('coverage') for s in value['sources'] if s['id'] in ('cafe-members','cafe-agency','fan-roundup')},
                 'naverSearchProvider':'NAVER API HUB',
                 'berrizCounts':{s:sum(r['sourceId']==s for k in ('news','events') for r in value[k]) for s in ('berriz-notice','berriz-calendar')},
                 'berrizCoverage':{s['id']:s.get('coverage') for s in value['sources'] if s['id'].startswith('berriz-')},

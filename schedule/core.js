@@ -41,7 +41,7 @@ export function scheduleCurrentForecasts(rows,date) {return rows.filter(x=>x.dat
 // Search matches cannot prove the writer. Deny them even in a stale server snapshot.
 export function scheduleApprovedRows(rows, approvedSources) {
  return rows.filter(r=>scheduleBerrizApproved(r)||r.sourceId==='parable-web'&&scheduleSafeUrl(r.sourceUrl)?.startsWith('https://parable-asia.com/')||
-  r.sourceId==='fan-roundup'&&r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'||
+  r.sourceId==='fan-roundup'&&(r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'||approvedSources.get(r.sourceUrl)==='fan-roundup')||
   ['cafe-members','cafe-agency'].includes(r.sourceId)&&approvedSources.get(r.sourceUrl)===r.sourceId);
 }
 export function schedulePostedDate(publishedAt) {

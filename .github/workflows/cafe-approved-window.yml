@@ -1,0 +1,49 @@
+name: Cafe - collect approved public window
+on:
+  workflow_dispatch:
+    inputs:
+      start_kst:
+        description: '첫 확인일 YYYY-MM-DD (KST, 최근 14일 이내)'
+        type: string
+        required: true
+permissions: {contents: read}
+jobs:
+  gather:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Review both boards and the designated series without a login
+        env: {START: '${{ inputs.start_kst }}'}
+        run: |
+          python -m venv /tmp/cafe-review
+          /tmp/cafe-review/bin/pip -q install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/cafe-review/bin/python > /tmp/cafe-browser.log
+          /tmp/cafe-review/bin/python scripts/review_cafe_window.py "$START"
+          /tmp/cafe-review/bin/python scripts/review_fan_series.py "$START"
+          /tmp/cafe-review/bin/python scripts/review_fan_cards.py fan-review.json
+          /tmp/cafe-review/bin/python scripts/pack_cafe_window.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: verified-window, path: cafe-window.json, if-no-files-found: error, retention-days: 30}
+  propose_data:
+    needs: gather
+    runs-on: ubuntu-latest
+    permissions: {contents: write}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main}
+      - uses: actions/download-artifact@v4
+        with: {name: verified-window, path: /tmp/reviewed}
+      - name: Save on a data branch only, never write directly to production
+        run: |
+          branch="data/cafe-window-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          git switch -c "$branch"
+          mkdir -p schedule/cafe-batches
+          cp /tmp/reviewed/cafe-window.json "schedule/cafe-batches/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          python -c "import sys;sys.path.insert(0,'scripts');import cafe_batch; assert cafe_batch.windows()"
+          git add schedule/cafe-batches
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'data: reviewed public cafe window'
+          git push origin "$branch"
+          echo "검토 및 반영: https://github.com/$GITHUB_REPOSITORY/compare/main...$branch" >> "$GITHUB_STEP_SUMMARY"
