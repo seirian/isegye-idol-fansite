@@ -18,13 +18,13 @@
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
     "home-review/soop-profiles.json": "3ca50bda1be2762c35e9cbcc9a57f168a28225e0d5cd6aeede31cf7fa1e88630",
     "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
-    "scripts/compose_schedule.py": "f2849f097bd0c2b4dbc672cd987ec72ab53af5a56a4121581eb78bf00dcf4c31",
-    "schedule/core.js": "52295342cdc059211b7f015eb7f198ab7b22e7e9779373ff359c66434e871057",
-    "schedule/ui.js": "c11802b3faa0fe3481c5279b01578ae40b1bc5aec86b9c4addf608a65b235d35",
+    "scripts/compose_schedule.py": "48831f157d9fbec419ffa6323c680b2334b0dc54c45c367a52de1bdd72b6a067",
+    "schedule/core.js": "4da48950c34320df1e0ec8f01b4fb89d255c01597392084a8f6716944a08ad5c",
+    "schedule/ui.js": "7fe9f189c2d95a1e6298a606bc4fa86b2db10b595ba797307f46b6b556698bba",
     "schedule/theme.css": "6799137a181acc8b8c3c1e68ee2c0709bbddf2a8e29c1f1594267231038576d6",
     "schedule/accessibility.css": "0c53009dfa46b30941a961debc8ef2ecc3e004f3f724084be3f4ea66dc41a8ef",
     "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc",
-    "scripts/notice_policy.py": "e1bcfcf3b346329787960f69ac3263350debd84525fb7474fbb5be9648e2db9b",
+    "scripts/notice_policy.py": "7dd436d760c7f41fc40db05edf00869fedab797cb9c28c0bd4a9d6839eccb386",
     "schedule/approved-notices.json": "ca384f767a55e0dbc72c9972904bfe0f34a8ecb6dda6b69f1b1fab845ceaeb03",
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
     "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
@@ -73,6 +73,10 @@
     {
       "requestedAt": "2026-10-31",
       "scope": "Add landing-page space below navigation; replace the visible intro and shortcut row with the latest verified Berriz notice and next confirmed official event from the existing schedule feed. Retain group artwork and place member channel links in an expandable video-section directory."
+    },
+    {
+      "requestedAt": "2026-11-03",
+      "scope": "Process reviewed public Cafe batches from 2026-10-31, with original observations, existing author rules and same-series fan reference verification. No recurring Cafe page/API crawler."
     }
   ]
 }

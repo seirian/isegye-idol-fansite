@@ -301,6 +301,9 @@ def naver_search(fetch,now):
 def collect(previous=None,fetch=request,now=None,berriz_reader=None):
  now=now or stamp();seed=json.loads((ROOT/'schedule/seed.json').read_text());seed=validate(seed)
  data={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':now,'sources':[], 'events':seed['events'][:],'news':seed['news'][:],'forecasts':seed['forecasts'][:]}
+ import cafe_batch,cafe_batch_cards
+ batch_states=cafe_batch.populate(data,now,seed)
+ cafe_batch_cards.add(data,now)
  # Isolated public browser, never the authenticated fan-site session.
  # Injected fetch in unit tests must not cause a real browser/network call.
  reader=berriz_reader or (berriz_feed.read_public if fetch is request else None)
@@ -317,7 +320,7 @@ def collect(previous=None,fetch=request,now=None,berriz_reader=None):
   elif source['id']=='naver-search':
    s.update(state='restricted',lastAttemptAt=None,detail='작성자 미확인 검색글 수집·공개 중단')
   elif source['mode']=='reviewed_snapshot':
-   s.update(state='snapshot',lastAttemptAt=None,lastSuccessAt=seed['generatedAt'],detail='초기 확인 자료 · 카페 자동 크롤링 미사용')
+   s.update(batch_states[source['id']])
   else:
    try:
     if source['id']=='parable-web':

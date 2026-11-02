@@ -8,17 +8,19 @@ ROOT=Path(__file__).resolve().parents[1]
 def history_bundle():
     data=notice_policy.archive()
     coverage=json.loads((ROOT/'schedule/notice-history-coverage.json').read_text())
+    import cafe_batch
+    observed=cafe_batch.official();
     rows=[];events=[]
     for r in data['notices']:
-        rows.append([r['articleId'],r['menuId'],r['author'],r['members'],r['title'],r['publishedAt'],r['titleGeneralized']])
+        rows.append([r['articleId'],r['menuId'],r['author'],r['members'],r['title'],r['publishedAt'],r['titleGeneralized'],observed[r['articleId']][1] if r['articleId'] in observed else data['checkedAt']])
         event=schedule_feed.event_from_title(r['title'],r['publishedAt'],True)
         if event and not r['titleGeneralized']:
             events.append([r['articleId'],event['date'],event['time'],event['type'],event['certainty'],event['status'],event['detail']])
     dates=[datetime.fromisoformat(r['publishedAt']).astimezone(notice_policy.KST).date().isoformat() for r in data['notices']]
     return {'checkedAt':data['checkedAt'],'start':min(dates) if dates else data['rangeStart'],
             'end':max(dates) if dates else data['rangeEnd'],'requestedEnd':data['rangeEnd'],
-            'completePublicListings':coverage.get('complete') is True,
-            'bodiesReviewed':False,'rows':rows,'events':events}
+            'completePublicListings':coverage.get('complete') is True and not cafe_batch.windows(),
+            'bodiesReviewed':False,'rows':rows,'events':events,'fanIds':list(cafe_batch.fans()),'incrementalReviews':len(cafe_batch.windows())}
 
 def compose(app,css,out,meta):
     snapshot=schedule_feed.validate(notice_policy.clean_snapshot(json.loads((ROOT/'schedule/snapshot.json').read_text())))

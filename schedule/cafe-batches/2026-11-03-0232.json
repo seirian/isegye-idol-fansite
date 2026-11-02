@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "from": "2026-10-31",
+  "checkedAt": "2026-11-02T17:32:06.058259+00:00",
+  "boards": {
+    "345": {
+      "state": "reviewed",
+      "count": 14,
+      "pages": 2
+    },
+    "1250": {
+      "state": "reviewed",
+      "count": 0,
+      "pages": 1
+    }
+  },
+  "notices": [
+    {
+      "articleId": 22157938,
+      "menuId": 345,
+      "author": "gosegu",
+      "members": [
+        "gosegu"
+      ],
+      "title": "[고세구] 싸이코싸이코싸이코싸~!",
+      "publishedAt": "2026-11-02T13:35:52.480+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22157702,
+      "menuId": 345,
+      "author": "lilpa",
+      "members": [
+        "lilpa"
+      ],
+      "title": "[릴파] 늦어졌ㄷ따!",
+      "publishedAt": "2026-11-02T12:43:07.823+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22157186,
+      "menuId": 345,
+      "author": "jingburger",
+      "members": [
+        "jingburger"
+      ],
+      "title": "[징버거] 마크가 취소되었지만 마크를 하는 청년",
+      "publishedAt": "2026-11-02T10:22:50.910+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22157070,
+      "menuId": 345,
+      "author": "viichan",
+      "members": [
+        "viichan"
+      ],
+      "title": "[비챤] 오늘 방송은....!!!",
+      "publishedAt": "2026-11-02T10:04:02.350+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22156203,
+      "menuId": 345,
+      "author": "jururu",
+      "members": [
+        "jururu"
+      ],
+      "title": "[주르르] 오늘 보물찾기 합방 취소!!! 하지만.....",
+      "publishedAt": "2026-11-02T07:46:26.907+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22152893,
+      "menuId": 345,
+      "author": "jingburger",
+      "members": [
+        "jingburger"
+      ],
+      "title": "[징버거] 힐링 로이세끼 하께용",
+      "publishedAt": "2026-11-01T10:32:31.133+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22152325,
+      "menuId": 345,
+      "author": "jururu",
+      "members": [
+        "jururu"
+      ],
+      "title": "[주르르] 로좋소 2차 면접+??",
+      "publishedAt": "2026-11-01T08:51:18.010+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22152062,
+      "menuId": 345,
+      "author": "viichan",
+      "members": [
+        "viichan"
+      ],
+      "title": "[비챤] 오느른용",
+      "publishedAt": "2026-11-01T07:13:38.107+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22150983,
+      "menuId": 345,
+      "author": "gosegu",
+      "members": [
+        "gosegu"
+      ],
+      "title": "[고세구] 강도하세요 안녕입니다",
+      "publishedAt": "2026-11-01T00:28:28.737+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22147558,
+      "menuId": 345,
+      "author": "jururu",
+      "members": [
+        "jururu"
+      ],
+      "title": "[주르르] 햅삐 할로윈~~~!! (좋아요?)",
+      "publishedAt": "2026-10-31T09:12:48.470+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22147542,
+      "menuId": 345,
+      "author": "gosegu",
+      "members": [
+        "gosegu"
+      ],
+      "title": "[고세구] ?ㅁ?",
+      "publishedAt": "2026-10-31T09:11:21.707+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22147395,
+      "menuId": 345,
+      "author": "jingburger",
+      "members": [
+        "jingburger"
+      ],
+      "title": "[징버거] 오늘 콜옵 해용",
+      "publishedAt": "2026-10-31T08:58:57.920+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22147266,
+      "menuId": 345,
+      "author": "viichan",
+      "members": [
+        "viichan"
+      ],
+      "title": "[비챤] 즐거운 토요일 보내세용",
+      "publishedAt": "2026-10-31T08:28:59.930+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    },
+    {
+      "articleId": 22146307,
+      "menuId": 345,
+      "author": "gosegu",
+      "members": [
+        "gosegu"
+      ],
+      "title": "[고세구] 올해 다짐한 목표 이루기까지 약 2달 남음....",
+      "publishedAt": "2026-10-31T04:18:22.860+00:00",
+      "verifiedRole": "staff",
+      "public": true,
+      "titleGeneralized": false
+    }
+  ],
+  "fan": {
+    "state": "article_observed",
+    "articleId": 22137397,
+    "title": "[10/30(금)] 이세돌 뱅온정보",
+    "displayDate": "2026.10.30. 09:07",
+    "forecastCoverage": "not_verified"
+  },
+  "fanSeries": [
+    {
+      "articleId": 22155145,
+      "title": "[11/2(월)] 이세돌 뱅온정보",
+      "date": "2026-11-02",
+      "publishedAt": "2026-11-02T08:49:00+09:00",
+      "sameBoard": true,
+      "sameAuthor": true,
+      "public": true
+    },
+    {
+      "articleId": 22151004,
+      "title": "[11/1(일)] 이세돌 뱅온정보",
+      "date": "2026-11-01",
+      "publishedAt": "2026-11-01T09:35:00+09:00",
+      "sameBoard": true,
+      "sameAuthor": true,
+      "public": true
+    },
+    {
+      "articleId": 22145101,
+      "title": "[10/31(토)] 이세돌 뱅온정보",
+      "date": "2026-10-31",
+      "publishedAt": "2026-10-31T09:58:00+09:00",
+      "sameBoard": true,
+      "sameAuthor": true,
+      "public": true
+    }
+  ],
+  "fanCheckedAt": "2026-11-03T02:37:05.244134+09:00",
+  "fanCards": {
+    "22155145": {
+      "ine": {
+        "status": "rest",
+        "time": null
+      },
+      "jingburger": {
+        "status": "expected",
+        "time": null
+      },
+      "lilpa": {
+        "status": "expected",
+        "time": null
+      },
+      "jururu": {
+        "status": "expected",
+        "time": null
+      },
+      "gosegu": {
+        "status": "unknown",
+        "time": null
+      },
+      "viichan": {
+        "status": "expected",
+        "time": null
+      }
+    },
+    "22151004": {
+      "ine": {
+        "status": "rest",
+        "time": null
+      },
+      "jingburger": {
+        "status": "expected",
+        "time": null
+      },
+      "lilpa": {
+        "status": "expected",
+        "time": null
+      },
+      "jururu": {
+        "status": "expected",
+        "time": null
+      },
+      "gosegu": {
+        "status": "expected",
+        "time": null
+      },
+      "viichan": {
+        "status": "expected",
+        "time": null
+      }
+    },
+    "22145101": {
+      "ine": {
+        "status": "rest",
+        "time": null
+      },
+      "jingburger": {
+        "status": "expected",
+        "time": null
+      },
+      "lilpa": {
+        "status": "expected",
+        "time": null
+      },
+      "jururu": {
+        "status": "expected",
+        "time": null
+      },
+      "gosegu": {
+        "status": "expected",
+        "time": null
+      },
+      "viichan": {
+        "status": "expected",
+        "time": null
+      }
+    }
+  },
+  "cardCheckedAt": "2026-11-03T02:40:40.041318+09:00",
+  "fanWindowComplete": false
+}

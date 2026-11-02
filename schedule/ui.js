@@ -2,8 +2,9 @@
 let scheduleSnapshot=SCHEDULE_SEED,scheduleLoading=false,scheduleLastFetch=0,scheduleLoadFailed=false;
 const scheduleLabels={'berriz-notice':'베리즈 · 소속사 공지','berriz-calendar':'베리즈 · 공식 캘린더','cafe-members':'멤버 공지','cafe-agency':'패러블 공지','fan-roundup':'지정 뱅온정보','parable-web':'패러블 공식','archive':'등록 기록'};
 const scheduleKinds={anniversary:'생일·기념일',broadcast:'방송',release:'음악 발매',event:'행사',notice:'공지 게시'};
-const noticeHistoryRows=NOTICE_ARCHIVE.rows.map(([id,menu,author,members,title,publishedAt,generalized])=>({id:'notice-source-'+id,sourceId:menu===345?'cafe-members':'cafe-agency',sourceUrl:'https://cafe.naver.com/steamindiegame/'+id,members,title,publishedAt,checkedAt:NOTICE_ARCHIVE.checkedAt,detail:generalized?'세부 내용은 원문에서 확인하세요.':'공개 목록의 작성자·게시일 확인 · 본문 일정 미확인'}));
+const noticeHistoryRows=NOTICE_ARCHIVE.rows.map(([id,menu,author,members,title,publishedAt,generalized,observedAt])=>({id:'notice-source-'+id,sourceId:menu===345?'cafe-members':'cafe-agency',sourceUrl:'https://cafe.naver.com/steamindiegame/'+id,members,title,publishedAt,checkedAt:observedAt||NOTICE_ARCHIVE.checkedAt,detail:generalized?'세부 내용은 원문에서 확인하세요.':'공개 목록의 작성자·게시일 확인 · 본문 일정 미확인'}));
 const noticeApprovedSources=new Map(noticeHistoryRows.map(r=>[r.sourceUrl,r.sourceId]));
+for(const id of (NOTICE_ARCHIVE.fanIds||[]))noticeApprovedSources.set('https://cafe.naver.com/steamindiegame/'+id,'fan-roundup');
 const noticeByArticle=new Map(noticeHistoryRows.map(r=>[Number(r.sourceUrl.split('/').pop()),r]));
 const noticeHistoryEvents=NOTICE_ARCHIVE.events.map(([id,date,time,type,certainty,status,detail])=>({...noticeByArticle.get(id),id:'notice-event-'+id+'-'+date,date,time,type,certainty,status,detail}));
 let scheduleNewsCache=null,scheduleNewsInput=null,scheduleEventsCache=null,scheduleEventsInput=null;
