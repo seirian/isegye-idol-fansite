@@ -1,0 +1,24 @@
+name: Cafe - verify same-author roundup series
+on:
+  push:
+    branches: ['feature/cafe-batch-20261031']
+    paths: ['.github/workflows/review-fan-series.yml']
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: git archive -o /tmp/sources.tar.gz HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: cafe-integration-source, path: /tmp/sources.tar.gz, retention-days: 2}
+      - run: |
+          python -m venv /tmp/br
+          /tmp/br/bin/pip -q install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/br/bin/python > /tmp/br.log
+          /tmp/br/bin/python scripts/review_fan_series.py 2026-10-31
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: fan-review, path: fan-review.json, retention-days: 14}
