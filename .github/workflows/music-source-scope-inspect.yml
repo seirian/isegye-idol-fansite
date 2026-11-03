@@ -1,0 +1,40 @@
+name: Music source inventory (one-time, read only)
+on:
+  push:
+    branches: [feature/daily-music-catalog]
+    paths: [.github/workflows/music-source-scope-inspect.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Resolve reviewed YouTube channels, sample their actual Atom metadata and verify schedules
+        run: |
+          python - <<'PY'
+          import json,re,html,concurrent.futures,urllib.request as u,xml.etree.ElementTree as ET
+          from pathlib import Path
+          import yaml
+          out=Path('music-inspection');out.mkdir();ROOT=Path('.')
+          schedules={}
+          for f in Path('.github/workflows').glob('*.yml'):
+              doc=yaml.safe_load(f.read_text());trig=doc.get(True,doc.get('on',{}));schedules[f.name]=trig
+          (out/'triggers.json').write_text(json.dumps(schedules,default=str))
+          def read(url):
+              req=u.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept-Language':'en-US,en;q=0.7'} )
+              with u.urlopen(req,timeout=15) as r: return r.read(4000000)
+          def inspect(it):
+              k,v=it
+              try:
+                  text=read(v['url']).decode();ids=set(re.findall(r'"externalId":"(UC[\w-]{22})"',text));assert len(ids)==1, 'channel metadata';cid=ids.pop()
+                  feed=ET.fromstring(read('https://www.youtube.com/feeds/videos.xml?channel_id='+cid));ns={'a':'http://www.w3.org/2005/Atom','yt':'http://www.youtube.com/xml/schemas/2015'};assert feed.findtext('yt:channelId',namespaces=ns) in (cid,cid[2:]);
+                  rows=[{n:e.findtext(t,namespaces=ns) for n,t in [('id','yt:videoId'),('title','a:title'),('date','a:published')]} for e in feed.findall('a:entry',ns)];return k,{'channelId':cid,'channel':v['name'],'role':v['role'],'videos':rows}
+              except Exception as err:return k,{'error':str(err)[:100], 'channel':v['name']}
+          channels=json.loads(Path('catalog/video-sources.json').read_text())['channels']
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex: results=dict(ex.map(inspect,channels.items()))
+          (out/'channels.json').write_text(json.dumps(results,ensure_ascii=False,indent=2));print({k:v.get('channelId',v.get('error')) for k,v in results.items()})
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: music-inventory, path: music-inspection, retention-days: 5}
