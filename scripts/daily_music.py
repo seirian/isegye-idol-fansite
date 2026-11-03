@@ -19,11 +19,18 @@ BLOCK=re.compile(r'티저|예고|트레일러|비하인드|리액션|챌린지|�
 MARK=re.compile(r'(official\s*(?:music\s*video|performance\s*(?:m/?v|video)|m/?v|audio)|original\s*song|오리지널\s*곡|자작곡|리메이크|\bremake\b|\bcover(?:ed)?\b|커버(?:곡)?)',re.I)
 QUOTE=re.compile(r"[‘'“\"「『]([^’'”\"」』]{1,130})[’'”\"」』]")
 FIELDS={'videoId','channelKey','title','members','type','kind','publishedAt','checkedAt'}
+OPTIONAL_FIELDS={'datePrecision','credits','context'}
+PERFORMANCE_TYPES={'performance'}
 
 def clock(s):
     d=datetime.fromisoformat(s.replace('Z','+00:00'))
     if d.tzinfo is None: raise ValueError('timezone required')
     return d
+
+def publication_clock(s):
+    # Date-only metadata stays date-only in storage/UI; this is for ordering only.
+    if re.fullmatch(r'20\d{2}-\d{2}-\d{2}',s or ''):return datetime.fromisoformat(s).replace(tzinfo=KST)
+    return clock(s)
 
 def norm(s): return ''.join(c for c in unicodedata.normalize('NFKC',s).casefold() if c.isalnum())
 def keys(title,members):
@@ -33,7 +40,7 @@ def keys(title,members):
 
 def baseline():
     m=load_music(); vids={v for r in m['songs'] for v in (r.get('videoId'),r.get('originalVideoId')) if v}
-    titles=set().union(*(keys(r['title'],r['members']) for r in m['songs']))
+    titles=set().union(*(keys(t,r['members']) for r in m['songs'] for t in [r['title'],*r.get('aliases',[])]))
     return vids,titles
 
 def clean_text(s): return ' '.join(unicodedata.normalize('NFKC',s).split())
@@ -43,22 +50,29 @@ def performers(credits):
 from official_channel_music import EXTRAS, MARKERS, NO as OFFICIAL_NONMUSIC, parse as official_format
 
 def record_keys(row):
+    if row['type'] in PERFORMANCE_TYPES:return {('performance:'+norm(row['title']),tuple(sorted(row['members'])))}
     aliases=keys(row['title'],row['members'])
     return {(row['type']+':'+w,artists) for w,artists in aliases} if row['type'] in EXTRAS else aliases
 
 def channel_evidence(k,titles,known):
-    if k!='c2':return known
+    if k not in ('c1','c2'):return known
     works=set(known)
     for title in titles:
-        r=official_format(clean_text(title),NAMES,performers,keys)
+        r=classify(k,clean_text(title),known)
         if r and r['kind'] in ('official_mv','official_audio'):works.update(keys(r['title'],r['members']))
     return works
 
 def needs_review(k,title):
+    if k=='c1':
+        from waktaverse_music import MUSIC,NONMUSIC
+        return bool(MUSIC.search(title) and not NONMUSIC.search(title) and (GROUP.search(title) or performers(title)))
     if k=='c2':return not OFFICIAL_NONMUSIC.search(title) and any(marker.search(title) for _,_,marker in MARKERS)
     return bool(MARK.search(title) and not BLOCK.search(title))
 
 def classify(k,title,evidence=frozenset()):
+    if k=='c1':
+        from waktaverse_music import parse as waktaverse_format
+        return waktaverse_format(clean_text(title),NAMES,performers,keys,evidence)
     if k=='c2':return official_format(clean_text(title),NAMES,performers,keys,evidence)
     title=clean_text(title)
     if BLOCK.search(title) or re.search(r'[<>\x00-\x1f]',title) or '#' in title: return None
@@ -128,11 +142,16 @@ def validate(rows):
     ids=set();names=set()
     if not isinstance(rows,list) or len(rows)>2000:raise ValueError('invalid list')
     for r in rows:
-        if set(r)!=FIELDS or not VID.fullmatch(r['videoId']) or r['channelKey'] not in CHANNELS or r['type'] not in ({'cover','remake','original','official_track'}|EXTRAS) or r['kind'] not in ('official_mv','official_audio','official_video'):raise ValueError('invalid record')
-        if r['type'] in EXTRAS and (r['channelKey']!='c2' or r['kind']!='official_video'):raise ValueError('invalid official format')
+        if not FIELDS<=set(r) or not set(r)<=FIELDS|OPTIONAL_FIELDS or not VID.fullmatch(r['videoId']) or r['channelKey'] not in CHANNELS or r['type'] not in ({'cover','remake','original','official_track'}|EXTRAS|PERFORMANCE_TYPES) or r['kind'] not in ('official_mv','official_audio','official_video'):raise ValueError('invalid record')
+        if r['type'] in EXTRAS and (r['channelKey'] not in ('c1','c2') or r['kind']!='official_video'):raise ValueError('invalid official format')
+        if r['type'] in PERFORMANCE_TYPES and (r['channelKey']!='c1' or r['kind']!='official_video'):raise ValueError('invalid performance source')
+        if 'context' in r and (r['channelKey']!='c1' or r['context'] not in ('collab','festival')):raise ValueError('invalid music context')
+        if 'credits' in r and (r['channelKey']!='c1' or not isinstance(r['credits'],str) or not 0<len(r['credits'])<=200 or re.search(r'[<>\x00-\x1f]',r['credits'])):raise ValueError('invalid collaborator credits')
+        day=bool(re.fullmatch(r'20\d{2}-\d{2}-\d{2}',r['publishedAt'] or ''))
+        if day != (r.get('datePrecision')=='day') or ('datePrecision' in r and r['datePrecision']!='day'):raise ValueError('invalid publication precision')
         if not isinstance(r['title'],str) or not 0<len(r['title'])<=140 or re.search(r'[<>\x00-\x1f]',r['title']) or not norm(r['title']):raise ValueError('invalid title')
         if not isinstance(r['members'],list) or not r['members'] or not set(r['members'])<=NAMES.keys() or len(set(r['members']))!=len(r['members']):raise ValueError('invalid credits')
-        if clock(r['publishedAt'])>clock(r['checkedAt']):raise ValueError('future release')
+        if publication_clock(r['publishedAt'])>clock(r['checkedAt']):raise ValueError('future release')
         aliases=record_keys(r);v=r['videoId']
         if v in ids or aliases & names:raise ValueError('duplicate music')
         ids.add(v);names.update(aliases)
@@ -170,9 +189,15 @@ def discover(now=None):
                 report['candidates']+=1
                 try:verify_video(v,channels[k]['url'],t)
                 except Exception:report['verificationErrors']+=1;report['review'].append(v);continue
-                rows.append(dict(parsed,videoId=v,channelKey=k,publishedAt=p,checkedAt=now.isoformat()))
+                rows.append(dict(parsed,videoId=v,channelKey=k,publishedAt=p,checkedAt=now.isoformat(),**({'datePrecision':'day'} if len(p)==10 else {})))
             if report['verificationErrors']:report['state']='partial'
         except Exception as ex:report.update(state='error',reason=type(ex).__name__)
+        if k=='c1':
+            from waktaverse_history import collect
+            historical,coverage=collect(now);rows.extend(historical);report['historical']=coverage
+            if coverage['errors']:
+                report['review'].extend(e['videoId'] for e in coverage['errors']);report['state']='partial' if rows or report['state']!='error' else 'error'
+            elif rows and report['state']=='error':report['state']='partial'
         return k,rows,report
     with ThreadPoolExecutor(max_workers=3) as ex: results=list(ex.map(run,CHANNELS))
     return {'schemaVersion':1,'generatedAt':now.isoformat(),'sources':{k:s for k,_,s in results},'rows':merge([], [r for _,rs,_ in results for r in rs])}

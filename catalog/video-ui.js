@@ -1,6 +1,6 @@
 /* Reviewed links only. A fan backup is never labelled as an official upload. */
 const MUSIC_VIDEO_LABELS=Object.freeze({official_mv:'공식 MV',official_audio:'공식 오디오',official_video:'공식 영상',fan_backup:'팬 백업 · 비공식',karaoke_tj:'TJ 노래방 · 반주',karaoke_ky:'KY 노래방 · 반주',unavailable:'영상 확인 중'});
-function musicVideoLabel(s){if(s.type==='album_medley'||s.type==='music_clip')return s.format;return MUSIC_VIDEO_LABELS[s.videoSource?.kind]||'YouTube';}
+function musicVideoLabel(s){if(s.type==='album_medley'||s.type==='music_clip'||s.type==='performance')return s.format;return MUSIC_VIDEO_LABELS[s.videoSource?.kind]||'YouTube';}
 function musicVideoActions(s,source){
  if(s.videoId)return external(catalogVideoUrl(s.videoId),musicVideoLabel(s)+' 보기','button primary');
  return external(source[0].url,'곡 정보 확인','button primary');
