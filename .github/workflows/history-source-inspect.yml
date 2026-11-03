@@ -1,0 +1,16 @@
+name: History - source inventory (work branch only)
+on:
+  push:
+    branches: [feature/monthly-history-refresh]
+    paths: [.github/workflows/history-source-inspect.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: git archive --format=tar.gz HEAD > history-source.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: history-source, path: history-source.tar.gz, retention-days: 3}
