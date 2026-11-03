@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
 URL = os.getenv('PRESENTATION_URL', 'http://127.0.0.1:4199/').rstrip('/') + '/'
@@ -41,9 +41,10 @@ with sync_playwright() as pw:
         page.reload(wait_until='networkidle')
         check('reload restores both search inputs', field.input_value() == '리와인드' and page.locator('#search-input').input_value() == '리와인드')
         field.fill('아이네');page.locator('#header-search button').click()
-        page.wait_for_function('document.querySelector("#search-input")?.value==="아이네"')
+        expect(page.locator('#search-input')).to_have_value('아이네')
         check('search button sends another query', field.input_value() == '아이네')
         page.go_back(wait_until='networkidle')
+        expect(page.locator('#search-input')).to_have_value('리와인드')
         check('back restores original query', page.locator('#search-input').input_value() == '리와인드' and field.input_value() == '리와인드')
         page.goto(URL + '#/home', wait_until='networkidle')
         field.fill('   ');field.press('Enter')
@@ -57,7 +58,7 @@ with sync_playwright() as pw:
         check('completed IME query submits', page.locator('#search-input').input_value() == '아이네')
         special = '<img src=x onerror=alert(1)> & # +'
         field.fill(special);field.press('Enter')
-        page.wait_for_function('(q)=>document.querySelector("#search-input")?.value===q', arg=special)
+        expect(page.locator('#search-input')).to_have_value(special)
         check('special characters round-trip safely', field.input_value() == special and page.locator('#main img[src=x]').count() == 0)
         page.goto(URL + '#/home', wait_until='networkidle')
         check('copyright contains FAN ARCHIVE once', page.locator('.footer small').inner_text().count('FAN ARCHIVE') == 1)
@@ -66,12 +67,12 @@ with sync_playwright() as pw:
         check('reduced motion disables automatic playback', gallery.get_attribute('data-autoplay') == 'paused')
         for i in range(1, 6):
             page.locator('[data-gallery=next]').click()
-            page.wait_for_function('(i)=>document.querySelector(".hm-gallery").dataset.index===String(i)', arg=i)
-            page.wait_for_function('document.querySelector(".hm-group").complete')
+            expect(gallery).to_have_attribute('data-index', str(i))
+            page.locator('.hm-group').evaluate('(im)=>im.decode()')
             check('photo ' + str(i) + ' decodes at HD or above', page.locator('.hm-group').evaluate('(im)=>im.naturalWidth>=1280&&im.naturalHeight>=720'))
             check('photo ' + str(i) + ' stays same-origin and uncropped', page.locator('.hm-group').evaluate('(im)=>new URL(im.src).origin===location.origin&&getComputedStyle(im).objectFit==="contain"'))
         page.locator('[data-gallery=next]').click()
-        page.wait_for_function('document.querySelector(".hm-gallery").dataset.index==="0"')
+        expect(gallery).to_have_attribute('data-index', '0')
         check('manual wrap returns to existing artwork', page.locator('.hm-group').evaluate('(im)=>im.src.includes("isegye-group-hero")'))
         for theme in ('light', 'dark'):
             for width in (320, 390, 640, 768, 1440):
@@ -93,14 +94,14 @@ with sync_playwright() as pw:
         auto.clock.run_for(9000)
         check('no automatic change before ten seconds', auto.locator('.hm-gallery').get_attribute('data-index') == '0')
         auto.clock.run_for(1500)
-        auto.wait_for_function('document.querySelector(".hm-gallery").dataset.index==="1"')
+        expect(auto.locator('.hm-gallery')).to_have_attribute('data-index', '1')
         check('automatic rotation starts at ten seconds', auto.locator('.hm-gallery-count').inner_text() == '2 / 6')
         auto.locator('[data-gallery=pause]').click();auto.mouse.move(0, 0);auto.locator('[data-gallery=pause]').blur()
         auto.clock.run_for(20000)
         check('explicit pause holds the photo', auto.locator('.hm-gallery').get_attribute('data-index') == '1')
         auto.locator('[data-gallery=pause]').click();auto.mouse.move(0, 0);auto.locator('[data-gallery=pause]').blur()
         auto.clock.run_for(10500)
-        auto.wait_for_function('document.querySelector(".hm-gallery").dataset.index==="2"')
+        expect(auto.locator('.hm-gallery')).to_have_attribute('data-index', '2')
         check('resume restarts rotation', auto.locator('.hm-gallery-count').inner_text() == '3 / 6')
         auto.locator('.hm-gallery').hover();auto.clock.run_for(20000)
         check('hover pauses rotation', auto.locator('.hm-gallery').get_attribute('data-index') == '2')
