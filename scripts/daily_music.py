@@ -40,7 +40,26 @@ def clean_text(s): return ' '.join(unicodedata.normalize('NFKC',s).split())
 def performers(credits):
     return [m for m,k in NAMES.items() if k in credits or re.search(r'(?<![a-z])'+m+r'(?![a-z])',credits,re.I)]
 
-def classify(k,title):
+from official_channel_music import EXTRAS, MARKERS, NO as OFFICIAL_NONMUSIC, parse as official_format
+
+def record_keys(row):
+    aliases=keys(row['title'],row['members'])
+    return {(row['type']+':'+w,artists) for w,artists in aliases} if row['type'] in EXTRAS else aliases
+
+def channel_evidence(k,titles,known):
+    if k!='c2':return known
+    works=set(known)
+    for title in titles:
+        r=official_format(clean_text(title),NAMES,performers,keys)
+        if r and r['kind'] in ('official_mv','official_audio'):works.update(keys(r['title'],r['members']))
+    return works
+
+def needs_review(k,title):
+    if k=='c2':return not OFFICIAL_NONMUSIC.search(title) and any(marker.search(title) for _,_,marker in MARKERS)
+    return bool(MARK.search(title) and not BLOCK.search(title))
+
+def classify(k,title,evidence=frozenset()):
+    if k=='c2':return official_format(clean_text(title),NAMES,performers,keys,evidence)
     title=clean_text(title)
     if BLOCK.search(title) or re.search(r'[<>\x00-\x1f]',title) or '#' in title: return None
     marks=MARK.findall(title)
@@ -109,11 +128,12 @@ def validate(rows):
     ids=set();names=set()
     if not isinstance(rows,list) or len(rows)>2000:raise ValueError('invalid list')
     for r in rows:
-        if set(r)!=FIELDS or not VID.fullmatch(r['videoId']) or r['channelKey'] not in CHANNELS or r['type'] not in ('cover','remake','original','official_track') or r['kind'] not in ('official_mv','official_audio','official_video'):raise ValueError('invalid record')
+        if set(r)!=FIELDS or not VID.fullmatch(r['videoId']) or r['channelKey'] not in CHANNELS or r['type'] not in ({'cover','remake','original','official_track'}|EXTRAS) or r['kind'] not in ('official_mv','official_audio','official_video'):raise ValueError('invalid record')
+        if r['type'] in EXTRAS and (r['channelKey']!='c2' or r['kind']!='official_video'):raise ValueError('invalid official format')
         if not isinstance(r['title'],str) or not 0<len(r['title'])<=140 or re.search(r'[<>\x00-\x1f]',r['title']) or not norm(r['title']):raise ValueError('invalid title')
         if not isinstance(r['members'],list) or not r['members'] or not set(r['members'])<=NAMES.keys() or len(set(r['members']))!=len(r['members']):raise ValueError('invalid credits')
         if clock(r['publishedAt'])>clock(r['checkedAt']):raise ValueError('future release')
-        aliases=keys(r['title'],r['members']);v=r['videoId']
+        aliases=record_keys(r);v=r['videoId']
         if v in ids or aliases & names:raise ValueError('duplicate music')
         ids.add(v);names.update(aliases)
     return rows
@@ -122,7 +142,7 @@ def merge(old,new,base=None):
     vids,titles=base if base is not None else baseline(); vids=set(vids);titles=set(titles);rows=[]
     rank={'official_mv':0,'official_audio':1,'official_video':2}
     for r in [*validate(old),*sorted(new,key=lambda r:(rank[r['kind']],r['videoId']))]:
-        validate([r]);aliases=keys(r['title'],r['members']);v=r['videoId']
+        validate([r]);aliases=record_keys(r);v=r['videoId']
         if v in vids or titles & aliases:continue
         vids.add(v);titles.update(aliases);rows.append(r)
     return validate(rows)
@@ -130,22 +150,23 @@ def merge(old,new,base=None):
 def discover(now=None):
     now=now or datetime.now(timezone.utc); channels=selections()[0]['channels'];ids,names=baseline()
     def run(k):
-        cid,_=CHANNELS[k]; report={'state':'ok','recent':0,'candidates':0,'review':[],'verificationErrors':0};rows=[]
+        cid,_=CHANNELS[k]; evidence=set(names); report={'state':'ok','recent':0,'candidates':0,'review':[],'verificationErrors':0};rows=[]
         try:
             if channels[k]['role']!='official' or not CID.fullmatch(cid):raise ValueError('invalid source')
             try:
                 entries=feed_entries(read('https://www.youtube.com/feeds/videos.xml?channel_id='+cid,1048576),cid,now);report['transport']='atom'
             except (OSError,ValueError,ET.ParseError):
                 from daily_music_listing import public_rows
-                entries=public_rows(cid,k,now,report,ids)
+                entries=public_rows(cid,k,now,report,ids,evidence)
+            evidence=channel_evidence(k,(t for _,t,_ in entries),evidence)
             report['recent']=len(entries)
             for v,t,p in entries:
                 if v in ids:continue
-                parsed=classify(k,t)
+                parsed=classify(k,t,evidence)
                 if not parsed:
-                    if MARK.search(t) and not BLOCK.search(t):report['review'].append(v)
+                    if needs_review(k,t):report['review'].append(v)
                     continue
-                if keys(parsed['title'],parsed['members']) & names:continue
+                if record_keys(parsed) & names:continue
                 report['candidates']+=1
                 try:verify_video(v,channels[k]['url'],t)
                 except Exception:report['verificationErrors']+=1;report['review'].append(v);continue
