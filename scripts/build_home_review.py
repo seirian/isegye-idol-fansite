@@ -7,6 +7,7 @@ import compose_schedule
 import compose_footer_navigation
 import compose_legal_documents
 import compose_ui_cleanup
+import compose_home_presentation
 ROOT=Path(__file__).resolve().parents[1]
 
 def replace_once(text, before, after):
@@ -44,6 +45,7 @@ def main():
     app,css=compose_footer_navigation.compose(app,css,meta)
     app,css=compose_legal_documents.compose(app,css,meta)
     app,css=compose_ui_cleanup.compose(app,css,meta)
+    app,css=compose_home_presentation.compose(app,css,out,meta)
     html=(out/'index.html').read_text()
     if 'content="noindex,nofollow"' not in html:raise RuntimeError('Preview must remain noindex')
     html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 심플 홈 검토</title>',html)
@@ -65,6 +67,7 @@ def main():
     inline='const INLINE_PORTRAITS='+json.dumps(portraits)+';\n'+inline
     inline=inline.replace('src="./assets/portraits/${m.id}.webp?v=${PORTRAITS[m.id].version}"','src="${INLINE_PORTRAITS[m.id]}"')
     inline=re.sub(r'\./assets/isegye-group-hero.webp\?v=[0-9a-f]+','data:image/webp;base64,'+base64.b64encode((out/'assets/isegye-group-hero.webp').read_bytes()).decode(),inline)
+    inline=compose_home_presentation.inline_gallery(inline,out)
     offline=html.replace('<link rel="stylesheet" href="./src/styles.css">','<style>'+css+'</style>').replace('<script type="module" src="./src/app.js"></script>','<script type="module">'+inline+'</script>')
     offline=offline.replace('href="./assets/favicon.svg"','href="data:image/svg+xml;base64,'+base64.b64encode((out/'assets/favicon.svg').read_bytes()).decode()+'"')
     for kind,text in [('script',inline),('style',css)]:

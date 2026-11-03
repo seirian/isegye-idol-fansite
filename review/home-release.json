@@ -12,7 +12,7 @@
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
     "home-review/ui.js": "74c93d6daabf3411165cff42b4d41d217ed4d324777c325013f52823f5c293e6",
     "home-review/theme.css": "15cc0801cadd7f04450a9f2ddb41771f7abc39e1d9bf5fa34c5e67b096f38f94",
-    "scripts/build_home_review.py": "4d660e8a6521df481e2fa957e76b8c0f3e393f90866116a77c24245f34f6fde6",
+    "scripts/build_home_review.py": "a7a73eb92aa09eb4b15ad25dfc964c20882982e4b39b22d8a194f3ae1bd96141",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
@@ -34,7 +34,11 @@
     "legal/ui.js": "40fec28b64b7212837bdca80e8dad6076b8bfae66af5b778c5fe014617dc57d8",
     "auth/legal.css": "582537f07feae3a101edf434f62a1a57b3e1e56c1b35a025a27dc379d11c0712",
     "auth/View.php": "8aeb34534967761ab1c71640f715638c12ed9ec07a37f3f970101f22cc525943",
-    "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c"
+    "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c",
+    "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
+    "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
+    "home-review/presentation.js": "a916212fad46c7d4a60201425d59a47c5371d6fca92be1819cced3de001cd8b6",
+    "home-review/presentation.css": "91c44d7d584fde729c8891aef5e723f964e2de02704c3a41a4e2f93d069b7828"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -82,6 +86,10 @@
     {
       "requestedAt": "2026-11-03",
       "scope": "Remove the four screenshot-marked UI elements from actual site markup: FAN ARCHIVE 02 badge, search slash hint, redundant members shortcut, and HOME LIVE manual refresh. Preserve search, six primary menus, automatic LIVE polling, LIVE-page controls, all data batches and access policy."
+    },
+    {
+      "requestedAt": "2026-11-03",
+      "scope": "Remove repeated footer FAN ARCHIVE; editable header search submits query via Enter/button; enlarge group gallery and add five checksum-pinned high-resolution six-member images with 10-second rotation, accessible pause and no cropping. Preserve LIVE, ingestion, auth and legal text."
     }
   ]
 }

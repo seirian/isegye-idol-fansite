@@ -44,6 +44,7 @@ try:
         page.on('request', lambda req: external.append(req.url) if req.url.startswith('http') and urlparse(req.url).netloc not in {urlparse(URL).netloc, 'chapi.sooplive.co.kr', 'liveimg.sooplive.com', 'i.ytimg.com'} else None)
         response = page.goto(URL, wait_until='networkidle')
         simple = page.locator('.hm-page').count() == 1
+        gallery = page.locator('.hm-gallery-stage').count() == 1
         art = '.hm-group' if simple else '.hero-group img'
         portraits = '.hm-members .portrait img' if simple else '.stage-lineup .portrait img'
         page.locator(art).wait_for()
@@ -69,7 +70,15 @@ try:
             check(f'{width}px hero image remains visible', image.is_visible())
             check(f'{width}px no page overflow', page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
             dimensions = image.evaluate('(e)=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height,fit:getComputedStyle(e).objectFit,filter:getComputedStyle(e).filter})')
-            check(f'{width}px full 16:9 uncropped image', dimensions['fit'] == 'contain' and abs(dimensions['w'] / dimensions['h'] - 16/9) < .025)
+            # Object-fit preserves the original 16:9 pixels inside the enlarged
+            # 4:3 slideshow box; legacy non-gallery heroes retain their 16:9 box.
+            frame_ratio = 4/3 if gallery else 16/9
+            check(f'{width}px original fits uncropped in expected frame', dimensions['fit'] == 'contain' and abs(dimensions['w'] / dimensions['h'] - frame_ratio) < .025)
+            if gallery:
+                check(f'{width}px image box is wholly inside gallery stage', image.evaluate('''(e)=>{
+                    const image=e.getBoundingClientRect(),stage=e.closest('.hm-gallery-stage').getBoundingClientRect();
+                    return image.left>=stage.left-1&&image.top>=stage.top-1&&image.right<=stage.right+1&&image.bottom<=stage.bottom+1;
+                }'''))
             if width <= (640 if simple else 960):
                 below_copy = page.evaluate("([a,c])=>document.querySelector(a).getBoundingClientRect().top>=document.querySelector(c).getBoundingClientRect().bottom", [".hm-group" if simple else ".hero-group", ".hm-intro-copy" if simple else ".hero-copy"])
                 check(f'{width}px image follows copy on small screens', below_copy)

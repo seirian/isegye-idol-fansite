@@ -32,7 +32,7 @@ try:
             href=link.get_attribute('href');date=href.split('&date=')[1].split('&')[0];link.click();expect(p.locator('.sc-page')).to_have_attribute('data-selected-date',date)
         empty={**snapshot,'news':[],'events':[],'generatedAt':(datetime.now(timezone.utc)+timedelta(minutes=5)).isoformat()}
         p.unroute('**/api/schedule');p.route('**/api/schedule',lambda r:r.fulfill(json=empty));p.goto(url+'#/home');p.reload(wait_until='networkidle')
-        expect(brief.locator('.hm-brief-empty')).to_have_count(2);check('new empty snapshot clears both stale links',brief.locator('a').count()==0)
+        expect(brief.locator('.hm-brief-empty')).to_have_count(2);check('new empty snapshot clears both stale links',brief.locator('.hm-intro-copy a').count()==0)
         check('no browser exceptions',not errors);b.close()
 finally:
     (out/'result.json').write_text(json.dumps({'passed':sum(x['passed'] for x in checks),'total':len(checks),'checks':checks},ensure_ascii=False,indent=2))
