@@ -9,7 +9,7 @@ export function visualMusicThumbnail(song) {
 }
 export const HISTORY_TYPES=Object.freeze({all:'전체 기록',audition:'오디션·결성',release:'음악 발매',performance:'공연·행사',content:'콘텐츠·방송',collaboration:'협업·전시',award:'수상'});
 export function historyQuery(params) {
- return {year:/^202[1-6]$/.test(params.get('year')||'')?params.get('year'):'all',type:Object.hasOwn(HISTORY_TYPES,params.get('type'))?params.get('type'):'all',member:LIVE_CHANNELS.some(m=>m.id===params.get('member'))?params.get('member'):'all',order:params.get('order')==='new'?'new':'old',q:(params.get('q')||'').trim().slice(0,120)};
+ return {year:/^20\d{2}$/.test(params.get('year')||'')?params.get('year'):'all',type:Object.hasOwn(HISTORY_TYPES,params.get('type'))?params.get('type'):'all',member:LIVE_CHANNELS.some(m=>m.id===params.get('member'))?params.get('member'):'all',order:params.get('order')==='new'?'new':'old',q:(params.get('q')||'').trim().slice(0,120)};
 }
 export function historyFiltered(events,query) {
  const q=query.q.toLocaleLowerCase('ko-KR');

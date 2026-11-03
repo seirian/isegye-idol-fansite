@@ -116,6 +116,20 @@ final class Gateway
             header("Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
             self::respond(503, View::maintenance($access['role'] !== null)); return;
         }
+        if ($path === '/api/history') {
+            // The existing account/maintenance gate above applies exactly as for /api/schedule.
+            $file = $this->root . '/.history-feed/current.json';
+            if (is_file($file) && !is_link($file) && realpath($file) === $file && filesize($file) <= 1500000) {
+                try {
+                    $raw = file_get_contents($file);
+                    $feed = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
+                    if (($feed['schemaVersion'] ?? null) === 1 && ($feed['feed'] ?? null) === 'monthly-history' && is_array($feed['events'] ?? null) && is_array($feed['sources'] ?? null)) {
+                        self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                    }
+                } catch (\Throwable) { /* preserve the curated history */ }
+            }
+            self::respond(503, '{"error":"history_unavailable"}', 'application/json; charset=utf-8'); return;
+        }
         if ($path === '/api/music') {
             // The existing account/maintenance gate above applies exactly as for /api/schedule.
             $file = $this->root . '/.music-feed/current.json';
