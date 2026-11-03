@@ -43,10 +43,14 @@ def enhance(out,app,css,html):
  app=app.replace('처음 오셨나요?','멤버 만나기').replace('class="nav-note" href="#/record/getting-started"','class="nav-note" href="#/members"')
  app=app.replace('LIVE 기능 검토','멤버·음악 개선 검토')
  app=app.replace('공식 출처와 GitHub를 방문하면 해당 서비스의 정책이 적용됩니다.','멤버 상세에서는 YouTube 영상의 썸네일을 불러오며 이때 이미지 제공 서버에 IP 주소 등의 접속 정보가 전달될 수 있습니다. 영상은 클릭한 뒤 YouTube에서 재생됩니다. 공식 출처와 GitHub를 방문하면 해당 서비스의 정책이 적용됩니다.')
+ import daily_music
+ from music_video_sources import selections
+ sources=selections()[0]['channels']
+ daily_js='const DAILY_MUSIC_CHANNELS='+json.dumps({k:{p:sources[k][p] for p in ('name','url')} for k in daily_music.CHANNELS},ensure_ascii=True).replace('<',r'\u003c')+';\n'+(ROOT/'catalog/daily-music.js').read_text()
  payload={'members':profiles['members'],'music':music,'videos':videos}
  embedded=json.dumps(payload,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
  core=re.sub(r'^export ','',(ROOT/'catalog/core.js').read_text(),flags=re.M)
- app=once(app,'shell();render();','const CATALOG='+embedded+';\n'+core+'\n'+(ROOT/'catalog/video-ui.js').read_text()+'\n'+(ROOT/'catalog/ui.js').read_text()+'\nshell();render();')
+ app=once(app,'shell();render();','const CATALOG='+embedded+';\n'+core+'\n'+(ROOT/'catalog/video-ui.js').read_text()+'\n'+(ROOT/'catalog/ui.js').read_text()+'\n'+daily_js+'\nshell();render();')
  app=once(app,"${s.videoId?external(catalogVideoUrl(s.videoId),'YouTube에서 영상 보기','button primary'):external(source[0].url,'발매 정보 확인','button primary')}",'${musicVideoActions(s,source)}')
  app=once(app,'<div class="catalog-song-people">','${musicVideoInfo(s)}<div class="catalog-song-people">')
  css+='\n'+(ROOT/'catalog/theme.css').read_text()+'\n'+(ROOT/'catalog/video-theme.css').read_text()
@@ -55,6 +59,7 @@ def enhance(out,app,css,html):
  html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 멤버 소개와 음악 검토</title>',html)
  (out/'src/app.js').write_text(app);(out/'src/styles.css').write_text(css);(out/'index.html').write_text(html)
  meta=json.loads((out/'build-info.json').read_text())
+ meta['dailyMusic']={'schemaVersion':1,'endpoint':'/api/music','reviewedBaseline':len(music['songs']),'registration':'daily-verified-public-uploads'}
  meta['musicVideoAudit']=music['videoAudit']
  meta['catalog']={'members':6,'channels':21,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'build-time-public-Atom-feed','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
  (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')

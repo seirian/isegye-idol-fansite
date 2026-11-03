@@ -116,6 +116,20 @@ final class Gateway
             header("Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
             self::respond(503, View::maintenance($access['role'] !== null)); return;
         }
+        if ($path === '/api/music') {
+            // The existing account/maintenance gate above applies exactly as for /api/schedule.
+            $file = $this->root . '/.music-feed/current.json';
+            if (is_file($file) && !is_link($file) && realpath($file) === $file && filesize($file) <= 1500000) {
+                try {
+                    $raw = file_get_contents($file);
+                    $feed = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
+                    if (($feed['schemaVersion'] ?? null) === 1 && ($feed['feed'] ?? null) === 'daily-music' && is_array($feed['rows'] ?? null)) {
+                        self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                    }
+                } catch (\Throwable) { /* preserve the built-in music library */ }
+            }
+            self::respond(503, '{"error":"music_unavailable"}', 'application/json; charset=utf-8'); return;
+        }
         if ($path === '/api/schedule') {
             // No additional member fields or third-party calls. Existing access gate above applies.
             $candidates = [$this->root . '/.schedule-feed/current.json', $this->release() . '/src/schedule.json'];

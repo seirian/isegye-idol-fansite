@@ -20,6 +20,7 @@ def main():
             ('home','tests/home_simple_browser.py',{'HOME_URL':url,'HOME_OUT':str(out/'home'),'HOME_EXPECT_MODE':mode,'HOME_EXPECT_APPROVED':'true','HOME_REAL_CHECK':'true'}),
             ('home-brief','tests/home_brief_browser.py',{'HOME_URL':url,'BRIEF_OUT':str(out/'home-brief')}),
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
+    suites.append(('daily-music','tests/daily_music_browser.py',{'DAILY_TEST_URL':url,'DAILY_OUT':str(out/'daily-music')}))
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
     suites.append(('berriz','tests/berriz_browser.py',{'BERRIZ_URL':url,'BERRIZ_OUT':str(out/'berriz')}))
     suites.append(('toolbar','tests/schedule_toolbar_browser.py',{'TOOLBAR_URL':url,'TOOLBAR_OUT':str(out/'toolbar')}))
