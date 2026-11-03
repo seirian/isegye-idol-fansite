@@ -17,7 +17,7 @@ def tree(x):
 
 def text(obj):return obj.get('simpleText') or ''.join(x.get('text','') for x in obj.get('runs',[]))
 
-def public_rows(cid,k,now,report,known):
+def public_rows(cid,k,now,report,known,evidence):
     import daily_music as m
     # Requested identity and canonical channel metadata must agree before looking at any tiles.
     content=m.read('https://www.youtube.com/channel/'+cid+'/videos?hl=en',4500000).decode();page=embedded(content,'ytInitialData')
@@ -35,15 +35,24 @@ def public_rows(cid,k,now,report,known):
         if m.VID.fullmatch(vid or '') and t:found[vid]=(t,age)
     if not found:raise ValueError('unrecognized or empty public listing')
     report.update(transport='public_videos_tab',listingSample=len(found));out=[]
+    evidence.update(m.channel_evidence(k,(title for title,_ in found.values()),evidence))
     for vid,(title,age) in list(found.items())[:35]:
         # The relative UI label is only an inexpensive exclusion for clearly old posts. Never used as the publication timestamp.
         if re.search(r'\b(?:[2-9]|\d{2,}) months? ago|\b(?:\d+ years?|a year) ago|(?:[2-9]|\d{2,})개월 전|\d+년 전',age,re.I):continue
-        if vid in known or not m.MARK.search(title) or m.BLOCK.search(title):continue
-        if not m.classify(k,title):report['review'].append(vid);continue
+        if vid in known:continue
+        if not m.classify(k,title,evidence):
+            if m.needs_review(k,title):report['review'].append(vid)
+            continue
         try:
             body=m.read('https://www.youtube.com/watch?v='+vid+'&hl=en',5500000).decode();player=embedded(body,'ytInitialPlayerResponse');details=player.get('videoDetails',{});micro=player.get('microformat',{}).get('playerMicroformatRenderer',{})
-            if details.get('channelId')!=cid or details.get('videoId')!=vid or details.get('isLiveContent') or details.get('isUpcoming') or m.clean_text(details.get('title',''))!=m.clean_text(title):raise ValueError('video identity mismatch')
-            stamp=m.clock(micro.get('publishDate') or micro.get('uploadDate') or '')
+            from official_channel_music import OBSERVED_ATOM
+            saved=OBSERVED_ATOM.get((cid,vid,title)) if k=='c2' else None
+            if not details and not micro and saved and player.get('playabilityStatus',{}).get('status')=='LOGIN_REQUIRED':
+                # Public channel tile matched; independent current oEmbed verification still required.
+                stamp=m.clock(saved)
+            else:
+                if details.get('channelId')!=cid or details.get('videoId')!=vid or details.get('isLiveContent') or details.get('isUpcoming') or m.clean_text(details.get('title',''))!=m.clean_text(title):raise ValueError('video identity mismatch')
+                stamp=m.clock(micro.get('publishDate') or micro.get('uploadDate') or saved or '')
             if now-timedelta(days=30)<=stamp<=now:out.append((vid,title,stamp.astimezone(timezone.utc).isoformat()))
         except (ValueError,KeyError,TypeError,OSError):report['verificationErrors']+=1;report['review'].append(vid)
     return out

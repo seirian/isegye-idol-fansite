@@ -20,6 +20,7 @@ def publish(remote,review):
     remote.directory('/web');remote.directory(d.ROOT);d.require(remote.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Wrong owner')
     router=remote.read(d.ROOT+'/.htaccess');rid,gated=routing.release_of(router);d.require(gated,'Access gate required')
     meta=json.loads(remote.read(d.ROOT+'/_isegye_releases/'+rid+'/build-info.json') or b'{}');d.require(meta.get('dailyMusic',{}).get('schemaVersion')==1,'Music-enabled release not active')
+    if any(r['type'] in music.EXTRAS for r in fresh):d.require(meta['dailyMusic'].get('officialFormats')==1,'Official format renderer not active')
     if remote.info(DIR) is None:
         remote.mkdir(DIR);remote.s.chmod(DIR,0o700);remote.new(path('.owner'),OWNER);remote.s.chmod(path('.owner'),0o600)
     remote.directory(DIR);d.require(remote.read(path('.owner'))==OWNER,'Unowned music folder')
