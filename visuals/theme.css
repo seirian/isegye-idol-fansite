@@ -18,3 +18,5 @@
 .music-video-art>img{z-index:1}
 .music-video-play{z-index:2}
 .music-video-art .music-video-label{z-index:3}
+
+.history-monthly-status{font-size:1rem;line-height:1.7;color:var(--muted);margin:2rem 0 .5rem;overflow-wrap:anywhere;}

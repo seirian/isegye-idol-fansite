@@ -20,6 +20,7 @@ def main():
             ('home','tests/home_simple_browser.py',{'HOME_URL':url,'HOME_OUT':str(out/'home'),'HOME_EXPECT_MODE':mode,'HOME_EXPECT_APPROVED':'true','HOME_REAL_CHECK':'true'}),
             ('home-brief','tests/home_brief_browser.py',{'HOME_URL':url,'BRIEF_OUT':str(out/'home-brief')}),
             ('integrity','tests/release_v04_browser.py',{'RELEASE_URL':url,'RELEASE_OUT':str(out/'integrity'),'RELEASE_MODE':mode})]
+    suites.append(('monthly-history','tests/monthly_history_browser.py',{'HISTORY_TEST_URL':url,'HISTORY_TEST_OUT':str(out/'monthly-history')}))
     suites.append(('daily-music','tests/daily_music_browser.py',{'DAILY_TEST_URL':url,'DAILY_OUT':str(out/'daily-music')}))
     suites.append(('waktaverse','tests/waktaverse_browser.py',{'WAKTA_TEST_URL':url,'WAKTA_OUT':str(out/'waktaverse')}))
     suites.append(('schedule','tests/schedule_browser.py',{'SCHEDULE_URL':url,'SCHEDULE_OUT':str(out/'schedule')}))
