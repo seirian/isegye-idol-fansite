@@ -38,7 +38,7 @@
     "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
     "home-review/presentation.js": "a916212fad46c7d4a60201425d59a47c5371d6fca92be1819cced3de001cd8b6",
-    "home-review/presentation.css": "abb75976f0340741329eb3372b09c276bd7b799cbeec725b477362e9c22bcfcb"
+    "home-review/presentation.css": "91c44d7d584fde729c8891aef5e723f964e2de02704c3a41a4e2f93d069b7828"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
