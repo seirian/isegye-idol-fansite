@@ -1,5 +1,5 @@
 /** Pure catalog rules. No network, DOM, or implicit classification by title. */
-export const CATALOG_TYPES = Object.freeze({all:'전체',original:'오리지널',cover:'커버',remake:'리메이크'});
+export const CATALOG_TYPES = Object.freeze({all:'전체',original:'오리지널',cover:'커버',remake:'리메이크',official_track:'공식 음원·MV'});
 export const CATALOG_SCOPES = Object.freeze({all:'모든 구성',solo:'개인',unit:'유닛',group:'단체'});
 export const CATALOG_CONTEXTS = Object.freeze({all:'모든 활동',standard:'일반',ost:'OST·테마송',festival:'페스티벌',collab:'외부 협업',audition:'오디션'});
 export function catalogQuery(params) {

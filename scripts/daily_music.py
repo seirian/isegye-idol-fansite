@@ -131,7 +131,12 @@ def discover(now=None):
         cid,_=CHANNELS[k]; report={'state':'ok','recent':0,'candidates':0,'review':[],'verificationErrors':0};rows=[]
         try:
             if channels[k]['role']!='official' or not CID.fullmatch(cid):raise ValueError('invalid source')
-            entries=feed_entries(read('https://www.youtube.com/feeds/videos.xml?channel_id='+cid,1048576),cid,now);report['recent']=len(entries)
+            try:
+                entries=feed_entries(read('https://www.youtube.com/feeds/videos.xml?channel_id='+cid,1048576),cid,now);report['transport']='atom'
+            except (OSError,ValueError,ET.ParseError):
+                from daily_music_listing import public_rows
+                entries=public_rows(cid,k,now,report,ids)
+            report['recent']=len(entries)
             for v,t,p in entries:
                 if v in ids:continue
                 parsed=classify(k,t)

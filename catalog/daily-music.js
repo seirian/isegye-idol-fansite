@@ -25,7 +25,7 @@ async function refreshDailyMusic(){
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),8000);
   try{const response=await fetch('/api/music',{credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal});
     if(!response.ok || !response.headers.get('content-type')?.includes('application/json'))return;
-    const feed=await response.json();if(feed.generatedAt!==dailyMusicVersion){const before=dailyMusicAdded.size;const n=applyDailyMusic(feed);dailyMusicVersion=feed.generatedAt;if((n||before)&&dailyMusicRoute())render();}
+    const feed=await response.json();if(feed.generatedAt!==dailyMusicVersion){const before=dailyMusicAdded.size;const n=applyDailyMusic(feed);dailyMusicVersion=feed.generatedAt;if((n||before)&&dailyMusicRoute())render({focus:false,scroll:false});}
     dailyMusicNext=Date.now()+300000;
   }catch{/* Unavailable feed: keep last good display, never replace the reviewed catalog. */}finally{dailyMusicPending=false;clearTimeout(timer);}
 }
