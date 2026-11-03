@@ -59,7 +59,7 @@ def enhance(out,app,css,html):
  html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 멤버 소개와 음악 검토</title>',html)
  (out/'src/app.js').write_text(app);(out/'src/styles.css').write_text(css);(out/'index.html').write_text(html)
  meta=json.loads((out/'build-info.json').read_text())
- meta['dailyMusic']={'schemaVersion':1,'endpoint':'/api/music','reviewedBaseline':len(music['songs']),'registration':'daily-verified-public-uploads'}
+ meta['dailyMusic']={'schemaVersion':1,'endpoint':'/api/music','officialFormats':1,'reviewedBaseline':len(music['songs']),'registration':'daily-verified-public-uploads'}
  meta['musicVideoAudit']=music['videoAudit']
  meta['catalog']={'members':6,'channels':21,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'build-time-public-Atom-feed','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
  (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
