@@ -27,6 +27,11 @@ jobs:
           s=s.replace("set(m.CHANNELS)-{'c2'}","set(m.CHANNELS)-{'c1','c2'}")
           s=s.replace('    def test_new_clip_needs_song_evidence(self):',"        self.assertEqual(m.classify('c1',MEDLEY,known)['type'],'album_medley')\n        self.assertEqual(m.classify('c1',CLIP,known)['type'],'music_clip')\n    def test_new_clip_needs_song_evidence(self):")
           p.write_text(s)
+          p=Path('scripts/music_public_metadata.py');s=p.read_text();old="    if not canonical.urls or not all(matching(u) for u in canonical.urls):raise ValueError('canonical video mismatch')\n    j=embedded(body,'ytInitialData')"
+          new="    j=embedded(body,'ytInitialData')\n    canonical_urls=[u for u in canonical.urls if u not in ('','undefined')]\n    current=j.get('currentVideoEndpoint',{}).get('watchEndpoint',{}).get('videoId')\n    if canonical_urls:\n        if not all(matching(u) for u in canonical_urls) or (current and current!=vid):raise ValueError('canonical video mismatch')\n    elif current!=vid:raise ValueError('current public video identity missing')"
+          assert s.count(old)==1;p.write_text(s.replace(old,new))
+          p=Path('tests/test_daily_music_waktaverse.py');s=p.read_text();anchor=' def test_failed_history(self):';extra=" def test_current_endpoint_fallback_still_requires_exact_id(self):\n  j=self.fixture();j['currentVideoEndpoint']={'watchEndpoint':{'videoId':'12345678901'}};body=self.html(j).replace('https://www.youtube.com/watch?v=12345678901','undefined');self.assertEqual(public.public_watch_date(body,m.CHANNELS['c1'][0],'12345678901','정확한 곡'),'2023-07-19')\n  with self.assertRaises(ValueError):public.public_watch_date(body,m.CHANNELS['c1'][0],'98765432109','정확한 곡')\n  del j['currentVideoEndpoint']\n  with self.assertRaises(ValueError):public.public_watch_date(self.html(j).replace('https://www.youtube.com/watch?v=12345678901','undefined'),m.CHANNELS['c1'][0],'12345678901','정확한 곡')\n";assert anchor in s;p.write_text(s.replace(anchor,extra+anchor))
+          p=Path('docs/BATCHES.md');s=p.read_text().replace('canonical 영상 ID, 본문 제목','canonical URL 또는 현재 영상 메타데이터의 영상 ID, 본문 제목');p.write_text(s)
           PY
           npm test > /tmp/node-tests.txt
           python -m unittest discover -s tests -p 'test_*.py'
@@ -43,8 +48,7 @@ jobs:
           def observed(body,cid,vid,title):
               try:return orig(body,cid,vid,title)
               except ValueError as e:
-                  c=p.Canonical();c.feed(body);j=p.embedded(body,'ytInitialData');nodes=j.get('contents',{}).get('twoColumnWatchNextResults',{}).get('results',{}).get('results',{}).get('contents',[])
-                  diagnostics.append({'videoId':vid,'reason':str(e),'canonical':c.urls,'primaryKeys':[list(n) for n in nodes[:5]],'owners':[n['videoOwnerRenderer'].get('navigationEndpoint',{}).get('browseEndpoint',{}).get('browseId') for n in p.tree(nodes) if 'videoOwnerRenderer' in n]});raise
+                  c=p.Canonical();c.feed(body);j=p.embedded(body,'ytInitialData');diagnostics.append({'videoId':vid,'reason':str(e),'canonical':c.urls,'currentVideoEndpoint':j.get('currentVideoEndpoint')});raise
           h.public_watch_date=observed
           rows,coverage=h.collect(datetime.now(timezone.utc))
           Path('waktaverse-verification.json').write_text(json.dumps({'coverage':coverage,'rows':rows,'diagnostics':diagnostics},ensure_ascii=False,indent=2))
