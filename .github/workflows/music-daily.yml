@@ -27,7 +27,7 @@ jobs:
         run: test "$PAUSE_ALL" != true && test "$PAUSE_MUSIC" != true
       - name: Validate merge rules and UI integration
         run: |
-          python -m unittest discover -s tests -p test_daily_music.py -v
+          python -m unittest discover -s tests -p 'test_daily_music*.py' -v
           node --test tests/daily-music.test.js
       - name: Install isolated fixed dependencies
         run: python -m venv /tmp/music-tools && /tmp/music-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
