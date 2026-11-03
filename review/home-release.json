@@ -35,9 +35,9 @@
     "auth/legal.css": "582537f07feae3a101edf434f62a1a57b3e1e56c1b35a025a27dc379d11c0712",
     "auth/View.php": "8aeb34534967761ab1c71640f715638c12ed9ec07a37f3f970101f22cc525943",
     "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c",
-    "scripts/compose_home_presentation.py": "24eec7bea03ce9ce67eb2ff8706ceb68293e1f987e4549361da4354afae1f04e",
+    "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
-    "home-review/presentation.js": "f8c890e88b1ef37b14df840d6ee152985c1890f77f14495b9ea5bed849280888",
+    "home-review/presentation.js": "a916212fad46c7d4a60201425d59a47c5371d6fca92be1819cced3de001cd8b6",
     "home-review/presentation.css": "abb75976f0340741329eb3372b09c276bd7b799cbeec725b477362e9c22bcfcb"
   },
   "rightsPermissionVerified": false,

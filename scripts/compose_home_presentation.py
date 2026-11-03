@@ -90,6 +90,12 @@ def compose(app, css, out, meta, fetcher=None):
     app = once(app, SEARCH, FORM)
     app = once(app, 'ISEGYE FAN ARCHIVE · FAN ARCHIVE</small>', 'ISEGYE FAN ARCHIVE</small>')
     app = once(app, HERO, '${homeGalleryView()}')
+    start, end = app.index('function searchView(params){'), app.index('function savedView()')
+    search = app[start:end].replace('result.length', 'total')
+    search = once(search, "result.map(resultRow).join('')", "result.map(resultRow).join('')+musicMatches.map(headerMusicResult).join('')")
+    search = once(search, 'const result=searchRecords(records,query,{kind,member});',
+                  'const result=searchRecords(records,query,{kind,member});\n const musicMatches=headerCatalogMatches(query,{kind,member},result),total=result.length+musicMatches.length;')
+    app = app[:start] + search + app[end:]
     app = once(app, "document.getElementById('main').innerHTML=html;", "document.getElementById('main').innerHTML=html;\n homePresentationMount();")
     code = 'const HOME_GROUP_GALLERY=' + json.dumps(gallery, ensure_ascii=False) + ';\n' + (ROOT / 'home-review/presentation.js').read_text()
     app = once(app, 'shell();render();', code + '\nshell();render();')

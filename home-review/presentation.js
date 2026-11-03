@@ -18,9 +18,28 @@ document.addEventListener('submit',event=>{
  location.hash=target;
 });
 
+// Include the current song catalog in global search without losing member/initial filters.
+function headerCatalogMatches(query,options,existing){
+ if(!['all','music'].includes(options.kind))return [];
+ const key=r=>[r.title.normalize('NFKC').toLocaleLowerCase('ko').replace(/[^\p{L}\p{N}]/gu,''),[...r.members].sort().join(','),r.date].join('|');
+ const seen=new Set(existing.filter(r=>r.kind==='music').map(key));
+ const index=CATALOG.music.songs.map(song=>({
+  id:song.id,kind:'music',visibility:'published',title:song.title,date:song.date,members:song.members,
+  subtitle:catMemberNames(song),summary:song.album||song.format,
+  tags:[...(song.aliases||[]),...(song.albumTracks||[]),song.album||'',song.format,
+   CATALOG_TYPES[song.type]||'',song.scope==='group'?'이세계아이돌 이세돌 ISEGYE IDOL':'',
+   /re\s*:?\s*wind/i.test(song.title)?'리와인드':'',
+   song.members.map(id=>catalogProfiles.get(id)?.en||'').join(' ')]
+ }));
+ return searchRecords(index,query,{kind:'music',member:options.member}).filter(row=>!seen.has(key(row)));
+}
+function headerMusicResult(row){
+ return `<article class="result-row" data-search-song="${e(row.id)}"><span class="list-symbol">${icon('music')}</span><a class="list-content" href="#/song/${encodeURIComponent(row.id)}"><span class="badge editorial">음악</span><h3>${e(row.title)}</h3><p>${e(row.summary)}</p><p>${formatDate(row.date)} · ${e(row.subtitle)}</p></a>${icon('arrow')}</article>`;
+}
+
 function homeGalleryView(){
  const first=HOME_GROUP_GALLERY[0];
- return `<figure class="hm-gallery" aria-label="이세계아이돌 단체 사진" aria-roledescription="슬라이드 쇼"><div class="hm-gallery-stage"><img class="hm-group" src="${e(first.src)}" width="800" height="450" alt="${e(first.alt)}" decoding="async" fetchpriority="high"></div><figcaption class="hm-gallery-controls"><button type="button" data-gallery="prev" aria-label="이전 단체 사진">‹</button><span class="hm-gallery-count" aria-live="off">1 / ${HOME_GROUP_GALLERY.length}</span><button type="button" data-gallery="next" aria-label="다음 단체 사진">›</button><button type="button" data-gallery="pause" aria-label="사진 자동 전환 일시정지" aria-pressed="false">Ⅱ</button><a class="hm-gallery-source" hidden target="_blank" rel="noopener noreferrer">사진 출처</a></figcaption></figure>`;
+ return `<figure class="hm-gallery" aria-label="이세계아이돌 단체 사진" aria-roledescription="슬라이드 쇼"><div class="hm-gallery-stage"><img class="hm-group" src="${e(first.src)}" width="800" height="450" alt="${e(first.alt)}" decoding="async" fetchpriority="high"></div><figcaption class="hm-gallery-controls"><button type="button" data-gallery="prev" aria-label="이전 단체 사진">‹</button><span class="hm-gallery-count" aria-live="off">1 / ${HOME_GROUP_GALLERY.length}</span><button type="button" data-gallery="next" aria-label="다음 단체 사진">›</button><button type="button" data-gallery="pause" aria-label="사진 자동 전환 일시정지" aria-pressed="false">Ⅱ</button><a class="hm-gallery-source" href="#/about" hidden target="_blank" rel="noopener noreferrer">사진 출처</a></figcaption></figure>`;
 }
 
 function homePresentationMount(){
@@ -70,7 +89,7 @@ function homePresentationMount(){
      current=index;image.src=item.src;image.alt=item.alt;
      root.dataset.index=String(index);count.textContent=`${index+1} / ${HOME_GROUP_GALLERY.length}`;
      source.hidden=!item.source;
-     if(item.source)source.href=item.source;else source.removeAttribute('href');
+     source.href=item.source||'#/about';
      image.classList.remove('is-changing');schedule();
     };
     if(motion.matches)apply();else{image.classList.add('is-changing');fade=setTimeout(apply,180);}
