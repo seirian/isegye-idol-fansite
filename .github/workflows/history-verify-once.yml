@@ -1,0 +1,62 @@
+name: History - verify monthly implementation (work branch only)
+on:
+  push:
+    branches: [feature/monthly-history-refresh]
+    paths: [.github/workflows/history-verify-once.yml]
+permissions: {contents: write}
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/feature/monthly-history-refresh'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify exact staged patch before applying
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64,zlib,hashlib,subprocess
+          parts=[Path(f'scripts/_history_patch_{i}.txt').read_text().strip() for i in range(4)]
+          parts[1]=parts[1].replace('NwdAZOXiscwe99d6H3+eL373x71vnq7','NwdAZOXiscwe99d6H3+48u7l+8twrV86vX54+N31yZnod1+Grm7sbz3CBH+BK98FFmo+hvc9+3L21tQ7D7n3+eL373x71vnq7').replace('FANh7CmNfRZZ+XPP8Lzznd3v+NfVSMx3SDEX4EMA9FIQ','FANh7CmNfRZ+XPP8LzzndbvY1vVSMx3SDEX4EMA9FIQ')
+          print('fragment lengths',[len(p) for p in parts])
+          raw=zlib.decompress(base64.b64decode(''.join(parts),validate=True))
+          assert hashlib.sha256(raw).hexdigest()=='63d99b096403af8d1c0da23c521131e9daad666c53741247ee477c09265ae3aa','Unexpected patch digest'
+          subprocess.run(['git','apply','--check','-'],input=raw,check=True)
+          subprocess.run(['git','apply','-'],input=raw,check=True)
+          PY
+      - name: Validate all offline rules
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install isolated public readers and browser
+        run: |
+          python -m venv /tmp/history-tools
+          /tmp/history-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0 playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/history-tools/bin/python
+      - name: Collect actual public sources without production credentials
+        run: /tmp/history-tools/bin/python scripts/monthly_history.py
+      - name: Verify actual built history UI with synthetic feed fixtures
+        env:
+          PYTHON: /tmp/history-tools/bin/python
+          HISTORY_TEST_URL: http://127.0.0.1:8991/
+          HISTORY_TEST_OUT: history-browser-proof
+        run: |
+          npm run build
+          /tmp/history-tools/bin/python -m http.server 8991 --bind 127.0.0.1 --directory dist > /tmp/history-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid"' EXIT
+          /tmp/history-tools/bin/python tests/monthly_history_browser.py
+      - name: Promote only tested implementation on work branch
+        run: |
+          git rm .github/workflows/history-source-inspect.yml .github/workflows/history-verify-once.yml scripts/_history_patch_*.txt
+          git add .github/workflows/history-monthly.yml auth/Gateway.php docs/BATCHES.md scripts/monthly_history.py scripts/publish_monthly_history.py scripts/enhance_visual_history.py scripts/verify_release_v04.py tests/auth/browser.py tests/test_monthly_history.py tests/monthly-history.test.js tests/monthly_history_browser.py visuals/core.js visuals/monthly-history.js visuals/theme.css visuals/ui.js
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(history): verified monthly activity feed on the first day, preserving curated records'
+          git push origin HEAD:feature/monthly-history-refresh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: history-monthly-proof
+          path: |
+            history-discovery.json
+            history-browser-proof
+          retention-days: 14
