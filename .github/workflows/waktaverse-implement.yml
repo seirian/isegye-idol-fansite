@@ -19,7 +19,15 @@ jobs:
           path: /tmp/waktaverse-audit
       - name: Apply scoped changes and validate offline
         run: |
+          mkdir -p tests/fixtures
           python scripts/_apply_waktaverse_once.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/test_daily_music_formats.py');s=p.read_text();assert "set(m.CHANNELS)-{'c2'}" in s
+          s=s.replace("set(m.CHANNELS)-{'c2'}","set(m.CHANNELS)-{'c1','c2'}")
+          s=s.replace('    def test_new_clip_needs_song_evidence(self):',"        self.assertEqual(m.classify('c1',MEDLEY,known)['type'],'album_medley')\n        self.assertEqual(m.classify('c1',CLIP,known)['type'],'music_clip')\n    def test_new_clip_needs_song_evidence(self):")
+          p.write_text(s)
+          PY
           npm test
           python -m unittest discover -s tests -p 'test_*.py'
       - name: Verify original public source metadata without production credentials
