@@ -44,7 +44,13 @@ def public_rows(cid,k,now,report,known,evidence):
             if m.needs_review(k,title):report['review'].append(vid)
             continue
         try:
-            body=m.read('https://www.youtube.com/watch?v='+vid+'&hl=en',5500000).decode();player=embedded(body,'ytInitialPlayerResponse');details=player.get('videoDetails',{});micro=player.get('microformat',{}).get('playerMicroformatRenderer',{})
+            body=m.read('https://www.youtube.com/watch?v='+vid+'&hl=en',5500000).decode();
+            if k=='c1':
+                from music_public_metadata import public_watch_date
+                day=public_watch_date(body,cid,vid,title)
+                if now-timedelta(days=30)<=m.publication_clock(day)<=now:out.append((vid,title,day))
+                continue
+            player=embedded(body,'ytInitialPlayerResponse');details=player.get('videoDetails',{});micro=player.get('microformat',{}).get('playerMicroformatRenderer',{})
             from official_channel_music import OBSERVED_ATOM
             saved=OBSERVED_ATOM.get((cid,vid,title)) if k=='c2' else None
             if not details and not micro and saved and player.get('playabilityStatus',{}).get('status')=='LOGIN_REQUIRED':

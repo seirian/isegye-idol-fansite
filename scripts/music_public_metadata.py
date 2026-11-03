@@ -21,8 +21,12 @@ def public_watch_date(body,cid,vid,expected_title):
     def matching(u):
         p=urlsplit(u)
         return p.scheme=='https' and p.hostname=='www.youtube.com' and p.path=='/watch' and parse_qs(p.query).get('v')==[vid]
-    if not canonical.urls or not all(matching(u) for u in canonical.urls):raise ValueError('canonical video mismatch')
     j=embedded(body,'ytInitialData')
+    canonical_urls=[u for u in canonical.urls if u not in ('','undefined')]
+    current=j.get('currentVideoEndpoint',{}).get('watchEndpoint',{}).get('videoId')
+    if canonical_urls:
+        if not all(matching(u) for u in canonical_urls) or (current and current!=vid):raise ValueError('canonical video mismatch')
+    elif current!=vid:raise ValueError('current public video identity missing')
     nodes=j.get('contents',{}).get('twoColumnWatchNextResults',{}).get('results',{}).get('results',{}).get('contents',[])
     primary=[n['videoPrimaryInfoRenderer'] for n in nodes if 'videoPrimaryInfoRenderer' in n]
     owners=[n['videoOwnerRenderer'] for item in nodes if 'videoSecondaryInfoRenderer' in item for n in tree(item['videoSecondaryInfoRenderer']) if 'videoOwnerRenderer' in n]

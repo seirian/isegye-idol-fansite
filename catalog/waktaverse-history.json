@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "channelId": "UCzh4yY8rl38knH33XpNqXbQ",
+  "reviewedAt": "2026-11-03T10:38:15.518001+00:00",
+  "coverage": {
+    "publicVideoIdsChecked": 134,
+    "artistRelatedCandidates": 44,
+    "acceptedMusicVideos": 26,
+    "alreadyRegistered": 11,
+    "historicalQueue": 15,
+    "note": "Bounded observed public listings and channel searches, not a claim of all past or unavailable uploads. Exact page date only; no time-zone inference."
+  },
+  "videos": [
+    {
+      "videoId": "MCyL9k_Tiok",
+      "sourceTitle": "이세계아이돌 (ISEGYE IDOL) 'STARGAZERS' 이세계페스티벌 2025 실황",
+      "publishedDate": "2025-05-18"
+    },
+    {
+      "videoId": "nsVbRO_k9b8",
+      "sourceTitle": "이세계아이돌 (ISEGYE IDOL) 'MEMORY' 이세계페스티벌 2025 실황",
+      "publishedDate": "2025-05-18"
+    },
+    {
+      "videoId": "7V7ZsMt6r-w",
+      "sourceTitle": "이세계아이돌 (ISEGYE IDOL) 'ELEVATE' 이세계페스티벌 2025 실황",
+      "publishedDate": "2025-05-17"
+    },
+    {
+      "videoId": "JiIvPGY2Xdk",
+      "sourceTitle": "[Original Song] 짬통스 - BAD END (ft. 릴파)",
+      "publishedDate": "2025-01-26"
+    },
+    {
+      "videoId": "KLOevIVg7Ww",
+      "sourceTitle": "이세계아이돌 두찜 CM송",
+      "publishedDate": "2025-01-08"
+    },
+    {
+      "videoId": "k5O1F_IS0mU",
+      "sourceTitle": "이세계 페스티벌 - RE:WIND",
+      "publishedDate": "2023-12-21"
+    },
+    {
+      "videoId": "YmELthNomns",
+      "sourceTitle": "맘가는대로 - (새우튀김, 캘리칼리데이비슨, 프리터)(ft.고세구) - 고멤가요제 세새한캘리퍼스",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "K8WC6uWyC9I",
+      "sourceTitle": "그냥 살아! - (뢴트게늄, 김치만두번영택사스가, 부정형인간)(ft.비챤) - 고멤가요제 김피탕앤짬뽕",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "7XFJ4s0j9z0",
+      "sourceTitle": "숲튽훈 & 주르르 (STH & JURURU) - 고속도로 로망스 (Freeway Romance) Official MV",
+      "publishedDate": "2023-07-19"
+    },
+    {
+      "videoId": "plO-C9aSwxs",
+      "sourceTitle": "RE : WIND (Jazz.ver) - 이세계아이돌(isegye idol) 리와인드 재즈 버전",
+      "publishedDate": "2021-12-24"
+    },
+    {
+      "videoId": "YZ0xA3LUzNQ",
+      "sourceTitle": "ShowDown(쇼다운) - (비밀소녀, 곽춘식, 이덕수할아바이)(ft.아이네) - 고멤가요제 밴틀니",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "owlLg3R9u6c",
+      "sourceTitle": "How To Love - (도파민박사, 풍신, 소피아)(ft.징버거) - 고멤가요제 OYT",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "IzrIYIqlBnA",
+      "sourceTitle": "피날레 - (비즈니스킴, 단답벌레, 독고혜지)(ft.릴파) - 고멤가요제 레이디버그",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "YwQkPlFlOJQ",
+      "sourceTitle": "STARLIGHT(스타라이트) - (왁파고, 하쿠0089 , 카르나르융터르)(ft.주르르) - 고멤가요제 하와유",
+      "publishedDate": "2022-09-17"
+    },
+    {
+      "videoId": "DIomV3Ebmz8",
+      "sourceTitle": "이세계 페스티벌 - 겨울봄",
+      "publishedDate": "2023-12-21"
+    }
+  ]
+}

@@ -31,6 +31,11 @@ class Waktaverse(unittest.TestCase):
    with self.assertRaises(ValueError):public.public_watch_date(self.html(j),cid,vid,title)
   j['contents']['twoColumnWatchNextResults']['results']['results']['contents'][0]['videoPrimaryInfoRenderer']['dateText']={'simpleText':'3년 전'}
   with self.assertRaises(ValueError):public.public_watch_date(self.html(j),m.CHANNELS['c1'][0],'12345678901','정확한 곡')
+ def test_current_endpoint_fallback_still_requires_exact_id(self):
+  j=self.fixture();j['currentVideoEndpoint']={'watchEndpoint':{'videoId':'12345678901'}};body=self.html(j).replace('https://www.youtube.com/watch?v=12345678901','undefined');self.assertEqual(public.public_watch_date(body,m.CHANNELS['c1'][0],'12345678901','정확한 곡'),'2023-07-19')
+  with self.assertRaises(ValueError):public.public_watch_date(body,m.CHANNELS['c1'][0],'98765432109','정확한 곡')
+  del j['currentVideoEndpoint']
+  with self.assertRaises(ValueError):public.public_watch_date(self.html(j).replace('https://www.youtube.com/watch?v=12345678901','undefined'),m.CHANNELS['c1'][0],'12345678901','정확한 곡')
  def test_failed_history(self):
   with patch.object(m,'verify_video',side_effect=OSError('temporary')):rows,stats=history.collect(datetime.now(timezone.utc))
   self.assertFalse(rows);self.assertEqual(stats['verified'],0);self.assertEqual(len(stats['errors']),15)
