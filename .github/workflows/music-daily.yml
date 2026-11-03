@@ -1,0 +1,69 @@
+name: Music - daily verified catalog refresh
+on:
+  schedule:
+    - cron: '43 21 * * *' # next calendar day, 06:43 Asia/Seoul
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Production - isolated inour SFTP deployment']
+    types: [completed]
+    branches: [main]
+permissions: {contents: read}
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Respect global and daily-music pause flags
+        env:
+          PAUSE_ALL: ${{ vars.PRODUCTION_PAUSED }}
+          PAUSE_MUSIC: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+        run: test "$PAUSE_ALL" != true && test "$PAUSE_MUSIC" != true
+      - name: Validate merge rules and UI integration
+        run: |
+          python -m unittest discover -s tests -p test_daily_music.py -v
+          node --test tests/daily-music.test.js
+      - name: Install isolated fixed dependencies
+        run: python -m venv /tmp/music-tools && /tmp/music-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
+      - name: Discover official music posts and verify new candidates
+        run: /tmp/music-tools/bin/python scripts/daily_music.py
+      - name: Audit the existing approved links (do not delete on transient outages)
+        id: audit
+        continue-on-error: true
+        run: /tmp/music-tools/bin/python scripts/check_music_video_sources.py
+      - name: Publish only validated cumulative music data and verify by readback
+        run: /tmp/music-tools/bin/python scripts/publish_daily_music.py
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Write batch summary and retain incomplete coverage as a warning
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          def load(n):return json.loads(Path(n).read_text()) if Path(n).exists() else {}
+          p=load('music-publication.json');d=load('music-discovery.json');a=load('test-results/music-sources/source-audit.json');s=d.get('sources',{});bad=[k for k,v in s.items() if v['state']!='ok'];pending=sum(len(x['review']) for x in s.values())
+          summary=f"Music: {p.get('status','not published')}; new {p.get('added','—')}, total auto {p.get('totalAuto','—')}; fully checked channels {len(s)-len(bad)}/{len(s)}, needs review {pending}; reviewed links {a.get('passed','—')}/{a.get('selected','—')}."
+          print(summary);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(summary+'\n')
+          if bad:print('::warning::Incomplete source coverage: '+','.join(bad))
+          if os.environ['AUDIT_OUTCOME']=='failure':raise SystemExit('Reviewed link audit incomplete. No reviewed link was removed.')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: daily-music-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            music-discovery.json
+            music-publication.json
+            test-results/music-sources/source-audit.json
+          retention-days: 30
