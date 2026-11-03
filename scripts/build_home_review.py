@@ -6,6 +6,7 @@ import home_soop_profiles
 import compose_schedule
 import compose_footer_navigation
 import compose_legal_documents
+import compose_ui_cleanup
 ROOT=Path(__file__).resolve().parents[1]
 
 def replace_once(text, before, after):
@@ -42,6 +43,7 @@ def main():
     app,css=compose_schedule.compose(app,css,out,meta)
     app,css=compose_footer_navigation.compose(app,css,meta)
     app,css=compose_legal_documents.compose(app,css,meta)
+    app,css=compose_ui_cleanup.compose(app,css,meta)
     html=(out/'index.html').read_text()
     if 'content="noindex,nofollow"' not in html:raise RuntimeError('Preview must remain noindex')
     html=re.sub(r'<title>.*?</title>','<title>ISEGYE! · 심플 홈 검토</title>',html)
@@ -70,5 +72,5 @@ def main():
         offline=offline.replace(kind+"-src 'self'",kind+"-src 'self' 'sha256-"+digest+"'")
     (out/'review.html').write_text(offline)
     subprocess.run(['node','--check',str(out/'src/app.js')],check=True)
-    print(json.dumps({'homeReview':True,'commit':meta['commit'],'liveRendererUnchanged':True}))
+    print(json.dumps({'homeReview':True,'commit':meta['commit'],'livePollingUnchanged':True}))
 if __name__=='__main__':main()

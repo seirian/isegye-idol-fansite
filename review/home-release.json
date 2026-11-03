@@ -12,7 +12,7 @@
     "home-review/core.js": "7180ac7c0aabac2bf0e35dfe1df27f8416cdb4f808e2a22c6721635982c332b1",
     "home-review/ui.js": "74c93d6daabf3411165cff42b4d41d217ed4d324777c325013f52823f5c293e6",
     "home-review/theme.css": "15cc0801cadd7f04450a9f2ddb41771f7abc39e1d9bf5fa34c5e67b096f38f94",
-    "scripts/build_home_review.py": "1df5a68cad8eadc2d2661dfa4c433dcffe1140e18594b9703509a013bbc693c6",
+    "scripts/build_home_review.py": "4d660e8a6521df481e2fa957e76b8c0f3e393f90866116a77c24245f34f6fde6",
     "live/core.js": "3b31d45be14862fe8c9e8a3c5d903db96212eb40c39dcd567659520c86971a2b",
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
@@ -33,7 +33,8 @@
     "scripts/compose_legal_documents.py": "879a6f1c4b80864647e3e69733102a9f96102f1b4b5134feeedd569f75b42815",
     "legal/ui.js": "40fec28b64b7212837bdca80e8dad6076b8bfae66af5b778c5fe014617dc57d8",
     "auth/legal.css": "582537f07feae3a101edf434f62a1a57b3e1e56c1b35a025a27dc379d11c0712",
-    "auth/View.php": "8aeb34534967761ab1c71640f715638c12ed9ec07a37f3f970101f22cc525943"
+    "auth/View.php": "8aeb34534967761ab1c71640f715638c12ed9ec07a37f3f970101f22cc525943",
+    "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -77,6 +78,10 @@
     {
       "requestedAt": "2026-11-03",
       "scope": "Process reviewed public Cafe batches from 2026-10-31, with original observations, existing author rules and same-series fan reference verification. No recurring Cafe page/API crawler."
+    },
+    {
+      "requestedAt": "2026-11-03",
+      "scope": "Remove the four screenshot-marked UI elements from actual site markup: FAN ARCHIVE 02 badge, search slash hint, redundant members shortcut, and HOME LIVE manual refresh. Preserve search, six primary menus, automatic LIVE polling, LIVE-page controls, all data batches and access policy."
     }
   ]
 }
