@@ -1,0 +1,31 @@
+name: Music feed transport checks (read only)
+on:
+  push:
+    branches: [feature/daily-music-catalog]
+    paths: [.github/workflows/music-atom-check.yml]
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: |
+          PYTHONPATH=scripts python - <<'PY'
+          import daily_music as m,urllib.request as u,concurrent.futures as f,re,json,datetime
+          def run(it):
+              k,(cid,_) = it; result={};base='https://www.youtube.com/'
+              for name,suffix in [('atom','feeds/videos.xml?channel_id='+cid),('playlist','feeds/videos.xml?playlist_id=UU'+cid[2:]),('localized','feeds/videos.xml?channel_id='+cid+'&hl=ko'),('page','channel/'+cid+'/videos?hl=en')]:
+                  try:
+                      req=u.Request(base+suffix,headers={'User-Agent':'Mozilla/5.0 (compatible; IsegyeFanArchive/1.0)','Accept':'text/html' if name=='page' else 'application/atom+xml'});
+                      with u.urlopen(req,timeout=12) as r:b=r.read(3500000)
+                      if name!='page':result[name]=[(v,t,p) for v,t,p in m.feed_entries(b,cid,datetime.datetime.now(datetime.timezone.utc))]
+                      else:
+                          s=b.decode();result[name]=[cid in re.findall(r'"externalId":"([\w-]+)"',s),len(re.findall('videoRenderer|lockupViewModel',s)), list(dict.fromkeys(re.findall(r'"videoId":"([\w-]{11})"',s)))[:4]]
+                  except Exception as e:result[name]=str(e)[:100]
+              return k,result
+          with f.ThreadPoolExecutor(max_workers=3) as ex:d=dict(ex.map(run,m.CHANNELS.items()))
+          open('network.json','w').write(json.dumps(d,ensure_ascii=False));print({k:{n:(len(v) if isinstance(v,list) and n!='page' else v) for n,v in r.items()} for k,r in d.items()})
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: music-public-feeds, path: network.json, retention-days: 5}
