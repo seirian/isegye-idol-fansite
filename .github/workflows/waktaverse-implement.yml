@@ -28,7 +28,7 @@ jobs:
           s=s.replace('    def test_new_clip_needs_song_evidence(self):',"        self.assertEqual(m.classify('c1',MEDLEY,known)['type'],'album_medley')\n        self.assertEqual(m.classify('c1',CLIP,known)['type'],'music_clip')\n    def test_new_clip_needs_song_evidence(self):")
           p.write_text(s)
           PY
-          npm test
+          npm test > /tmp/node-tests.txt
           python -m unittest discover -s tests -p 'test_*.py'
       - name: Verify original public source metadata without production credentials
         run: |
@@ -38,14 +38,20 @@ jobs:
           import json
           from pathlib import Path
           from datetime import datetime,timezone
-          import daily_music as m,waktaverse_history as h
+          import daily_music as m,waktaverse_history as h,music_public_metadata as p
+          diagnostics=[];orig=h.public_watch_date
+          def observed(body,cid,vid,title):
+              try:return orig(body,cid,vid,title)
+              except ValueError as e:
+                  c=p.Canonical();c.feed(body);j=p.embedded(body,'ytInitialData');nodes=j.get('contents',{}).get('twoColumnWatchNextResults',{}).get('results',{}).get('results',{}).get('contents',[])
+                  diagnostics.append({'videoId':vid,'reason':str(e),'canonical':c.urls,'primaryKeys':[list(n) for n in nodes[:5]],'owners':[n['videoOwnerRenderer'].get('navigationEndpoint',{}).get('browseEndpoint',{}).get('browseId') for n in p.tree(nodes) if 'videoOwnerRenderer' in n]});raise
+          h.public_watch_date=observed
           rows,coverage=h.collect(datetime.now(timezone.utc))
-          Path('waktaverse-verification.json').write_text(json.dumps({'coverage':coverage,'rows':rows},ensure_ascii=False,indent=2))
+          Path('waktaverse-verification.json').write_text(json.dumps({'coverage':coverage,'rows':rows,'diagnostics':diagnostics},ensure_ascii=False,indent=2))
+          print(json.dumps({'coverage':coverage,'diagnostics':diagnostics[:2]},ensure_ascii=False))
           assert len(rows)==15 and coverage['verified']==15,coverage
-          assert len(m.merge([],rows))==15
-          assert len(m.merge(rows,rows))==15
+          assert len(m.merge([],rows))==15 and len(m.merge(rows,rows))==15
           assert 'fgSXAKsq-Vo' in m.baseline()[0]
-          print(json.dumps(coverage,ensure_ascii=False))
           PY
       - name: Keep implementation only and commit on work branch
         run: |
