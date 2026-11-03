@@ -1,0 +1,52 @@
+[
+  {
+    "id": "mafia",
+    "url": "https://cdn.kpopping.com/kpics/2026/06/1781627727652-04dqj7-0.png",
+    "width": 1600,
+    "height": 900,
+    "sha256": "15719f19e4ec8d5db2a3d2bd9764870444ff3ed188af20a261cc03e2255c808e",
+    "alt": "이세계아이돌 여섯 멤버의 마피아 콘셉트 단체 사진",
+    "sixMembersReviewed": true,
+    "checkedAt": "2026-11-03"
+  },
+  {
+    "id": "christmas",
+    "url": "https://cdn.kpopping.com/kpics/2026/06/1781630020889-7crh4z-0.jpg",
+    "width": 4096,
+    "height": 2304,
+    "sha256": "6b68d0dd00aea3e1409b8e50f494eb6a4627909b696cb8da9dcccc5965bdc944",
+    "alt": "크리스마스 의상을 입은 이세계아이돌 여섯 멤버의 단체 사진",
+    "sixMembersReviewed": true,
+    "checkedAt": "2026-11-03"
+  },
+  {
+    "id": "pastel",
+    "url": "https://cdn.kpopping.com/kpics/2026/06/1781630640449-jits8e-0.png",
+    "width": 2160,
+    "height": 1215,
+    "sha256": "291ee787b970949648dea687b5308f14ae1b4a3e9886a4255ee1f630b864d0ed",
+    "alt": "파스텔 의상을 입은 이세계아이돌 여섯 멤버의 단체 사진",
+    "sixMembersReviewed": true,
+    "checkedAt": "2026-11-03"
+  },
+  {
+    "id": "hanteo",
+    "url": "https://legacy.kpopping.com/ca/1/251209-HANTEO-NEWS-Twitter-Update-with-ISEGYE-IDOL-documents-1.jpeg",
+    "width": 1280,
+    "height": 960,
+    "sha256": "6d1fdaa4e6765fb8c2a58a351c1c78704f7bfeaec1c3bbfc0ecc4133b7ba8bcd",
+    "alt": "한터뉴스 기념패와 함께한 이세계아이돌 여섯 멤버의 단체 사진",
+    "sixMembersReviewed": true,
+    "checkedAt": "2026-11-03"
+  },
+  {
+    "id": "rewind",
+    "url": "https://isegye-festival.com/wp-content/uploads/2024/05/maxresdefault-1.jpg",
+    "width": 1280,
+    "height": 720,
+    "sha256": "a9cd2d35c8c4fb9d67f339a4e92f79ddf72ad8443a1c9fcbc74559b574802a14",
+    "alt": "RE:WIND 속 이세계아이돌 여섯 멤버의 단체 장면",
+    "sixMembersReviewed": true,
+    "checkedAt": "2026-11-03"
+  }
+]
