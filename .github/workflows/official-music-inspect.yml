@@ -1,0 +1,40 @@
+name: Inspect official music formats (work branch only)
+on:
+  push:
+    branches: ['feature/official-music-formats']
+    paths: ['.github/workflows/official-music-inspect.yml']
+permissions: {contents: read}
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Inspect public video identity, listing titles and precise publish-date availability
+        run: |
+          mkdir /tmp/review
+          git archive --format=tar.gz -o /tmp/review/source.tgz HEAD scripts catalog tests docs/BATCHES.md .github/workflows/music-daily.yml
+          PYTHONPATH=scripts python - <<'PY'
+          import daily_music as m,daily_music_listing as l,json
+          from pathlib import Path
+          from urllib.parse import urlencode
+          cid=m.CHANNELS['c2'][0];vid='lFgCjRoFjyU';u='https://www.youtube.com/watch?v='+vid
+          out={'cid':cid,'videoId':vid}
+          for label,fn in [('oembed',lambda:json.loads(m.read('https://www.youtube.com/oembed?'+urlencode({'url':u,'format':'json'}),128000))),('watch',lambda:l.embedded(m.read(u+'&hl=en',6000000).decode(),'ytInitialPlayerResponse')),('channel',lambda:l.embedded(m.read('https://www.youtube.com/channel/'+cid+'/videos?hl=en',5000000).decode(),'ytInitialData')),('atom',lambda:m.feed_entries(m.read('https://www.youtube.com/feeds/videos.xml?channel_id='+cid,1048576),cid,m.datetime.now(m.timezone.utc)))]:
+              try:
+                  d=fn()
+                  if label=='oembed':out[label]={k:d.get(k) for k in ('title','author_name','author_url')}
+                  elif label=='watch':
+                      v=d.get('videoDetails',{});mf=d.get('microformat',{}).get('playerMicroformatRenderer',{});out[label]={k:v.get(k) for k in ('videoId','title','channelId','isLiveContent','isUpcoming')};out[label].update({k:mf.get(k) for k in ('publishDate','uploadDate','category','externalChannelId')});out['playability']=d.get('playabilityStatus',{}).get('status')
+                  elif label=='channel':
+                      out['listingChannel']=d.get('metadata',{}).get('channelMetadataRenderer',{}).get('externalId');out['titles']={}
+                      for n in l.tree(d.get('contents',{})):
+                          v=n.get('lockupViewModel',{});i=v.get('contentId');t=v.get('metadata',{}).get('lockupMetadataViewModel',{}).get('title',{}).get('content');old=n.get('videoRenderer',{});i=i or old.get('videoId');t=t or l.text(old.get('title',{}))
+                          if i and t:out['titles'][i]=t
+                  else:out['atomTarget']=[e for e in d if e[0]==vid]
+              except Exception as e:out[label+'Error']=type(e).__name__+': '+str(e)[:100]
+          Path('/tmp/review/target.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: official-formats-inspection, path: /tmp/review, retention-days: 3}
