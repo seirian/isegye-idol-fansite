@@ -1,0 +1,61 @@
+name: History - monthly verified activity refresh
+on:
+  schedule:
+    - cron: '43 0 1 * *' # 1st day of each month, 09:43 Asia/Seoul
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Respect global and monthly-history pause controls
+        env:
+          PAUSE_ALL: ${{ vars.PRODUCTION_PAUSED }}
+          PAUSE_HISTORY: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+        run: test "$PAUSE_ALL" != true && test "$PAUSE_HISTORY" != true
+      - name: Validate monthly cutoff, deduplication and publication boundary
+        run: |
+          python -m unittest discover -s tests -p 'test_monthly_history*.py' -v
+          node --test tests/monthly-history.test.js
+      - name: Install isolated source readers
+        run: |
+          python -m venv /tmp/history-tools
+          /tmp/history-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0 playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/history-tools/bin/python
+      - name: Collect permitted public sources without production credentials
+        run: /tmp/history-tools/bin/python scripts/monthly_history.py
+      - name: Merge successful cumulative data and atomically publish history only
+        run: /tmp/history-tools/bin/python scripts/publish_monthly_history.py
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Record actual result and incomplete source coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path('history-publication.json')
+          d=json.loads(p.read_text()) if p.exists() else {}
+          text=f"History: {d.get('status','not published')}; through {d.get('through','—')}; added {d.get('added','—')}, updated {d.get('updated','—')}; total {d.get('totalDisplayed','—')}."
+          print(text)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:out.write(text+'\n')
+          if d.get('coverage',{}).get('partial'):print('::warning::Some history sources could not be fully checked; previous evidence was preserved.')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: monthly-history-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            history-discovery.json
+            history-publication.json
+          retention-days: 90
