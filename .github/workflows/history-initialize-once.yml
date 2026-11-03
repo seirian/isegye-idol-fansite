@@ -10,13 +10,23 @@ jobs:
   initialize:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/ops/initialize-monthly-history'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: seirian/isegye-idol-fansite
       EXPECTED: 68e91773e9213bc5800ad2742c244e5d4bae28a6
       DEPLOY_RUN: '41635495197'
     steps:
+      - name: Supersede only the earlier initializer for this same change
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          repo=os.environ['REPO']; own=int(os.environ['GITHUB_RUN_ID'])
+          data=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs?branch=ops%2Finitialize-monthly-history&per_page=20']))
+          for r in data['workflow_runs']:
+              if r['id']<own and r['path']=='.github/workflows/history-initialize-once.yml' and r['status']!='completed':
+                  subprocess.run(['gh','api','--method','POST',f"repos/{repo}/actions/runs/{r['id']}/cancel"],check=True)
+          PY
       - name: Require the exact requested production run
         run: |
           test "$(gh api repos/$REPO/actions/runs/$DEPLOY_RUN --jq '.head_sha')" = "$EXPECTED"
@@ -24,8 +34,22 @@ jobs:
           test "$(gh api repos/$REPO/actions/runs/$DEPLOY_RUN --jq '.head_branch')" = main
       - name: Confirm successful production deployment before collecting
         run: gh run watch "$DEPLOY_RUN" --repo "$REPO" --interval 30 --exit-status
+      - name: Do not replace pending hourly or daily publication jobs
+        run: |
+          python - <<'PY'
+          import json,os,subprocess,time
+          repo=os.environ['REPO']; sha=os.environ['EXPECTED']; paths={'.github/workflows/music-daily.yml','.github/workflows/schedule-refresh.yml'}
+          time.sleep(15)
+          for attempt in range(24):
+              data=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs?branch=main&head_sha={sha}&per_page=40']))
+              running=[r for r in data['workflow_runs'] if r['path'] in paths and r['status']!='completed']
+              if not running:break
+              print('Preserving existing data job order:',[(r['id'],r['status']) for r in running],flush=True)
+              time.sleep(20)
+          else:raise SystemExit('Existing data publication is still active; no initial history dispatch')
+          PY
       - name: Start the main-only monthly job once
         run: |
           test "$(gh api repos/$REPO/git/ref/heads/main --jq '.object.sha')" = "$EXPECTED"
           gh api --method POST "repos/$REPO/actions/workflows/history-monthly.yml/dispatches" -f ref=main
-          echo 'Initial history refresh dispatched to main after successful exact production deployment.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Initial history refresh dispatched to main after successful production deployment and completion of existing post-deployment data jobs.' >> "$GITHUB_STEP_SUMMARY"
