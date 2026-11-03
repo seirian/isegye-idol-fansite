@@ -52,7 +52,9 @@ def classify(k,title):
     else:
         # Explicit performer prefix/suffix or 'song | cover by artist'. Do not silently use a third-party artist as performer.
         by=re.search(r'(?i)\s*(?:[|｜]\s*)?(?:cover(?:ed)?\s+by|sung\s+by)\s+(.+)$',title)
-        if by: name=MARK.sub(' ',title[:by.start()]).strip(' |:-[]()');credits=by[1]
+        if by:
+            name=MARK.sub(' ',title[:by.start()]).strip(' |:-[]()');credits=by[1]
+            if not performers(credits) and not GROUP.search(credits):return None
         else:
             parts=re.split(r'\s+[–—-]\s+|\s*[|｜]\s*',work)
             if len(parts)==2 and (performers(parts[0]) or GROUP.search(parts[0])):credits,name=parts
