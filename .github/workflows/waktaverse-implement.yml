@@ -1,0 +1,53 @@
+name: Waktaverse - implement and verify music-only backfill
+on:
+  push:
+    branches: [feature/waktaverse-music-backfill]
+    paths: [.github/workflows/waktaverse-implement.yml]
+permissions: {contents: write, actions: read}
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/feature/waktaverse-music-backfill'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/download-artifact@v4
+        with:
+          name: waktaverse-audit
+          run-id: 41620873000
+          github-token: ${{ github.token }}
+          path: /tmp/waktaverse-audit
+      - name: Apply scoped changes and validate offline
+        run: |
+          python scripts/_apply_waktaverse_once.py
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py'
+      - name: Verify original public source metadata without production credentials
+        run: |
+          python -m venv /tmp/wakta-verify
+          /tmp/wakta-verify/bin/pip -q install pillow==11.3.0
+          PYTHONPATH=scripts /tmp/wakta-verify/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime,timezone
+          import daily_music as m,waktaverse_history as h
+          rows,coverage=h.collect(datetime.now(timezone.utc))
+          Path('waktaverse-verification.json').write_text(json.dumps({'coverage':coverage,'rows':rows},ensure_ascii=False,indent=2))
+          assert len(rows)==15 and coverage['verified']==15,coverage
+          assert len(m.merge([],rows))==15
+          assert len(m.merge(rows,rows))==15
+          assert 'fgSXAKsq-Vo' in m.baseline()[0]
+          print(json.dumps(coverage,ensure_ascii=False))
+          PY
+      - name: Keep implementation only and commit on work branch
+        run: |
+          rm .github/workflows/waktaverse-inspect.yml .github/workflows/waktaverse-audit.yml .github/workflows/waktaverse-implement.yml scripts/_apply_waktaverse_once.py
+          git add catalog scripts tests docs/BATCHES.md .github/workflows/waktaverse-inspect.yml .github/workflows/waktaverse-audit.yml .github/workflows/waktaverse-implement.yml
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix(music): verify Waktaverse historical music and restore Rewind discovery'
+          git push origin HEAD:feature/waktaverse-music-backfill
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: waktaverse-implementation-proof
+          path: waktaverse-verification.json
+          retention-days: 14
