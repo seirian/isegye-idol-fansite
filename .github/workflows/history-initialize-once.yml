@@ -1,0 +1,31 @@
+name: History - one-time initial run after approved deployment
+on:
+  push:
+    branches: [ops/initialize-monthly-history]
+    paths: [.github/workflows/history-initialize-once.yml]
+permissions:
+  actions: write
+  contents: read
+jobs:
+  initialize:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/ops/initialize-monthly-history'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: seirian/isegye-idol-fansite
+      EXPECTED: 68e91773e9213bc5800ad2742c244e5d4bae28a6
+      DEPLOY_RUN: '41635495197'
+    steps:
+      - name: Require the exact requested production run
+        run: |
+          test "$(gh api repos/$REPO/actions/runs/$DEPLOY_RUN --jq '.head_sha')" = "$EXPECTED"
+          test "$(gh api repos/$REPO/actions/runs/$DEPLOY_RUN --jq '.path')" = '.github/workflows/production.yml'
+          test "$(gh api repos/$REPO/actions/runs/$DEPLOY_RUN --jq '.head_branch')" = main
+      - name: Confirm successful production deployment before collecting
+        run: gh run watch "$DEPLOY_RUN" --repo "$REPO" --interval 30 --exit-status
+      - name: Start the main-only monthly job once
+        run: |
+          test "$(gh api repos/$REPO/git/ref/heads/main --jq '.object.sha')" = "$EXPECTED"
+          gh api --method POST "repos/$REPO/actions/workflows/history-monthly.yml/dispatches" -f ref=main
+          echo 'Initial history refresh dispatched to main after successful exact production deployment.' >> "$GITHUB_STEP_SUMMARY"
