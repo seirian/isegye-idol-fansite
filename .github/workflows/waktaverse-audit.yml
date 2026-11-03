@@ -1,0 +1,57 @@
+name: Waktaverse - historical music metadata audit
+on:
+  push:
+    branches: [feature/waktaverse-music-backfill]
+    paths: [.github/workflows/waktaverse-audit.yml]
+permissions: {contents: read, actions: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@v4
+        with:
+          name: waktaverse-inventory
+          run-id: 41620435858
+          github-token: ${{ github.token }}
+          path: /tmp/inventory
+      - name: Read current public oEmbed titles and watch-page metadata
+        run: |
+          PYTHONPATH=scripts python - <<'PY'
+          import json,re,concurrent.futures,urllib.parse
+          from pathlib import Path
+          from datetime import datetime,timezone
+          import daily_music as m,daily_music_listing as l
+          data=json.loads(Path('/tmp/inventory/inventory.json').read_text());out=Path('waktaverse-audit');out.mkdir();cid=m.CHANNELS['c1'][0]
+          def title(x):
+              x=dict(x)
+              try:
+                  j=json.loads(m.read('https://www.youtube.com/oembed?'+urllib.parse.urlencode({'url':'https://www.youtube.com/watch?v='+x['videoId'],'format':'json'}),128000))
+                  x.update(title=j['title'],author_url=j['author_url'],author_name=j['author_name']);assert j['author_url'].lower().rstrip('/')=='https://www.youtube.com/@waktaverse'
+              except Exception as e:x['error']=type(e).__name__
+              return x
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:videos=list(ex.map(title,data['videos']))
+          artist=re.compile(r'이세계\s*아이돌|이세돌|아이네|징버거|릴파|주르르|고세구|비챤|ISEGYE|INE\b|LILPA|JURURU|JINGBURGER|GOSEGU|VIICHAN',re.I)
+          extras=['k5O1F_IS0mU','DIomV3Ebmz8']
+          candidates=[x for x in videos if artist.search(x['title']) or x['videoId'] in extras]
+          def detail(x):
+              x=dict(x)
+              try:
+                  body=m.read('https://www.youtube.com/watch?v='+x['videoId']+'&hl=en',6500000).decode();j=l.embedded(body,'ytInitialData');player=l.embedded(body,'ytInitialPlayerResponse');d=player.get('videoDetails',{});f=player.get('microformat',{})
+                  x['watch']={'details':{k:d.get(k) for k in ['videoId','channelId','title','lengthSeconds','isLiveContent','isUpcoming']},'microformat':f,'playability':player.get('playabilityStatus',{}).get('status')}
+                  x['publicMetadata']=[n for n in l.tree(j) if 'videoPrimaryInfoRenderer' in n or 'videoDescriptionHeaderRenderer' in n or 'videoOwnerRenderer' in n or 'microformatDataRenderer' in n]
+                  x['dates']=[{k:v for k,v in n.items() if k in ('dateText','publishDate','uploadDate','publishedTimeText')} for n in l.tree(j) if any(k in n for k in ('dateText','publishDate','uploadDate','publishedTimeText'))]
+                  x['jsonLd']=re.findall(r'<script type="application/ld\+json">(.*?)</script>',body,re.S)
+                  x['dateMeta']=re.findall(r'<meta[^>]+(?:itemprop|property)="(?:datePublished|uploadDate)"[^>]*>',body)
+              except Exception as e:x['watchError']=type(e).__name__
+              return x
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:details=list(ex.map(detail,candidates))
+          result={'checkedAt':datetime.now(timezone.utc).isoformat(),'channelId':cid,'videos':videos,'candidates':details,'coverage':{k:data[k] for k in ['pages','scrolls','listingEndObserved','listingCount','errors']}}
+          (out/'audit.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
+          for x in details: print(x['videoId'],x['title'],json.dumps(x.get('dates'),ensure_ascii=False)[:500])
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with: {name: waktaverse-audit, path: waktaverse-audit, retention-days: 7}
