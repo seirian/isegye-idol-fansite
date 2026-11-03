@@ -1,0 +1,89 @@
+name: Waktaverse - public music inventory (work branch only)
+on:
+  push:
+    branches: [feature/waktaverse-music-backfill]
+    paths: [.github/workflows/waktaverse-inspect.yml]
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Prepare public browser
+        run: |
+          python -m venv /tmp/wakta
+          /tmp/wakta/bin/pip -q install playwright==1.56.0 pillow==11.3.0
+          bash scripts/ci_browser_install.sh /tmp/wakta/bin/python > /tmp/browser.log
+      - name: Read public channel listings and music metadata only
+        run: |
+          PYTHONPATH=scripts /tmp/wakta/bin/python - <<'PY'
+          import json,re,concurrent.futures,urllib.parse
+          from pathlib import Path
+          from datetime import datetime,timezone
+          import daily_music as m,daily_music_listing as l
+          from playwright.sync_api import sync_playwright
+          out=Path('waktaverse-inventory');out.mkdir()
+          cid=m.CHANNELS['c1'][0]; known=m.load_music()['songs']; items={}; errors=[]; pages=[]
+          def add(v,t,via):
+              if m.VID.fullmatch(v or '') and t:
+                  x=items.setdefault(v,{'videoId':v,'title':t,'seenOn':[]})
+                  if via not in x['seenOn']:x['seenOn'].append(via)
+          def tiles(j,via):
+              for n in l.tree(j.get('contents',{})):
+                  v=n.get('videoRenderer') or n.get('gridVideoRenderer') or n.get('playlistVideoRenderer')
+                  if v:add(v.get('videoId'),l.text(v.get('title',{})),via)
+                  elif 'lockupViewModel' in n:
+                      v=n['lockupViewModel'];add(v.get('contentId'),v.get('metadata',{}).get('lockupMetadataViewModel',{}).get('title',{}).get('content'),via)
+          urls=['https://www.youtube.com/channel/'+cid+'/videos','https://www.youtube.com/channel/'+cid+'/videos?view=0&sort=p','https://www.youtube.com/channel/'+cid+'/videos?view=0&sort=da']
+          urls += ['https://www.youtube.com/@waktaverse/search?query='+urllib.parse.quote(q) for q in ['이세계아이돌','이세돌','아이네','징버거','릴파','주르르','고세구','비챤']]
+          def readpage(url):
+              try:
+                  body=m.read(url,6000000).decode();j=l.embedded(body,'ytInitialData')
+                  meta=j.get('metadata',{}).get('channelMetadataRenderer',{})
+                  if meta.get('externalId')!=cid:raise ValueError('channel identity mismatch')
+                  return url,j,None
+              except Exception as e:return url,None,type(e).__name__
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
+              for u,j,e in ex.map(readpage,urls):
+                  if e:errors.append({'page':u,'error':e})
+                  else:tiles(j,u);pages.append(u)
+          complete=False;scrolls=0
+          try:
+              with sync_playwright() as p:
+                  b=p.chromium.launch();c=b.new_context(locale='ko-KR',viewport={'width':1440,'height':1000});page=c.new_page()
+                  page.route('**/*',lambda r:r.abort() if r.request.resource_type in ('media','font') else r.continue_())
+                  page.goto(urls[0],wait_until='domcontentloaded',timeout=60000);page.wait_for_timeout(2500)
+                  j=page.evaluate('window.ytInitialData');assert j.get('metadata',{}).get('channelMetadataRenderer',{}).get('externalId')==cid
+                  tiles(j,urls[0]);stable=0;last=0
+                  for scrolls in range(220):
+                      rows=page.locator('ytd-rich-grid-renderer a[href*="watch?v="]').evaluate_all('(xs)=>xs.map(a=>({url:a.href,title:a.getAttribute("title")||a.innerText||""}))')
+                      for r in rows:
+                          v=urllib.parse.parse_qs(urllib.parse.urlsplit(r['url']).query).get('v',[''])[0];add(v,r['title'].strip(),urls[0]+' [public browser scroll]')
+                      current=len(items);stable=stable+1 if current==last else 0;last=current
+                      if stable>=6:complete=True;break
+                      page.evaluate('window.scrollTo(0,document.documentElement.scrollHeight)');page.wait_for_timeout(1000)
+                  b.close()
+          except Exception as e:errors.append({'page':'browser','error':type(e).__name__})
+          performer=re.compile(r'이세(?:계아이)?돌|아이네|징버거|릴파|주르르|고세구|비챤|ISEGYE|INE\b|LILPA|JURURU|JINGBURGER|GOSEGU|VIICHAN',re.I)
+          music=re.compile(r'뮤비|뮤직|MV|M/V|Music|Cover|커버|오리지널|오피셜|Official|리와인드|RE\s*:?\s*WIND|음원|OST|메들리|MEDLEY|노래|싸이퍼|싱글|앨범|콘서트|LIVE|Concert|녹음|스페셜|SPECIAL',re.I)
+          candidates=[x for x in items.values() if performer.search(x['title']) and music.search(x['title'])]
+          def detail(x):
+              x=dict(x)
+              try:
+                  j=json.loads(m.read('https://www.youtube.com/oembed?'+urllib.parse.urlencode({'url':'https://www.youtube.com/watch?v='+x['videoId'],'format':'json'}),128000));x['oembed']={k:j.get(k) for k in ['title','author_name','author_url','thumbnail_url']}
+                  body=m.read('https://www.youtube.com/watch?v='+x['videoId']+'&hl=en',6500000).decode();j=l.embedded(body,'ytInitialPlayerResponse');d=j.get('videoDetails',{});f=j.get('microformat',{}).get('playerMicroformatRenderer',{})
+                  x['watch']={'videoId':d.get('videoId'),'channelId':d.get('channelId'),'title':d.get('title'),'lengthSeconds':d.get('lengthSeconds'),'isLiveContent':d.get('isLiveContent'),'publishDate':f.get('publishDate'),'uploadDate':f.get('uploadDate'),'category':f.get('category'),'playability':j.get('playabilityStatus',{}).get('status')}
+                  x['dateMeta']=re.findall(r'<meta[^>]+(?:itemprop|property)="(?:datePublished|uploadDate)"[^>]*>',body)
+              except Exception as e:x['error']=type(e).__name__
+              return x
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex: details=list(ex.map(detail,candidates))
+          result={'checkedAt':datetime.now(timezone.utc).isoformat(),'channelId':cid,'pages':pages,'scrolls':scrolls,'listingEndObserved':complete,'errors':errors,'listingCount':len(items),'candidateCount':len(candidates),'videos':list(items.values()),'candidates':details,'catalog':known}
+          (out/'inventory.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
+          print(json.dumps({k:v for k,v in result.items() if k not in ('videos','candidates','catalog','pages')},ensure_ascii=False))
+          for x in details: print(x['videoId'],x['title'],x.get('watch',{}).get('publishDate'))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with: {name: waktaverse-inventory, path: waktaverse-inventory, retention-days: 7}
