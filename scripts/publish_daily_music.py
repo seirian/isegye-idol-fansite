@@ -20,6 +20,7 @@ def publish(remote,review):
     remote.directory('/web');remote.directory(d.ROOT);d.require(remote.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Wrong owner')
     router=remote.read(d.ROOT+'/.htaccess');rid,gated=routing.release_of(router);d.require(gated,'Access gate required')
     meta=json.loads(remote.read(d.ROOT+'/_isegye_releases/'+rid+'/build-info.json') or b'{}');d.require(meta.get('dailyMusic',{}).get('schemaVersion')==1,'Music-enabled release not active')
+    if any(r['type'] in music.PERFORMANCE_TYPES or set(r)&music.OPTIONAL_FIELDS for r in fresh):d.require(meta['dailyMusic'].get('waktaverseFormats')==1,'Waktaverse music renderer not active')
     if any(r['type'] in music.EXTRAS for r in fresh):d.require(meta['dailyMusic'].get('officialFormats')==1,'Official format renderer not active')
     if remote.info(DIR) is None:
         remote.mkdir(DIR);remote.s.chmod(DIR,0o700);remote.new(path('.owner'),OWNER);remote.s.chmod(path('.owner'),0o600)
@@ -35,7 +36,7 @@ def publish(remote,review):
             backup=remote.read(path('previous.json'));remote.replace(path('previous.json'),old,backup);remote.s.chmod(path('previous.json'),0o600)
         if raw!=old:remote.replace(path('current.json'),raw,old);remote.s.chmod(path('current.json'),0o600)
         d.require(remote.read(path('current.json'))==raw,'Publication read-back mismatch')
-        return {'status':'published','release':rid,'generatedAt':value['generatedAt'],'added':len(added),'totalAuto':len(rows),'newItems':added,'sha256':d.digest(raw),'sourceStates':{k:v['state'] for k,v in review['sources'].items()},'verifiedReadback':True}
+        return {'status':'published','release':rid,'generatedAt':value['generatedAt'],'added':len(added),'totalAuto':len(rows),'newItems':added,'waktaverseIds':[r['videoId'] for r in rows if r['channelKey']=='c1'],'waktaverseHistory':review['sources']['c1'].get('historical'),'sha256':d.digest(raw),'sourceStates':{k:v['state'] for k,v in review['sources'].items()},'verifiedReadback':True}
     finally:remote.remove_own(path('.lock'),lock)
 
 def main():

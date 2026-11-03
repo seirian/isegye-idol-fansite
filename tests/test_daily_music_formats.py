@@ -17,8 +17,10 @@ class Formats(unittest.TestCase):
                 r=m.classify('c2',t,known);self.assertEqual((r['title'],r['type']),w);self.assertEqual(set(r['members']),set(m.NAMES))
         for t in [CLIP+' Teaser',HEAD+'‘Across Dimensions’ HIGHLIGHT',HEAD+'‘Across Dimensions’ HIGHLIGHT MEDLEY REACTION','(SUB) 이세계아이돌 Smile For You 컴백 비하인드 | ISEGYE IDOL Highlight','(SUB) ISEGYE IDOL (이세계아이돌) 8시 15분쯤 뉴스',HEAD+'Official Logo Motion',HEAD+'‘음악 토크’ Special Clip','일반 채널 ‘Across Dimensions’ HIGHLIGHT MEDLEY','(SUB) 우리 중에 스파이가 숨어 있어! | ISEGYE IDOL Highlight',HEAD+'‘Smile For You’ Special Clip #Shorts',HEAD+'‘Smile For You’ Official MV Reaction']:
             with self.subTest(t=t):self.assertIsNone(m.classify('c2',t,known))
-        for other in set(m.CHANNELS)-{'c2'}:
+        for other in set(m.CHANNELS)-{'c1','c2'}:
             self.assertIsNone(m.classify(other,MEDLEY));self.assertIsNone(m.classify(other,CLIP))
+        self.assertEqual(m.classify('c1',MEDLEY,known)['type'],'album_medley')
+        self.assertEqual(m.classify('c1',CLIP,known)['type'],'music_clip')
     def test_new_clip_needs_song_evidence(self):
         clip=HEAD+'‘새 작업’ Special Clip';audio=HEAD+'‘새 작업’ Official Audio'; self.assertIsNone(m.classify('c2',clip,set()))
         known=m.channel_evidence('c2',[audio],set());self.assertEqual(m.classify('c2',clip,known)['type'],'music_clip')
