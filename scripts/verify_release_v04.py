@@ -29,6 +29,7 @@ def main():
     suites.append(('legal-shell','tests/legal_shell_browser.py',{'LEGAL_SHELL_URL':url,'LEGAL_SHELL_OUT':str(out/'legal-shell')}))
     suites.append(('ui-cleanup','tests/ui_cleanup_browser.py',{'UI_CLEANUP_URL':url,'UI_CLEANUP_OUT':str(out/'ui-cleanup')}))
     suites.append(('home-presentation','tests/home_presentation_browser.py',{'PRESENTATION_URL':url,'PRESENTATION_OUT':str(out/'home-presentation')}))
+    suites.append(('cafe-runtime','tests/schedule_runtime_browser.py',{'CAFE_RUNTIME_URL':url,'CAFE_RUNTIME_OUT':str(out/'cafe-runtime')}))
     try:
         if 'RELEASE_URL' not in os.environ:
             server=subprocess.Popen([sys.executable,'-m','http.server','4199','--bind','127.0.0.1','--directory','dist'],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

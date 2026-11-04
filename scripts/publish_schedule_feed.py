@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hourly, data-only publication. Fixed private folder; never writes auth/routing.
 
-The official Cafe Search API is optional. Cafe/internal API crawling is forbidden.
+The official Search API is discovery only. Bounded browser-reviewed metadata is supplied by a separate credential-free step; direct Cafe/internal API requests remain forbidden.
 Existing Google access gate serves this feed only to authorized visitors.
 """
 from pathlib import Path
@@ -10,6 +10,8 @@ import inour_sftp as d
 import schedule_feed as feed
 import auth_routing
 import notice_policy
+import schedule_health
+from collections import Counter
 FOLDER=d.ROOT+'/.schedule-feed'
 MARKER=b'isegye-schedule-feed:v1\n'
 ALLOWED={'current.json','previous.json','.owner','.lock'}
@@ -40,6 +42,7 @@ def publish(remote,collect=feed.collect):
         previous=feed.validate(notice_policy.clean_snapshot(old_value)) if old_value else None
         removed={k:len(old_value[k])-len(previous[k]) if old_value else 0 for k in ('news','events','forecasts')}
         value=feed.validate(notice_policy.clean_snapshot(collect(previous=previous)))
+        value['collectionHealth']=schedule_health.assess(value)
         raw=(json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode()
         d.require(remote.read(d.ROOT+'/.htaccess')==router,'Router changed during collection')
         d.require(remote.snapshot()==protected,'Protected file changed during collection')
@@ -56,6 +59,9 @@ def publish(remote,collect=feed.collect):
         d.require(remote.read(path('current.json'))==raw,'Feed bytes differ')
         return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),
                 'counts':{k:len(value[k]) for k in ('events','news','forecasts')},
+                'collectionHealth':value['collectionHealth'],
+                'cafeNewsByKstDay':dict(Counter(feed.iso(r['publishedAt']).astimezone(feed.KST).date().isoformat() for r in value['news'] if r['sourceId']=='cafe-members' and r.get('publishedAt'))),
+                'runtimeEvidenceCounts':{k:len(value.get('cafeEvidence',{}).get(k,[])) for k in ('notices','fanSeries')},
                 'sources':{s['id']:s['state'] for s in value['sources']},
                 'newsCountsBySource':{s['id']:sum(n['sourceId']==s['id'] for n in value['news']) for s in value['sources']},
                 'cafeBatchCoverage':{s['id']:s.get('coverage') for s in value['sources'] if s['id'] in ('cafe-members','cafe-agency','fan-roundup')},
@@ -76,6 +82,11 @@ def main():
         d.require(os.getenv('GITHUB_REPOSITORY')=='seirian/isegye-idol-fansite' and os.getenv('GITHUB_REF')=='refs/heads/main','Main only')
         d.require(os.getenv('PRODUCTION_PAUSED')!='true' and os.getenv('ISEGYE_SCHEDULE_PAUSED')!='true','Collection paused')
         d.require(bool(password),'SFTP credential missing')
+        review_path=os.getenv('ISEGYE_CAFE_REVIEW_PATH')
+        packet=None
+        if review_path:
+            import cafe_runtime
+            packet=cafe_runtime.validate_packet(json.loads(Path(review_path).read_text()),feed.stamp())
         import paramiko
         sock=socket.create_connection((d.HOST,d.PORT),timeout=15);resources.append(sock)
         t=paramiko.Transport(sock);resources.append(t);t.banner_timeout=15;t.auth_timeout=20
@@ -84,7 +95,7 @@ def main():
         d.require(k.get_name()=='ssh-ed25519' and fingerprint==d.FINGERPRINT,'Host key mismatch; password not sent')
         t.auth_password(d.USER,password);password=None;d.require(t.is_authenticated(),'SFTP authentication incomplete')
         c=paramiko.SFTPClient.from_transport(t);resources.append(c);c.get_channel().settimeout(30)
-        result=publish(d.Remote(c))
+        result=publish(d.Remote(c),lambda **kw:feed.collect(**kw,cafe_review=packet))
     except Exception as err:
         result={'status':'failed','errorType':type(err).__name__}
         if isinstance(err,(d.Stop,feed.FeedError)):result['reason']=str(err)

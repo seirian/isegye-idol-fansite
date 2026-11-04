@@ -30,7 +30,7 @@ def discover(fetch=f.request,env=None):
             out[sid]={'state':'not_checked','reason':reason}
     return out
 if __name__=='__main__':
-    result=discover();print(json.dumps(result,ensure_ascii=False));file=os.getenv('GITHUB_STEP_SUMMARY');
+    result=discover();Path('cafe-discovery.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n');print(json.dumps(result,ensure_ascii=False));file=os.getenv('GITHUB_STEP_SUMMARY');
     if file:
         with open(file,'a') as s:
             print('### 카페 새 글 신호 (공식 검색 API)\n검색은 작성자 검증·게시판 전수 대조가 아닙니다. 일반 검색글은 저장·공개하지 않습니다.\n',file=s)

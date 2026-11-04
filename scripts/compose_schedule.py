@@ -40,7 +40,8 @@ def compose(app,css,out,meta):
     (out/'src/schedule.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2)+'\n')
     meta['scheduleFeed']={'schemaVersion':1,'calendarFirst':True,'officialAnnouncementBlock':False,
         'events':len(snapshot['events']),'news':len(snapshot['news']),'fanReferences':len(snapshot['forecasts']),
-        'generatedAt':snapshot['generatedAt'],'cafeCrawling':False,'unverifiedSearchPublished':False,
+        'generatedAt':snapshot['generatedAt'],'directCafeApiCrawling':False,'unverifiedSearchPublished':False,
+        'cafePublicWindowReview':{'automatic':True,'boardIds':[345,1250],'overlapDays':3,'runtimeEvidence':True},
         'publicationPolicy':'approved-authors-only-v1','noticeHistory':{'count':len(history['rows']),
         'titleDatedEvents':len(history['events']),'start':history['start'],'end':history['end'],
         'completePublicListings':history['completePublicListings'],'bodiesReviewed':False},

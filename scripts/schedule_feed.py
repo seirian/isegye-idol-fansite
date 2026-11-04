@@ -171,6 +171,9 @@ def public_item(source, url, title, published, checked, **extra):
 def validate(doc):
  if doc.get('schemaVersion')!=1 or doc.get('timezone')!='Asia/Seoul' or not iso(doc.get('generatedAt')):raise FeedError('invalid_snapshot')
  if len(json.dumps(doc).encode())>LIMIT:raise FeedError('snapshot_too_large')
+ if 'cafeEvidence' in doc:
+  import cafe_runtime
+  cafe_runtime.validate_evidence(doc['cafeEvidence'],doc['generatedAt'])
  if not isinstance(doc.get('sources'),list):raise FeedError('invalid_sources')
  source_ids=[s.get('id') for s in doc['sources']]
  base={s['id'] for s in SOURCES[:5]}
@@ -212,12 +215,16 @@ def merge(previous,current):
     months=calendar.get('coverage',{}).get('months',[])
     byid={i:r for i,r in byid.items() if not (r['sourceId']=='berriz-calendar' and r.get('date','')[:7] in months)}
    # A successfully re-read URL replaces its previous extracted dates as well.
-   fresh_urls={r['sourceUrl'] for r in current['news'] if r['checkedAt']==current['generatedAt']}
+   prior_news={r['sourceUrl']:r for r in previous['news']}
+   fresh_urls={r['sourceUrl'] for r in current['news'] if r['checkedAt']==current['generatedAt'] or (r['sourceId'] in ('cafe-members','cafe-agency') and r['sourceUrl'] in prior_news and iso(r['checkedAt'])>iso(prior_news[r['sourceUrl']]['checkedAt']))}
    if key in ('events','forecasts'):
     byid={i:r for i,r in byid.items() if r['sourceUrl'] not in fresh_urls}
    for r in current[key]:
     old=byid.get(r['id'])
     if old is None or iso(r['checkedAt'])>=iso(old['checkedAt']):byid[r['id']]=r
+   if key=='forecasts':
+    detailed={r['sourceUrl'] for r in byid.values() if r.get('sourceId')=='fan-roundup' and len(r.get('members',[]))==1}
+    byid={i:r for i,r in byid.items() if not (r.get('sourceId')=='fan-roundup' and len(r.get('members',[]))>1 and r['sourceUrl'] in detailed)}
    current[key]=sorted(byid.values(),key=lambda r:r.get('publishedAt') or r.get('checkedAt') or '',reverse=True)[:600]
   old={s['id']:s for s in previous['sources']}
   for s in current['sources']:
@@ -298,12 +305,14 @@ def naver_search(fetch,now):
   time.sleep(.25)
  return list(found.values())
 
-def collect(previous=None,fetch=request,now=None,berriz_reader=None):
+def collect(previous=None,fetch=request,now=None,berriz_reader=None,cafe_review=None):
  now=now or stamp();seed=json.loads((ROOT/'schedule/seed.json').read_text());seed=validate(seed)
  data={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':now,'sources':[], 'events':seed['events'][:],'news':seed['news'][:],'forecasts':seed['forecasts'][:]}
  import cafe_batch,cafe_batch_cards
  batch_states=cafe_batch.populate(data,now,seed)
  cafe_batch_cards.add(data,now)
+ import cafe_runtime
+ batch_states.update(cafe_runtime.populate(data,previous,cafe_review,now,batch_states))
  # Isolated public browser, never the authenticated fan-site session.
  # Injected fetch in unit tests must not cause a real browser/network call.
  reader=berriz_reader or (berriz_feed.read_public if fetch is request else None)
