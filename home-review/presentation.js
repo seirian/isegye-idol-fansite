@@ -39,7 +39,7 @@ function headerMusicResult(row){
 
 function homeGalleryView(){
  const first=HOME_GROUP_GALLERY[0];
- return `<figure class="hm-gallery" aria-label="이세계아이돌 단체 사진" aria-roledescription="슬라이드 쇼"><div class="hm-gallery-stage"><img class="hm-group" src="${e(first.src)}" width="800" height="450" alt="${e(first.alt)}" decoding="async" fetchpriority="high"></div><figcaption class="hm-gallery-controls"><button type="button" data-gallery="prev" aria-label="이전 단체 사진">‹</button><span class="hm-gallery-count" aria-live="off">1 / ${HOME_GROUP_GALLERY.length}</span><button type="button" data-gallery="next" aria-label="다음 단체 사진">›</button><button type="button" data-gallery="pause" aria-label="사진 자동 전환 일시정지" aria-pressed="false">Ⅱ</button><a class="hm-gallery-source" href="#/about" hidden target="_blank" rel="noopener noreferrer">사진 출처</a></figcaption></figure>`;
+ return `<figure class="hm-gallery" aria-label="이세계아이돌 단체 사진" aria-roledescription="슬라이드 쇼" aria-live="off"><div class="hm-gallery-stage"><img class="hm-group" src="${e(first.src)}" width="800" height="450" alt="${e(first.alt)}" decoding="async" fetchpriority="high"></div></figure>`;
 }
 
 function homePresentationMount(){
@@ -50,20 +50,18 @@ function homePresentationMount(){
  const root=document.querySelector('.hm-gallery');
  if(!root)return;
  const image=root.querySelector('.hm-group');
- const count=root.querySelector('.hm-gallery-count');
- const source=root.querySelector('.hm-gallery-source');
- const toggle=root.querySelector('[data-gallery=pause]');
  const motion=matchMedia('(prefers-reduced-motion: reduce)');
- let current=0,timer=0,fade=0,generation=0,disposed=false,hover=false,focused=false,paused=motion.matches;
+ let current=0,timer=0,fade=0,generation=0,disposed=false;
  const failed=new Set(),loaded=new Map();
- const blocked=()=>disposed||paused||hover||focused||document.hidden;
+ const blocked=()=>disposed||document.hidden;
  function schedule(){
   clearTimeout(timer);
   root.dataset.autoplay=blocked()?'paused':'playing';
-  toggle.textContent=paused?'▷':'Ⅱ';
-  toggle.setAttribute('aria-pressed',String(paused));
-  toggle.setAttribute('aria-label',paused?'사진 자동 전환 재생':'사진 자동 전환 일시정지');
-  if(!blocked())timer=setTimeout(()=>show(current+1),10000);
+  if(!blocked()){
+   // Preload the next photo; only a ready image replaces the current one.
+   load((current+1)%HOME_GROUP_GALLERY.length);
+   timer=setTimeout(()=>show(current+1),10000);
+  }
  }
  function load(index){
   if(!loaded.has(index))loaded.set(index,new Promise(resolve=>{
@@ -77,47 +75,35 @@ function homePresentationMount(){
  async function show(requested){
   clearTimeout(timer);clearTimeout(fade);
   image.classList.remove('is-changing');
-  const token=++generation,step=requested<current?-1:1;
-  let index=(requested+HOME_GROUP_GALLERY.length)%HOME_GROUP_GALLERY.length;
+  const token=++generation;
+  let index=requested%HOME_GROUP_GALLERY.length;
   for(let attempts=0;attempts<HOME_GROUP_GALLERY.length;attempts++){
-   if(disposed||token!==generation)return;
+   if(blocked()||token!==generation)return;
    if(!failed.has(index)&&await load(index)){
-    if(disposed||token!==generation||!root.isConnected)return;
+    if(blocked()||token!==generation||!root.isConnected)return;
     const apply=()=>{
-     if(disposed||token!==generation||!root.isConnected)return;
+     if(blocked()||token!==generation||!root.isConnected)return;
      const item=HOME_GROUP_GALLERY[index];
      current=index;image.src=item.src;image.alt=item.alt;
-     root.dataset.index=String(index);count.textContent=`${index+1} / ${HOME_GROUP_GALLERY.length}`;
-     source.hidden=!item.source;
-     source.href=item.source||'#/about';
+     root.dataset.index=String(index);
      image.classList.remove('is-changing');schedule();
     };
+    // Reduced-motion users get an instant replacement, without a fade.
     if(motion.matches)apply();else{image.classList.add('is-changing');fade=setTimeout(apply,180);}
     return;
    }
-   failed.add(index);index=(index+step+HOME_GROUP_GALLERY.length)%HOME_GROUP_GALLERY.length;
+   failed.add(index);index=(index+1)%HOME_GROUP_GALLERY.length;
   }
   // Retain the last successfully rendered image when every source is unavailable.
   schedule();
  }
  root.dataset.index='0';
- root.addEventListener('click',event=>{
-  const action=event.target.closest('[data-gallery]')?.dataset.gallery;
-  if(action==='pause'){paused=!paused;schedule();}
-  else if(action==='next')show(current+1);
-  else if(action==='prev')show(current-1);
- });
- root.addEventListener('mouseenter',()=>{hover=true;schedule();});
- root.addEventListener('mouseleave',()=>{hover=false;schedule();});
- root.addEventListener('focusin',()=>{focused=true;schedule();});
- root.addEventListener('focusout',()=>queueMicrotask(()=>{focused=root.contains(document.activeElement);schedule();}));
+ // No click/hover controls: the visible gallery rotates without user interaction.
  const visibility=()=>{generation++;clearTimeout(fade);image.classList.remove('is-changing');schedule();};
- const preference=()=>{if(motion.matches)paused=true;schedule();};
  document.addEventListener('visibilitychange',visibility);
- motion.addEventListener('change',preference);
  disposeHomeGallery=()=>{
   disposed=true;generation++;clearTimeout(timer);clearTimeout(fade);
-  document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',preference);
+  document.removeEventListener('visibilitychange',visibility);
  };
  schedule();
 }
