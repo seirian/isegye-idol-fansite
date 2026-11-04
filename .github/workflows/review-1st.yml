@@ -10,70 +10,16 @@ concurrency:
   group: isegye-review-1st
   cancel-in-progress: false
 jobs:
-  source:
-    if: github.ref == 'refs/heads/feature/review-1st'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    permissions:
-      contents: write
-      actions: read
-    outputs:
-      commit: ${{ steps.source.outputs.commit }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Restore only the previously reviewed public observation
-        if: hashFiles('.review-recovery/manifest.json') != ''
-        uses: actions/download-artifact@v4
-        with:
-          name: isegye-production-41811111377-1
-          run-id: 41811111377
-          github-token: ${{ github.token }}
-          path: /tmp/review-observation
-      - name: Verify plaintext recovery against original file checksums
-        if: hashFiles('.review-recovery/manifest.json') != ''
-        run: |
-          python - <<'PY'
-          import hashlib,json,shutil
-          from pathlib import Path
-          root=Path.cwd().resolve()
-          manifest=json.loads(Path('.review-recovery/manifest.json').read_text())
-          allowed={'review-1st/app.js','review-1st/styles.css','review-1st/core.js','review-1st/index.html','review-1st/fixtures/schedule-observed.json','docs/REVIEW-1ST.md','scripts/build_review_1st.py','tests/review_1st.test.js','tests/review_1st_browser.py','tests/test_review_1st.py','.gitignore','package.json'}
-          assert set(manifest)==allowed
-          payload={}
-          for name,entry in manifest.items():
-              target=root/name
-              assert target.resolve().is_relative_to(root) and not target.is_symlink()
-              if entry.get('productionArtifact'):
-                  raw=json.dumps(json.loads(Path('/tmp/review-observation/schedule/snapshot.json').read_text()),ensure_ascii=False).encode()
-              elif entry.get('parts'):
-                  parts=[Path(x) for x in entry['parts']]
-                  assert all(x.parent==Path('.review-recovery') and not x.is_symlink() for x in parts)
-                  raw=b''.join(x.read_bytes() for x in parts)
-              else:raw=target.read_bytes()
-              assert hashlib.sha256(raw).hexdigest()==entry['sha256'], 'Source checksum mismatch: '+name
-              payload[target]=raw
-          for path,raw in payload.items():
-              path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
-          shutil.rmtree('.review-recovery')
-          print('Restored 12 exact original source/data files; no production writes')
-          PY
-          git add -A .review-recovery review-1st docs/REVIEW-1ST.md scripts/build_review_1st.py tests/review_1st.test.js tests/review_1st_browser.py tests/test_review_1st.py .gitignore package.json
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(review): restore complete first-review source and verified snapshot'
-          git push origin HEAD:feature/review-1st
-      - id: source
-        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   build:
-    needs: source
+    if: github.ref == 'refs/heads/feature/review-1st'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: ${{ needs.source.outputs.commit }}
-          persist-credentials: false
+        with: {persist-credentials: false}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '22'}
-      - name: Read the exact previously verified baseline and original images
+      - name: Read exact previously verified baseline and images
         uses: actions/download-artifact@v4
         with:
           name: review-1st-workspace-1ec11cd8b6cc730fa6fc136c39e019fce6fcfe09
@@ -89,14 +35,12 @@ jobs:
         run: |
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
-      - name: Build isolated review from the same verified baseline
-        env:
-          GITHUB_SHA: ${{ needs.source.outputs.commit }}
+      - name: Build exact isolated review
         run: |
           /tmp/review-tools/bin/python scripts/build_review_1st.py --baseline /tmp/review-baseline/dist
           /tmp/review-tools/bin/python -m unittest discover -s tests -p test_review_1st.py -v
           git archive HEAD -o review-1st-source.tar
-      - name: Exercise the exact served review page
+      - name: Exercise actual served review page
         run: |
           /tmp/review-tools/bin/python -m http.server 4198 --bind 127.0.0.1 --directory review-1st-dist > /tmp/review-http.log 2>&1 &
           server=$!
@@ -104,14 +48,20 @@ jobs:
           REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_1st_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: review-1st-site-${{ needs.source.outputs.commit }}
+          name: review-1st-site-${{ github.sha }}
           path: review-1st-dist/
           retention-days: 30
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: review-1st-evidence-${{ needs.source.outputs.commit }}
+          name: review-1st-evidence-${{ github.sha }}
           path: |
             review-1st-source.tar
             test-results/
           retention-days: 30
+  publish:
+    needs: build
+    uses: ./.github/workflows/review-1st-host.yml
+    with:
+      commit: ${{ github.sha }}
+    secrets: inherit
