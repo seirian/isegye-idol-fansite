@@ -37,8 +37,8 @@
     "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c",
     "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
-    "home-review/presentation.js": "a916212fad46c7d4a60201425d59a47c5371d6fca92be1819cced3de001cd8b6",
-    "home-review/presentation.css": "91c44d7d584fde729c8891aef5e723f964e2de02704c3a41a4e2f93d069b7828"
+    "home-review/presentation.js": "547448995d950e703a49c5845a0b8c6a49c375dd9eaddcc102de4f3b4593cf42",
+    "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -90,6 +90,10 @@
     {
       "requestedAt": "2026-11-03",
       "scope": "Remove repeated footer FAN ARCHIVE; editable header search submits query via Enter/button; enlarge group gallery and add five checksum-pinned high-resolution six-member images with 10-second rotation, accessible pause and no cropping. Preserve LIVE, ingestion, auth and legal text."
+    },
+    {
+      "requestedAt": "2026-11-04",
+      "scope": "Remove the complete gallery caption including arrows, count, playback buttons and visible source link. Retain all six images and ten-second automatic rotation without hover/click interruption. Center the image-only figure vertically without reserved caption space. Reduced motion uses instant replacements; hidden tabs and route disposal suspend timers. Keep source metadata, rights footer, header search, LIVE, ingestion and authentication unchanged."
     }
   ]
 }
