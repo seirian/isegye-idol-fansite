@@ -1,0 +1,38 @@
+name: Review 1st - isolated full-site preview
+on:
+  push:
+    branches: ['feature/review-1st']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-review-1st
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/review-1st'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Preserve exact credential-free source for review
+        run: git archive HEAD -o review-1st-source.tar
+      - name: Install isolated build tools
+        run: |
+          python -m venv /tmp/review-tools
+          /tmp/review-tools/bin/pip install pillow==11.3.0 playwright==1.56.0
+      - name: Build existing approved baseline without publication
+        env: {PYTHON: /tmp/review-tools/bin/python}
+        run: npm run build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: review-1st-workspace-${{ github.sha }}
+          path: |
+            review-1st-source.tar
+            dist/
+          include-hidden-files: true
+          retention-days: 14
