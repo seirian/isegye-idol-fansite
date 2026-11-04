@@ -1,0 +1,18 @@
+        for key,value in group.items():group[key]=inline(value)
+    for item in copy['gallery']:item['src']=inline(item['src'])
+    css=(out/'styles.css').read_text()
+    code='const REVIEW_DATA='+script_json(copy)+';\n'+(out/'core.js').read_text()+'\n'+(out/'live-core.js').read_text()+'\n'+(out/'app.js').read_text()
+    sha=lambda s:"'sha256-"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+"'"
+    html=(out/'index.html').read_text()
+    html=html.replace("script-src 'self'","script-src "+sha(code)).replace("style-src 'self'","style-src "+sha(css))
+    html=re.sub(r'<link rel="icon"[^>]+>','',html)
+    html=html.replace('<link rel="stylesheet" href="styles.css">','<style>'+css+'</style>')
+    html=re.sub(r'<script src="(?:data|core|live-core|app)\.js"></script>','',html)
+    html=html.replace('</body>','<script>'+code+'</script></body>')
+    (out/'review.html').write_text(html)
+    print(json.dumps(manifest,ensure_ascii=False,indent=2))
+    return manifest
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser();parser.add_argument('--baseline',default=str(ROOT/'dist'));args=parser.parse_args()
+    build(Path(args.baseline).resolve())

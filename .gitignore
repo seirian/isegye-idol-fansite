@@ -22,3 +22,8 @@ site.tar.gz
 auth-source.zip
 auth-preflight.json
 auth-stage.json
+
+# Isolated first-review build and recovered workspace (never production).
+/review-1st-dist/
+/artifact/
+/review-1st-source.tar

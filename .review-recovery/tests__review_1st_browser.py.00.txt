@@ -1,0 +1,138 @@
+"""Exercise the exact isolated review artifact; no production writes.
+
+Default: render self-contained HTML in memory, deny external requests, and use
+an explicitly synthetic localStorage object. This is not a navigation/hosting
+or real broadcast verification. REVIEW_URL enables a normal local CI server.
+"""
+from datetime import datetime, timezone
+from pathlib import Path
+import json, os, re
+from playwright.sync_api import sync_playwright, expect
+
+ROOT=Path(__file__).resolve().parents[1]
+OUT=Path(os.getenv('REVIEW_OUT',ROOT/'test-results/review-1st'))
+OUT.mkdir(parents=True,exist_ok=True)
+URL=os.getenv('REVIEW_URL','')
+HTML=(ROOT/'review-1st-dist/review.html').read_text()
+checks=[];errors=[];requests=[];violations=[]
+
+def check(name,ok,detail=None):
+    checks.append({'name':name,'passed':bool(ok),**({'detail':detail} if detail is not None else {})})
+    assert ok,name+(': '+str(detail) if detail is not None else '')
+
+def install_store(page,seed=None):
+    page.evaluate('''(seed)=>{const store=new Map(Object.entries(seed||{}));
+      Object.defineProperty(window,'localStorage',{configurable:true,value:{
+        getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),
+        removeItem:k=>store.delete(k),clear:()=>store.clear()}});
+      window.__testStore=store;}''',seed or {})
+
+def ready(context,clock=False,seed=None):
+    p=context.new_page();p.on('pageerror',lambda e:errors.append(str(e)))
+    p.on('request',lambda r:requests.append(r.url) if r.url.startswith('http') else None)
+    p.route(re.compile(r'^https?://'),lambda r:r.abort()) if not URL else p.route('https://**/*',lambda r:r.abort())
+    if clock:p.clock.install(time=datetime(2026,11,4,13,0,tzinfo=timezone.utc))
+    if URL:p.goto(URL,wait_until='load')
+    else:
+        install_store(p,seed)
+        p.set_content(HTML,wait_until='load')
+    p.evaluate('''()=>document.addEventListener('securitypolicyviolation',e=>{window.__violations??=[];window.__violations.push(e.violatedDirective)})''')
+    expect(p.locator('#main h1')).to_be_visible()
+    return p
+
+def go(p,path):
+    p.evaluate('(v)=>{location.hash="#/"+v}',path)
+    expect(p.locator('#main h1')).to_be_visible()
+    # Hash navigation only; never navigates to another network address.
+    p.wait_for_timeout(60)
+
+try:
+ with sync_playwright() as pw:
+    opts={'headless':True}
+    if os.getenv('CHROMIUM_PATH'):opts['executable_path']=os.environ['CHROMIUM_PATH']
+    browser=pw.chromium.launch(**opts)
+    context=browser.new_context(viewport={'width':1440,'height':1000},locale='ko-KR',timezone_id='Asia/Seoul',reduced_motion='reduce')
+    p=ready(context)
+    check('six primary menus retained',p.locator('.desktop-nav>a').count()==6)
+    check('preview clearly separated from production','1차 검토' in p.locator('.review-bar').inner_text())
+    check('robots remain noindex',p.locator('meta[name=robots]').get_attribute('content')=='noindex,nofollow')
+    check('footer FAN ARCHIVE not duplicated',p.locator('footer small').inner_text().count('FAN ARCHIVE')==1)
+    field=p.locator('#header-query');field.click();check('header focuses without navigation',p.evaluate('location.hash==="#/home"'))
+    field.fill('  릴파 11월 3일  ');check('typing stays on home',p.evaluate('location.hash==="#/home"'))
+    field.press('Enter');expect(p.locator('#global-query')).to_have_value('릴파 11월 3일')
+    check('search actually includes restored notice','오늘은 휴방입니다!' in p.locator('#main').inner_text())
+    check('date interpretation is explicit','2026.11.03' in p.locator('#main').inner_text())
+    p.locator('#header-query').fill('리와인드');p.locator('#header-search button').click()
+    expect(p.locator('#global-query')).to_have_value('리와인드')
+    check('Korean music alias reaches RE:WIND',p.locator('a[href="#/song/rewind"]').count()>0)
+    go(p,'home');p.locator('#header-query').fill('  ');p.locator('#header-query').press('Enter')
+    check('blank search stays home',p.evaluate('location.hash==="#/home"'))
+    p.locator('#header-query').fill('아이네');p.locator('#header-query').dispatch_event('compositionstart');p.locator('#header-query').press('Enter')
+    check('IME confirmation does not submit',p.evaluate('location.hash==="#/home"'))
+    p.locator('#header-query').dispatch_event('compositionend');p.locator('#header-query').press('Enter');expect(p.locator('#global-query')).to_have_value('아이네')
+    special='<img src=x onerror=alert(1)> & # + ? %'
+    p.locator('#header-query').fill(special);p.locator('#header-query').press('Enter');expect(p.locator('#global-query')).to_have_value(special)
+    check('special query remains inert',p.locator('#main img[src=x]').count()==0)
+    go(p,'notice/22160973');check('notice detail preserves original title','오늘은 휴방입니다!' in p.locator('h1').inner_text())
+    check('notice original source preserved',p.locator('a[href="https://cafe.naver.com/steamindiegame/22160973"]').count()>0)
+    p.locator('[data-save="notice:22160973"]').first.click()
+    go(p,'song/rewind');check('song detail resolves actual song','RE:WIND' in p.locator('h1').inner_text().replace(' ',''))
+    p.locator('[data-save="song:rewind"]').first.click()
+    album=p.locator('a[href^="#/album/"]').first.get_attribute('href')
+    check('song has linked album',bool(album));p.locator('a[href^="#/album/"]').first.click();p.wait_for_timeout(60)
+    check('album exposes known tracks',p.locator('.track-row').count()>0)
+    p.locator('[data-save^="album:"]').first.click()
+    video=p.evaluate('D.videos.find(v=>v.category==="replay").id')
+    go(p,'video/'+video);check('video detail is valid',p.locator('[data-watched]').count()==1)
+    check('upload date not pretended broadcast date','방송일' in p.locator('#main').inner_text())
+    p.locator('[data-watched]').click();expect(p.locator('[data-watched]')).to_have_attribute('aria-pressed','true')
+    p.locator('[data-save^="video:"]').first.click()
+    go(p,'saved');check('unified save includes four content types',p.locator('.row-card').count()==4)
+    for key in ['notice:22160973','song:rewind','video:'+video]:check('saved key '+key,p.locator('[data-item-key="'+key+'"]').count()==1)
+    p.locator('[data-interest=lilpa]').click();p.locator('[data-interest=viichan]').click()
+    check('multiple interests allowed',p.locator('[data-interest][aria-pressed=true]').count()==2)
+    # A synthetic storage replay proves serialization, not real browser disk persistence.
+    if not URL:
+        seed=p.evaluate('Object.fromEntries(window.__testStore)')
+        clone=ready(context,seed=seed);go(clone,'saved');check('synthetic storage round-trip restores saves',clone.locator('.row-card').count()==4);clone.close()
+    go(p,'member/lilpa');check('five member tabs',p.locator('.tabbar .tab').count()==5)
+    for tab in ['news','videos','music','history']:
+        go(p,'member/lilpa?tab='+tab);check('member '+tab+' has content',p.locator('[data-item-key]').count()>0)
+    go(p,'schedule?month=2026-11&date=2026-11-03&view=calendar')
+    check('calendar has November dates',p.locator('.calendar-grid .day').count()==30)
+    check('restored three November 3 notices present',all(s in p.locator('#main').inner_text() for s in ['9시 파스모포비아','곧 7시입니다','오늘은 휴방입니다']))
+    check('fan estimates visibly unconfirmed','미확정' in p.locator('#main').inner_text())
+    go(p,'schedule?month=2026-11&view=list&members=lilpa')
+    check('schedule list supports a member filter',p.locator('.day-group').count()>0)
+    check('member filtered rows limited to member',p.locator('.row-card[data-item-key^="notice:"]').evaluate_all('(es)=>es.every(e=>registry.get(e.dataset.itemKey).members.includes("lilpa"))'))
+    eid=p.evaluate('D.events.find(x=>x.certainty==="confirmed"&&x.status!=="cancelled").id');go(p,'event/'+eid)
+    check('confirmed event has calendar export',p.locator('[data-ics]').count()==1)
+    check('calendar export warns about no sync','자동 구독·변경 동기화는 아니' in p.locator('#main').inner_text())
+    ics=p.evaluate('(id)=>makeCalendar(events.get(id))',eid)
+    check('calendar export generates RFC structure',ics.startswith('BEGIN:VCALENDAR\r\n') and 'BEGIN:VEVENT' in ics)
+    go(p,'series/festival-2025');check('festival uses three verified videos',p.locator('.content-card').count()==3)
+    check('series does not invent multiview','멀티시점' in p.locator('#main').inner_text())
+    go(p,'history');check('all 55 curated histories retained',p.locator('.row-card').count()==55)
+    go(p,'search?q=ㄹㅍ&kind=member');check('initials find Lilpa',p.locator('.row-card').count()==1 and '릴파' in p.locator('.row-card').inner_text())
+    go(p,'settings');p.locator('[data-setting=gallery]').uncheck();p.locator('[data-setting=spoilers]').check();p.locator('[data-setting=density]').select_option('list')
+    go(p,'live?tab=replay');check('density applies to media lists',p.locator('.grid.compact').count()==1)
+    check('spoiler switch masks relevant cards',p.locator('.spoiler-masked').count()>0)
+    check('spoiler titles hidden from accessibility tree',p.locator('.spoiler-masked h3').evaluate_all('(xs)=>xs.every(x=>x.getAttribute("aria-hidden")=="true")'))
+    check('spoiler save labels do not reveal titles',p.locator('.spoiler-masked [data-save]').evaluate_all('(xs)=>xs.every(x=>x.getAttribute("aria-label").startsWith("가림 영상"))'))
+    before=p.locator('.spoiler-masked').count();p.locator('[data-reveal]').first.click();check('individual spoiler reveal works',p.locator('.spoiler-masked').count()==before-1)
+    go(p,'home');check('gallery setting disables autoplay',p.locator('.gallery').get_attribute('data-autoplay')=='paused')
+    go(p,'settings');p.locator('[data-setting=notifications]').check()
+    check('notifications explicitly unconnected',p.locator('button[disabled]').count()==2 and '발송 미연결' in p.locator('#main').inner_text())
+    go(p,'review');check('scope matrix covers complete proposal',p.locator('.scope-table tbody tr').count()>=20)
+    check('no invented account sync','계정 동기화' in p.locator('#main').inner_text())
+    go(p,'status');check('status is labelled as frozen observation','현재 상태' in p.locator('#main').inner_text())
+    go(p,'live');check('failed external requests never label everyone offline',p.locator('.live-card[data-state=offline]').count()==0)
+    # Auto rotation tested with fake clock and embedded original images, never substitute images.
+    auto_context=browser.new_context(viewport={'width':1440,'height':1000},locale='ko-KR',timezone_id='Asia/Seoul',reduced_motion='reduce')
+    auto=ready(auto_context,clock=True)
+    auto.clock.run_for(9000);check('gallery unchanged before 10 seconds',auto.locator('.gallery').get_attribute('data-index')=='0')
+    auto.clock.run_for(1100);expect(auto.locator('.gallery')).to_have_attribute('data-index','1')
+    check('gallery automatically advances',auto.locator('.gallery').get_attribute('data-index')=='1')
+    auto.locator('.gallery').hover()
+    for i in range(2,7):
+        auto.clock.run_for(10100);expect(auto.locator('.gallery')).to_have_attribute('data-index',str(i%6))
