@@ -6,17 +6,11 @@
 #header-search button:hover{background:var(--paper)}
 #header-search:focus-within{outline:2px solid var(--accent);outline-offset:3px}
 .hm-intro.hm-brief{grid-template-columns:minmax(0,1fr) minmax(280px,28%);column-gap:clamp(24px,3vw,44px)}
-.hm-gallery{width:100%;max-width:440px;min-width:0;margin:0;justify-self:end;align-self:center}
+/* The image-only figure is vertically centered; no caption space is reserved. */
+.hm-gallery{display:grid;place-items:center;width:100%;max-width:440px;min-width:0;margin:0;justify-self:end;align-self:center}
 .hm-gallery-stage{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
-.hm-brief .hm-gallery .hm-group{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border:0;border-radius:0;box-shadow:none;transition:opacity .18s ease}
+.hm-brief .hm-gallery .hm-group{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;object-position:center;border:0;border-radius:0;box-shadow:none;transition:opacity .18s ease}
 .hm-gallery .hm-group.is-changing{opacity:0}
-.hm-gallery-controls{display:flex;align-items:center;justify-content:center;gap:2px;min-height:44px;margin-top:6px;font-size:14px;color:var(--muted)}
-.hm-gallery-controls button{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--ink);font-size:22px;cursor:pointer}
-.hm-gallery-controls button:hover{border-color:var(--line);background:var(--bg)}
-.hm-gallery-controls button[data-gallery=pause]{font-size:16px}
-.hm-gallery-count{min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
-.hm-gallery-source{margin-left:6px;color:var(--muted);font-size:14px;white-space:nowrap}
-.hm-gallery-source[hidden]{display:none}
 @media(max-width:800px){.hm-intro.hm-brief{grid-template-columns:minmax(0,1fr) minmax(230px,32%);gap:20px}}
 @media(max-width:640px){
  .header-inner{flex-wrap:wrap}
@@ -24,6 +18,5 @@
  .top-search#header-search{flex:1;width:auto;height:48px;min-width:0;margin-right:0}
  .hm-intro.hm-brief{grid-template-columns:minmax(0,1fr);gap:18px}
  .hm-gallery{width:min(100%,440px);justify-self:center}
- .hm-gallery-controls{flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){.hm-gallery .hm-group{transition:none}}
