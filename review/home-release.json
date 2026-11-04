@@ -18,13 +18,13 @@
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
     "home-review/soop-profiles.json": "3ca50bda1be2762c35e9cbcc9a57f168a28225e0d5cd6aeede31cf7fa1e88630",
     "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
-    "scripts/compose_schedule.py": "48831f157d9fbec419ffa6323c680b2334b0dc54c45c367a52de1bdd72b6a067",
-    "schedule/core.js": "4da48950c34320df1e0ec8f01b4fb89d255c01597392084a8f6716944a08ad5c",
-    "schedule/ui.js": "7fe9f189c2d95a1e6298a606bc4fa86b2db10b595ba797307f46b6b556698bba",
+    "scripts/compose_schedule.py": "bab023af330d2e7e329a43e68f72c092d5042b3d6a8df559a913c967a9d4888d",
+    "schedule/core.js": "23c24e4f9462020848d97274a4b79dba4e2b1f95f5f7c9c03382c0e2ea635bf2",
+    "schedule/ui.js": "96adc3a408f89a7b389dcd9262a6752eee126719602c60a902099c9576b44a11",
     "schedule/theme.css": "6799137a181acc8b8c3c1e68ee2c0709bbddf2a8e29c1f1594267231038576d6",
     "schedule/accessibility.css": "0c53009dfa46b30941a961debc8ef2ecc3e004f3f724084be3f4ea66dc41a8ef",
     "schedule/seed.json": "732d28c4be2903ae88eab902f8907bcc77281cf0efb20119ba686d45dff28cfc",
-    "scripts/notice_policy.py": "7dd436d760c7f41fc40db05edf00869fedab797cb9c28c0bd4a9d6839eccb386",
+    "scripts/notice_policy.py": "c352280618d31d35acf32071c3b221e6bb28706b7694e3b8fbc330200d1ca1ed",
     "schedule/approved-notices.json": "ca384f767a55e0dbc72c9972904bfe0f34a8ecb6dda6b69f1b1fab845ceaeb03",
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
     "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
@@ -38,7 +38,12 @@
     "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
     "home-review/presentation.js": "547448995d950e703a49c5845a0b8c6a49c375dd9eaddcc102de4f3b4593cf42",
-    "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7"
+    "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7",
+    "scripts/cafe_runtime.py": "235575a97c108375d52af52d1698a371710e6db4ec811313c177991ae7f817c5",
+    "scripts/refresh_reviewed_cafe.py": "f56247089a764667aac030b8f2bfbab02139fab0666dee45c551adf14f84bf67",
+    "scripts/schedule_health.py": "4421d8fd9f39d3a960e963ad8318d9694596a9e129e0dd32ab701b2dc07a03f9",
+    "scripts/schedule_feed.py": "d84fac4f02f41ed742b919af880ea95965c052d03581eb9e19163729a662a1d6",
+    "scripts/publish_schedule_feed.py": "39ca0061bae46ca171f80fa68d9c21c0f97e9473da54dff1a3a34de8222260c0"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -94,6 +99,10 @@
     {
       "requestedAt": "2026-11-04",
       "scope": "Remove the complete gallery caption including arrows, count, playback buttons and visible source link. Retain all six images and ten-second automatic rotation without hover/click interruption. Center the image-only figure vertically without reserved caption space. Reduced motion uses instant replacements; hidden tabs and route disposal suspend timers. Keep source metadata, rights footer, header search, LIVE, ingestion and authentication unchanged."
+    },
+    {
+      "requestedAt": "2026-11-04",
+      "scope": "Recover November 3-4 approved public Cafe notices; connect bounded credential-free public-window review to hourly data publication, preserve validated runtime provenance across runs, admit only matching verified runtime sources in the calendar, distinguish publication success from source freshness/incomplete collection. Keep existing author rules, LIVE, auth, legal bodies and hosting boundaries."
     }
   ]
 }

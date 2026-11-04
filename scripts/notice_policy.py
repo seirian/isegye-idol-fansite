@@ -86,9 +86,11 @@ def is_publishable(row):
 
 def clean_snapshot(value):
     """Remove unapproved rows before merging OLD data, not only future fetches."""
+    import cafe_runtime
+    runtime=cafe_runtime.source_map(value.get('cafeEvidence'),value['generatedAt'])
     cleaned={**value}
     for bucket in ('news','events','forecasts'):
-        cleaned[bucket]=[row for row in value.get(bucket,[]) if is_publishable(row)]
+        cleaned[bucket]=[row for row in value.get(bucket,[]) if is_publishable(row) or cafe_runtime.matches(row,runtime)]
     cleaned['sources']=[{**s,**({'state':'restricted','mode':'disabled_unverified',
         'lastAttemptAt':None,'lastSuccessAt':None,
         'detail':'작성자가 확인되지 않은 검색 글은 수집·표시하지 않습니다.'} if s['id']=='naver-search' else {})}

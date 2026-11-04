@@ -12,6 +12,7 @@ export function scheduleValidate(data) {
  const known=['ine','jingburger','lilpa','jururu','gosegu','viichan'];
  if(data?.schemaVersion!==1||data.timezone!=='Asia/Seoul'||!Number.isFinite(Date.parse(data.generatedAt)))throw new Error('invalid feed');
  const sourceIds=['cafe-members','cafe-agency','fan-roundup','parable-web','naver-search','berriz-notice','berriz-calendar'];
+ if(data.cafeEvidence!==undefined)scheduleCafeEvidence(data);
  if(!Array.isArray(data.sources)||data.sources.length<5||data.sources.length>7||new Set(data.sources.map(x=>x.id)).size!==data.sources.length||sourceIds.slice(0,5).some(id=>!data.sources.some(x=>x.id===id))||data.sources.some(x=>!sourceIds.includes(x.id)))throw new Error('invalid sources');
  for(const key of ['events','news','forecasts']){
   if(!Array.isArray(data[key])||data[key].length>700)throw new Error('invalid rows');
@@ -39,8 +40,9 @@ export function scheduleMergeEvents(staticRows,dynamicRows) {
 export function scheduleCurrentForecasts(rows,date) {return rows.filter(x=>x.date===date);}
 
 // Search matches cannot prove the writer. Deny them even in a stale server snapshot.
-export function scheduleApprovedRows(rows, approvedSources) {
- return rows.filter(r=>scheduleBerrizApproved(r)||r.sourceId==='parable-web'&&scheduleSafeUrl(r.sourceUrl)?.startsWith('https://parable-asia.com/')||
+export function scheduleApprovedRows(rows, approvedSources, snapshot={}) {
+ const runtime=scheduleCafeEvidence(snapshot);
+ return rows.filter(r=>scheduleCafeMatches(r,runtime)||scheduleBerrizApproved(r)||r.sourceId==='parable-web'&&scheduleSafeUrl(r.sourceUrl)?.startsWith('https://parable-asia.com/')||
   r.sourceId==='fan-roundup'&&(r.sourceUrl==='https://cafe.naver.com/steamindiegame/22137397'||approvedSources.get(r.sourceUrl)==='fan-roundup')||
   ['cafe-members','cafe-agency'].includes(r.sourceId)&&approvedSources.get(r.sourceUrl)===r.sourceId);
 }
@@ -93,4 +95,49 @@ export function schedulePriority(r) {
  if(url?.startsWith('https://berriz.in/ko/isegyeidol/notice/')&&r.sourceId==='berriz-notice')return 0;
  if(url==='https://berriz.in/ko/isegyeidol/calendar/'&&r.sourceId==='berriz-calendar')return 1;
  return 2;
+}
+
+
+// Same-origin publisher evidence, not a Search snippet or a caller-supplied source label.
+export function scheduleCafeEvidence(data) {
+ const result=new Map(),proof=data?.cafeEvidence;if(proof===undefined)return result;
+ const sameKeys=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join('|')===[...keys].sort().join('|');
+ const members=['ine','jingburger','lilpa','jururu','gosegu','viichan'];
+ const official=['articleId','menuId','author','members','title','publishedAt','verifiedRole','public','titleGeneralized','checkedAt'];
+ const fan=['articleId','title','date','publishedAt','sameBoard','sameAuthor','public','checkedAt'];
+ const stamp=v=>typeof v==='string'&&/(?:Z|[+-]\d{2}:\d{2})$/.test(v)?Date.parse(v):NaN;
+ const generated=stamp(data.generatedAt);
+ if(!sameKeys(proof,['schemaVersion','notices','fanSeries'])||proof.schemaVersion!==1||!Number.isFinite(generated))throw new Error('invalid Cafe evidence');
+ for(const key of ['notices','fanSeries']){
+  if(!Array.isArray(proof[key])||proof[key].length>(key==='notices'?600:100))throw new Error('invalid Cafe evidence size');
+  for(const r of proof[key]){
+   const isOfficial=key==='notices';
+   if(!sameKeys(r,isOfficial?official:fan)||!Number.isSafeInteger(r.articleId)||r.articleId<=0||[22133027,22133865].includes(r.articleId)||r.public!==true||typeof r.title!=='string'||!r.title||r.title.length>220||/[<>\x00-\x1f]/.test(r.title))throw new Error('invalid Cafe metadata');
+   const url='https://cafe.naver.com/steamindiegame/'+r.articleId,published=stamp(r.publishedAt),checked=stamp(r.checkedAt);
+   if(result.has(url)||!Number.isFinite(published)||!Number.isFinite(checked)||published>checked||checked>generated)throw new Error('invalid Cafe observation');
+   let source='fan-roundup';
+   if(isOfficial){
+    if(!Array.isArray(r.members)||!r.members.length||r.members.some(m=>!members.includes(m))||new Set(r.members).size!==r.members.length||typeof r.titleGeneralized!=='boolean')throw new Error('invalid Cafe members');
+    if(r.menuId===345&&members.includes(r.author)&&r.verifiedRole==='staff'&&r.members.length===1&&r.members[0]===r.author)source='cafe-members';
+    else if(r.menuId===1250&&r.author==='parable'&&['staff','manager'].includes(r.verifiedRole))source='cafe-agency';
+    else throw new Error('unapproved Cafe writer');
+   }else{
+    const m=r.title.match(/^\[\s*(\d{1,2})\/(\d{1,2})\([^)]{1,4}\)\s*\]\s*이세돌\s*뱅온정보$/);
+    if(!m||r.sameAuthor!==true||r.sameBoard!==true||!scheduleValidDate(r.date)||schedulePostedDate(r.publishedAt)!==r.date||Number(m[1])!==Number(r.date.slice(5,7))||Number(m[2])!==Number(r.date.slice(8)))throw new Error('unverified fan reference');
+   }
+   result.set(url,{source,record:r});
+  }
+ }
+ return result;
+}
+export function scheduleCafeMatches(row,proofs) {
+ const proof=proofs.get(row.sourceUrl);if(!proof||row.sourceId!==proof.source||row.publishedAt!==proof.record.publishedAt)return false;
+ const r=proof.record;
+ if(proof.source==='fan-roundup')return row.date===r.date&&row.dateBasis==='roundup_title'&&['unknown','tentative'].includes(row.certainty);
+ return row.title===r.title&&row.checkedAt===r.checkedAt&&JSON.stringify(row.members)===JSON.stringify(r.members);
+}
+export function scheduleCollectionMessage(data,now=Date.now()) {
+ if(!data.collectionHealth)return '';
+ const outdated=data.sources.filter(s=>s.id!=='naver-search').some(s=>s.state!=='ok'||!Number.isFinite(Date.parse(s.lastSuccessAt))||now-Date.parse(s.lastSuccessAt)>3*60*60*1000);
+ return data.collectionHealth.state!=='complete'||outdated?'일부 출처 수집 지연 · 이전 확인 자료를 표시합니다.':'';
 }

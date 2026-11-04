@@ -1,4 +1,4 @@
-"""One-time public review. Not an hourly Cafe crawler. No credentials or direct API calls."""
+"""Bounded public-list review of two approved boards. No credentials or direct API calls."""
 import argparse, collections, json, re, time
 from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
