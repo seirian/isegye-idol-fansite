@@ -6,6 +6,7 @@ from pathlib import Path
 import argparse, base64, hashlib, json, os, re, shutil
 import tinycss2
 import build_review_1st as first
+import review_2nd_polish as polish
 ROOT=Path(__file__).resolve().parents[1]
 PRODUCTION='b05d0c91f482dfd666e2b70e70c49ebe4ece2175'
 FIRST='013998a27293d28fc54ba17950e190f5ed9f6db5'
@@ -107,8 +108,8 @@ def adapt_app(text):
     text=one(text,"${badge(label,'neutral')}","${isAgency(r)?badge('★ 소속사 공지','agency'):badge(label,'neutral')}")
     before="rows.sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='event'?-1:1)-(b.kind==='event'?-1:1)"
     text=one(text,before,"rows.sort((a,b)=>a.date.localeCompare(b.date)||Number(isAgency(b))-Number(isAgency(a))||(a.kind==='event'?-1:1)-(b.kind==='event'?-1:1)")
-    old='''<span class="day-chip ${r.kind} ${r.members.length===1?'tone-'+r.members[0]:''}">${esc(r.title.replace(/^\\[[^\\]]+\\]\\s*/,''))}</span>'''
-    new='''<span class="day-chip ${r.kind}" data-member-tone="${r.members.length===1?r.members[0]:'group'}" data-agency="${isAgency(r)}" title="${esc(memberText(r.members)+' · '+r.title)}">${isAgency(r)?'★ 소속사 · ':r.members.length===1?esc(names[r.members[0]])+' · ':'이세돌 · '}${esc(r.title.replace(/^\\[[^\\]]+\\]\\s*/,''))}</span>'''
+    old='''<span class="day-chip ${r.kind} ${r.members.length===1?'tone-'+r.members[0]:''}">${esc(r.title.replace(/^\[[^\]]+\]\s*/,''))}</span>'''
+    new='''<span class="day-chip ${r.kind}" data-member-tone="${r.members.length===1?r.members[0]:'group'}" data-agency="${isAgency(r)}" title="${esc(memberText(r.members)+' · '+r.title)}">${isAgency(r)?'★ 소속사 · ':r.members.length===1?esc(names[r.members[0]])+' · ':'이세돌 · '}${esc(r.title.replace(/^\[[^\]]+\]\s*/,''))}</span>'''
     text=one(text,old,new)
     text=one(text,'''${D.members.map(x=>`<span class="tone-${x.id}"><i class="dot"></i> ${x.name}</span>`).join('')}</div>${content}''','''${D.members.map(x=>`<span class="tone-${x.id}"><i class="dot"></i> ${x.name}</span>`).join('')}<span class="agency-label">★ 소속사 공지</span></div>${content}''')
     text=one(text,"['cafe','멤버·소속사 카페'],['fan','팬 참고']","['cafe','멤버·소속사 카페'],['agency','소속사 공지'],['fan','팬 참고']")
@@ -128,8 +129,9 @@ def build(baseline):
     if out.is_symlink():raise ValueError('Symlink output')
     if out.exists():shutil.rmtree(out)
     shutil.copytree(src,out)
-    app=adapt_app((src/'app.js').read_text());legacy=production_adapter(baseline)
-    css=(src/'styles.css').read_text()+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()
+    app=polish.app(adapt_app((src/'app.js').read_text()))
+    legacy=polish.adapter(production_adapter(baseline),(baseline/'src/app.js').read_text())
+    css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()
     (out/'app.js').write_text(app);(out/'production-ui.js').write_text(legacy);(out/'styles.css').write_text(css)
     meta=json.loads((out/'build-info.json').read_text());meta.update(review='review-2nd',branch='feature/review-2nd',firstReviewCommit=FIRST,operatingPagesCommit=PRODUCTION,accepted=['home-recent-content','music','history-layout','schedule-layout'],restored=['production-home-live','production-live-page','production-members-and-detail','member-colors','agency-notice-priority'],contentTabs=['videos','replay','series'],navigationCount=7)
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
