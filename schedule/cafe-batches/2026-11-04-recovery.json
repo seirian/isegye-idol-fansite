@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "from": "2026-11-03",
+  "checkedAt": "2026-11-04T09:09:37.305539+00:00",
+  "boards": {
+    "345": {"state": "reviewed", "count": 4, "pages": 1},
+    "1250": {"state": "reviewed", "count": 0, "pages": 1}
+  },
+  "notices": [
+    {"articleId": 22164238, "menuId": 345, "author": "viichan", "members": ["viichan"], "title": "[비챤] 신곡 티저 같이보기~!", "publishedAt": "2026-11-04T08:30:46.530+00:00", "verifiedRole": "staff", "public": true, "titleGeneralized": false},
+    {"articleId": 22160973, "menuId": 345, "author": "lilpa", "members": ["lilpa"], "title": "[릴파] 오늘은 휴방입니다!", "publishedAt": "2026-11-03T11:26:02.357+00:00", "verifiedRole": "staff", "public": true, "titleGeneralized": false},
+    {"articleId": 22160543, "menuId": 345, "author": "viichan", "members": ["viichan"], "title": "[비챤] 곧 7시입니다", "publishedAt": "2026-11-03T09:59:07.573+00:00", "verifiedRole": "staff", "public": true, "titleGeneralized": false},
+    {"articleId": 22160518, "menuId": 345, "author": "jingburger", "members": ["jingburger"], "title": "[징버거] 9시 파스모포비아 합방!", "publishedAt": "2026-11-03T09:56:57.033+00:00", "verifiedRole": "staff", "public": true, "titleGeneralized": false}
+  ],
+  "fan": {"state": "article_observed", "articleId": 22137397, "title": "[10/30(금)] 이세돌 뱅온정보", "displayDate": "2026.10.30. 09:07", "forecastCoverage": "not_verified"},
+  "fanSeries": [
+    {"articleId": 22162881, "title": "[11/4(수)] 이세돌 뱅온정보", "date": "2026-11-04", "publishedAt": "2026-11-04T06:45:00+09:00", "sameBoard": true, "sameAuthor": true, "public": true},
+    {"articleId": 22159041, "title": "[11/3(화)] 이세돌 뱅온정보", "date": "2026-11-03", "publishedAt": "2026-11-03T08:51:00+09:00", "sameBoard": true, "sameAuthor": true, "public": true}
+  ],
+  "fanCheckedAt": "2026-11-04T18:09:49.933649+09:00",
+  "fanCards": {
+    "22162881": {"ine": {"status": "rest", "time": null}, "jingburger": {"status": "unknown", "time": null}, "lilpa": {"status": "unknown", "time": null}, "jururu": {"status": "expected", "time": null}, "gosegu": {"status": "expected", "time": null}, "viichan": {"status": "expected", "time": null}},
+    "22159041": {"ine": {"status": "rest", "time": null}, "jingburger": {"status": "expected", "time": null}, "lilpa": {"status": "expected", "time": null}, "jururu": {"status": "rest", "time": null}, "gosegu": {"status": "unknown", "time": null}, "viichan": {"status": "expected", "time": null}}
+  },
+  "cardCheckedAt": "2026-11-04T18:10:08.925900+09:00",
+  "fanWindowComplete": false
+}
