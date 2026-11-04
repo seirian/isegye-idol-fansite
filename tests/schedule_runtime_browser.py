@@ -15,11 +15,11 @@ def check(name,ok):
 now=datetime.now(timezone.utc).isoformat()
 seed=json.loads((ROOT/'schedule/snapshot.json').read_text())
 packet=json.loads((ROOT/'schedule/cafe-batches/2026-11-04-recovery.json').read_text())
-# This ID is test-only and intentionally absent from the bundled notice archive.
+# Preserve the fixed observation window so this fixture remains valid in later CI runs.
+# This synthetic ID is intentionally absent from the bundled real notice archive.
 packet['notices']=[{**packet['notices'][0],'articleId':99911111,'author':'ine','members':['ine'],
                     'title':'[테스트 전용] 재배포 없는 새 공지','publishedAt':'2026-11-04T07:30:00+00:00'}]
 packet['boards']['345']['count']=1
-packet['checkedAt']=now;packet['fanCheckedAt']=now;packet['cardCheckedAt']=now
 value=feed.collect(previous=seed,fetch=lambda u:(_ for _ in ()).throw(feed.FeedError('fixture')),now=now,cafe_review=packet)
 value['collectionHealth']=schedule_health.assess(value)
 current={'value':seed}
@@ -55,10 +55,9 @@ with sync_playwright() as pw:
             for width in (320,390,768,1440):
                 page.set_viewport_size({'width':width,'height':1000})
                 check(f'{theme}/{width} no overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
-        # Public HTTP 200 is not sufficient: reject invalid author proof, retain last good UI.
+        # HTTP 200 is not sufficient: reject invalid proof and retain the last good UI.
         bad=copy.deepcopy(value);bad['cafeEvidence']['notices'][0]['verifiedRole']='member'
         current['value']=bad
-        page.evaluate('scheduleLastFetch=0')
         page.locator('[data-schedule-refresh]').click()
         expect(page.locator('.sc-refresh-status')).to_contain_text('갱신 확인 실패')
         expect(item).to_have_count(1)
