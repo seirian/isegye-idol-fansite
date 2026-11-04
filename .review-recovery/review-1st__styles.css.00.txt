@@ -1,3 +1,0 @@
-/* Isolated first-review design system; production selectors are not imported. */
-:root{--bg:#17151f;--panel:#252230;--panel2:#302b3d;--ink:#f3eff7;--muted:#c0b6ca;--line:#40394c;--accent:#f5a1be;--accent-soft:#3c2837;--shadow:0 12px 40px #00000016;--good:#a2d7ba;--warn:#edca8d;--max:1320px;--radius:20px;--ine:#c7a6ef;--jingburger:#f2ca72;--lilpa:#abb7ff;--jururu:#edacd4;--gosegu:#91d0ed;--viichan:#b1d899}
-:root[data-theme=light]{--bg:#fcf9fc;--panel:#fff;--panel2:#f2edf4;--ink:#292332;--muted:#655d70;--line:#ded5e3;--accent:#a82e59;--accent-soft:#fcebf2;--shadow:0 12px 40px #33203a09;--good:#286946;--warn:#7b570f;--ine:#724398;--jingburger:#856108;--lilpa:#4656a4;--jururu:#964d7b;--gosegu:#296581;--viichan:#4b702f}
