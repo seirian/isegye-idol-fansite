@@ -1,0 +1,133 @@
+diff --git a/site/runtime-feeds.js b/site/runtime-feeds.js
+new file mode 100644
+index 0000000..befe216
+--- /dev/null
++++ b/site/runtime-feeds.js
+@@ -0,0 +1,107 @@
++/* Existing same-origin read endpoints only. No account, storage or collector writes. */
++const ProductionFeeds=(()=>{
++ const known=new Map(PRODUCTION_FEED_BASE.knownSources),baseVideos=D.videos.slice();
++ const state={schedule:{version:'',error:false},music:{version:'',error:false},history:{version:'',error:false}};
++ let pending=false,next=0,paintNeeded=false;
++ const stampOK=s=>typeof s==='string'&&/(?:Z|[+-]\d{2}:\d{2})$/.test(s)&&Number.isFinite(Date.parse(s));
++ function generation(feed,name){
++  if(!stampOK(feed?.generatedAt)||Date.parse(feed.generatedAt)>Date.now()+300000)throw Error('Invalid feed generation');
++  if(state[name].version&&Date.parse(feed.generatedAt)<Date.parse(state[name].version))throw Error('Older feed rejected');
++ }
++ function reindex(){
++  for(const [map,list] of [[songs,D.songs],[videos,D.videos],[albums,D.albums],[notices,D.notices],[events,D.events],[histories,D.history]]){
++   map.clear();for(const row of list)map.set(row.id,row);
++  }
++  allItems.splice(0,allItems.length,...memberItems,...D.songs,...D.videos,...D.notices,...D.events,...D.history,...D.albums);
++  registry.clear();for(const row of allItems)registry.set(row.key,row);
++ }
++ function applySchedule(feed){
++  generation(feed,'schedule');FeedValidators.scheduleValidate(feed);
++  const safe={};for(const k of ['news','events','forecasts'])safe[k]=FeedValidators.scheduleApprovedRows(feed[k],known,feed);
++  for(const r of safe.news)if(!stampOK(r.publishedAt)||!kstDay(r.publishedAt))throw Error('Invalid notice publication');
++  const merged=new Map(PRODUCTION_FEED_BASE.archiveNotices.map(r=>[r.id,{...r}]));
++  for(const r of safe.news){
++   const id=r.sourceId.startsWith('cafe-')?r.sourceUrl.split('/').pop():r.id;
++   const row={...r,id,key:'notice:'+id,kind:'notice',type:'notice',date:kstDay(r.publishedAt),url:r.sourceUrl,summary:r.detail||'',tags:['공지']};
++   if(!merged.has(id)||Date.parse(row.checkedAt)>=Date.parse(merged.get(id).checkedAt))merged.set(id,row);
++  }
++  const rows=safe.events.map(r=>({...r,key:'event:'+r.id,kind:'event',url:r.sourceUrl,summary:r.detail||'',tags:['일정']}));
++  D.notices=[...merged.values()];D.events=rows;D.forecasts=safe.forecasts;D.sources=feed.sources;
++  D.snapshotAt=feed.generatedAt;D.scope.collectionHealth=feed.collectionHealth;
++  state.schedule={version:feed.generatedAt,error:false};reindex();return true;
++ }
++ function applyMusic(feed){
++  generation(feed,'music');
++  const music=ProductionUI.applyMusic(feed);
++  D.songs=music.songs.map(r=>({...r,kind:'song',key:'song:'+r.id,summary:r.album||r.format||'',
++   tags:[...(r.aliases||[]),...(r.albumTracks||[])],checkedAt:r.videoSource?.checkedAt||music.checkedAt,
++   ...(songs.get(r.id)?.albumId?{albumId:songs.get(r.id).albumId}:{}),
++   sourceLinks:(r.sources||[]).map(k=>music.sources[k]).filter(Boolean)}));
++  const byVideo=new Map(baseVideos.map(r=>[r.id,r]));
++  for(const row of D.songs){
++   const vs=row.videoSource,vid=row.videoId;if(!vid||!vs?.kind?.startsWith('official')||byVideo.has(vid))continue;
++   const channel=D.channels.find(c=>c.url===vs.channelUrl);
++   byVideo.set(vid,{id:vid,key:'video:'+vid,kind:'video',title:row.title,date:row.date,dateBasis:'catalog',dateLabel:row.dateKind,
++    url:'https://www.youtube.com/watch?v='+vid,members:row.members,memberBasis:'catalog_credit',channelName:vs.channel,
++    channelKey:channel?.key||'',channelUrl:vs.channelUrl,category:row.members.length===6?'group':'member',format:row.format,
++    type:vs.kind,checkedAt:vs.checkedAt,relatedSong:row.id,summary:'검증된 음악 영상 · '+row.dateKind+' 기준',tags:row.tags});
++  }
++  D.videos=[...byVideo.values()];D.scope.musicCheckedAt=feed.generatedAt;
++  state.music={version:feed.generatedAt,error:false};reindex();return true;
++ }
++ function applyHistory(feed){
++  generation(feed,'history');const history=FeedValidators.monthly(feed);
++  D.history=history.events.map(r=>({...r,key:'history:'+r.id,kind:'history',summary:r.summary||r.note||'공개 출처를 바탕으로 정리한 주요 활동 기록입니다.',
++   sourceLinks:r.sources.map(k=>history.sources[k]).filter(Boolean),
++   checkedAt:r.id.startsWith('monthly-')?history.sources[r.sources[0]].checkedAt:history.checkedAt,tags:['활동 기록']}));
++  D.scope.historyCheckedAt=feed.generatedAt;state.history={version:feed.generatedAt,error:false};reindex();return true;
++ }
++ function scheduleMessage(){
++  const message=FeedValidators.scheduleCollectionMessage({sources:D.sources,collectionHealth:D.scope.collectionHealth});
++  return (state.schedule.error?'갱신 확인 실패 · 마지막 검증 자료를 표시합니다. ':message+' ')+
++   '자료 생성 '+stamp(D.snapshotAt)+' · 원문 변경·취소는 공식 안내를 확인하세요.';
++ }
++ function paint(){
++  if(!paintNeeded||document.hidden||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))return;
++  paintNeeded=false;const y=scrollY,active=document.activeElement;
++  const href=active?.getAttribute('href'),key=active?.dataset?.save;
++  render();scrollTo(0,y);
++  const target=key?[...document.querySelectorAll('[data-save]')].find(e=>e.dataset.save===key):href?[...document.querySelectorAll('a')].find(e=>e.getAttribute('href')===href):null;
++  target?.focus({preventScroll:true});
++ }
++ async function refresh(force=false){
++  if(pending||document.hidden||!/^https?:$/.test(location.protocol)||(!force&&Date.now()<next))return;
++  pending=true;next=Date.now()+60000;
++  try{
++   await Promise.all([['schedule',applySchedule,2097152],['music',applyMusic,1500000],['history',applyHistory,1500000]].map(async([name,apply,limit])=>{
++    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
++    try{
++     const r=await fetch('/api/'+name,{credentials:'same-origin',cache:'no-store',redirect:'error',signal:ctl.signal});
++     if(!r.ok||!r.headers.get('content-type')?.includes('application/json'))throw Error('Feed unavailable');
++     const text=await r.text();if(new TextEncoder().encode(text).length>limit)throw Error('Oversized feed');
++     const feed=JSON.parse(text);if(feed.generatedAt!==state[name].version){apply(feed);paintNeeded=true;}
++     else if(state[name].error){state[name].error=false;paintNeeded=true;}
++    }catch{if(!state[name].error){state[name].error=true;paintNeeded=true;}}
++    finally{clearTimeout(timer);}
++   }));
++   next=Date.now()+300000;paint();
++  }finally{pending=false;}
++ }
++ document.addEventListener('focusout',()=>setTimeout(paint,0));
++ window.addEventListener('hashchange',()=>{paintNeeded=false;refresh();});
++ window.addEventListener('focus',()=>refresh());
++ document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();paint();}});
++ setInterval(()=>refresh(),60000);queueMicrotask(()=>refresh());
++ return {applySchedule,applyMusic,applyHistory,refresh,scheduleMessage};
++})();
++// Retain the operating guide's public issue hand-off, with explicit user submit.
++document.addEventListener('submit',event=>{
++ if(event.target.id!=='report-form')return;event.preventDefault();
++ const d=new FormData(event.target),source=String(d.get('source')||'').trim(),kind=String(d.get('type'));
++ if((['correction','content'].includes(kind)||source)&&!safeExternal(source)){toast('공개된 HTTPS 근거 주소가 필요합니다.');return;}
++ const labels={correction:'정보 정정',content:'자료 제보',bug:'기능 문제',rights:'권리 요청'};
++ const target=new URL('https://github.com/seirian/isegye-idol-fansite/issues/new');
++ target.searchParams.set('title','['+(labels[kind]||'제보')+'] '+String(d.get('title')).slice(0,100));
++ target.searchParams.set('body','## 요청 유형\n'+(labels[kind]||'제보')+'\n\n## 대상 문서\n'+(route().params.get('record')||'별도 문서 없음')+'\n\n## 공개 근거\n'+(source||'해당 없음')+'\n\n## 내용\n'+String(d.get('body')).slice(0,1200)+'\n\n공개 제보입니다. 개인정보·비공개 자료를 포함하지 않음을 확인했습니다.');
++ location.assign(target.href);
++});
+diff --git a/site/storage-migration.js b/site/storage-migration.js
+new file mode 100644
+index 0000000..0ae8acc
+--- /dev/null
++++ b/site/storage-migration.js
+@@ -0,0 +1,14 @@
++// Import compatible operating bookmarks once; never erase or read preview storage.
++try {
++ if (!localStorage.getItem('isegye:archive:prefs:v1')) {
++  const oldTheme=localStorage.getItem('isegye:theme:v1');
++  if(['dark','light'].includes(oldTheme))prefs.theme=oldTheme;
++  const old=JSON.parse(localStorage.getItem('isegye:bookmarks:v1')||'[]');
++  if(Array.isArray(old))for(const id of old.slice(0,3000)){
++   if(typeof id!=='string')continue;
++   const type=persons.has(id)?'member':songs.has(id)?'song':histories.has(id)?'history':null;
++   if(type&&!prefs.favorites.includes(type+':'+id))prefs.favorites.push(type+':'+id);
++  }
++  localStorage.setItem('isegye:archive:prefs:v1',JSON.stringify(prefs));
++ }
++}catch{/* Read/write restrictions never block rendering; legacy values stay intact. */}
