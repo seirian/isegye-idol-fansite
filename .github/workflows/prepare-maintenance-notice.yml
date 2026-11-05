@@ -1,0 +1,33 @@
+name: Prepare standalone maintenance notice source
+on:
+  push:
+    branches: ['fix/maintenance-notices']
+permissions:
+  contents: write
+concurrency:
+  group: prepare-maintenance-notice
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/fix/maintenance-notices'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 2
+      - name: Apply exact locally validated source changes on the isolated fix branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '0becf13fe672aa692f7a8a22af76f1edb7c0494e'
+          echo '7256ad2ec66acd63a56bb6535553f89d18f09f7dd79687d88b7ad4bcf6bc80ef  .maintenance-notice.patch' | sha256sum -c -
+          git apply --check --index --unidiff-zero .maintenance-notice.patch
+          git apply --index --unidiff-zero .maintenance-notice.patch
+          git rm .maintenance-notice.patch .github/workflows/prepare-maintenance-notice.yml
+          test "$(git write-tree)" = 'b11c30d3a64897897c8da235063516198e371c9c'
+          php -l auth/View.php
+          php -l auth/Gateway.php
+          test "$(git ls-remote origin refs/heads/fix/maintenance-notices | cut -f1)" = "$GITHUB_SHA"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix(legal): make construction notices standalone and preserve authorized site shell'
+          git push origin HEAD:refs/heads/fix/maintenance-notices
