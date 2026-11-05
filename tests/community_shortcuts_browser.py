@@ -84,8 +84,14 @@ with sync_playwright() as pw:
         ctx.route(base+'/account/legal.css',lambda r:r.fulfill(content_type='text/css',body=(ROOT/'dist/src/styles.css').read_text()))
         ctx.route(base+'/account/legal.js',lambda r:r.fulfill(content_type='text/javascript',body=(ROOT/'dist/src/member-legal.js').read_text()))
         ctx.route(base+'/auth/account.css',lambda r:r.fulfill(content_type='text/css',body=(ROOT/'auth/account.css').read_text()))
+        def document_response(kind):
+            # Playwright may supply (route, request); capture the document in a
+            # closure rather than a positional default overwritten by Request.
+            def handle(route):
+                route.fulfill(content_type='text/html',body=docs[kind])
+            return handle
         for kind in ('terms','privacy'):
-            ctx.route(base+'/account/'+kind,lambda r,kind=kind:r.fulfill(content_type='text/html',body=docs[kind]))
+            ctx.route(base+'/account/'+kind,document_response(kind))
             for width in (390,1440):
                 page.set_viewport_size({'width':width,'height':1000})
                 if os.getenv('PROMOTED_URL'):
