@@ -24,6 +24,7 @@ jobs:
           node-version: '22'
       - name: Validate content, release and rollback boundaries
         run: |
+          python -m pip install tinycss2==1.4.0
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Validate Google access library and storage
@@ -36,7 +37,7 @@ jobs:
         timeout-minutes: 6
         run: |
           python -m venv /tmp/release-tools
-          /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0 cryptography
+          /tmp/release-tools/bin/pip install playwright==1.56.0 pillow==11.3.0 tinycss2==1.4.0 cryptography
           bash scripts/ci_browser_install.sh /tmp/release-tools/bin/python
       - name: Test first-administrator access with local synthetic identities only
         run: /tmp/release-tools/bin/python tests/auth/browser.py
@@ -49,12 +50,16 @@ jobs:
         env:
           PYTHON: /tmp/release-tools/bin/python
         run: |
-          npm run build
+          ISEGYE_BASELINE_ONLY=true npm run build
           node scripts/standalone.mjs
       - name: Test exact preview bundle and disconnected standalone UI
         run: |
           /tmp/release-tools/bin/python scripts/verify_release_v04.py
           /tmp/release-tools/bin/python tests/offline_smoke.py
+      - name: Build and validate accepted second-review application
+        run: |
+          /tmp/release-tools/bin/python scripts/promote_review_2nd.py
+          /tmp/release-tools/bin/python scripts/verify_promoted_review.py
       - name: Validate main-only production packaging without upload
         env:
           PYTHON: /tmp/release-tools/bin/python

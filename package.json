@@ -13,6 +13,8 @@
     "check": "node --check src/app.js && node --check src/data.js && node --check src/lib.js && node scripts/validate.mjs",
     "test": "npm run check && node --test tests/*.test.js",
     "build": "node scripts/build.mjs",
-    "test:browser": "python tests/browser_smoke.py"
+    "test:browser": "python tests/browser_smoke.py",
+    "build:review-1st": "npm run build && python scripts/build_review_1st.py",
+    "test:review-1st": "node --test tests/review_1st.test.js && python -m unittest discover -s tests -p test_review_1st.py -v"
   }
 }

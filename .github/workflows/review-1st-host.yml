@@ -1,0 +1,67 @@
+name: Review 1st - existing administrator gated hosting
+on:
+  workflow_call:
+    inputs:
+      commit:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  host:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/review-1st' && inputs.commit == github.sha
+    environment:
+      name: production
+      url: https://isegye-idol.kr/review-1st/
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - name: Respect existing production pause
+        env: {PRODUCTION_PAUSED: '${{ vars.PRODUCTION_PAUSED }}'}
+        run: test "$PRODUCTION_PAUSED" != true
+      - uses: actions/download-artifact@v4
+        with:
+          name: review-1st-site-${{ inputs.commit }}
+          path: review-1st-dist
+      - name: Install and verify existing pinned identity library
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          php tests/auth/store_test.php
+          php tests/auth/jwt_test.php
+      - name: Install isolated verification tools
+        run: |
+          python -m venv /tmp/review-host-tools
+          /tmp/review-host-tools/bin/pip install pillow==11.3.0 playwright==1.56.0 paramiko==5.0.0 cryptography
+          bash scripts/ci_browser_install.sh /tmp/review-host-tools/bin/python
+      - name: Build generated handler after unchanged authorization gate
+        run: |
+          python scripts/build_review_host.py
+          php -l auth-bundle/Gateway.php
+          php -l auth-bundle/ReviewPreview.php
+          python -m unittest discover -s tests -p test_review_host.py -v
+      - name: Test exact preview via existing login and maintenance flow using local synthetic users
+        run: /tmp/review-host-tools/bin/python tests/review_host_browser.py
+      - name: Publish isolated preview and verify unchanged production routes
+        run: /tmp/review-host-tools/bin/python scripts/deploy_review_1st.py
+        env:
+          REVIEW_COMMIT: ${{ inputs.commit }}
+          REVIEW_DEPLOY_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: review-1st-hosting-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            review-1st-deployment.json
+            test-results/review-host/
+          retention-days: 30

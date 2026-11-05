@@ -1,0 +1,70 @@
+name: Review 2nd - isolated full-site preview
+on:
+  push:
+    branches: ['feature/review-2nd']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: isegye-review-2nd
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/review-2nd'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Read exact previously verified baseline and images
+        uses: actions/download-artifact@v4
+        with:
+          name: review-1st-workspace-1ec11cd8b6cc730fa6fc136c39e019fce6fcfe09
+          run-id: 41824099338
+          github-token: ${{ github.token }}
+          path: /tmp/review-baseline
+      - name: Install isolated browser tools
+        run: |
+          python -m venv /tmp/review-tools
+          /tmp/review-tools/bin/pip install pillow==11.3.0 playwright==1.56.0 tinycss2==1.4.0
+          bash scripts/ci_browser_install.sh /tmp/review-tools/bin/python
+      - name: Check all source and review contracts
+        run: |
+          npm test
+          /tmp/review-tools/bin/python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build exact isolated review
+        run: |
+          /tmp/review-tools/bin/python scripts/build_review_2nd.py --baseline /tmp/review-baseline/dist
+          /tmp/review-tools/bin/python -m unittest discover -s tests -p test_review_2nd.py -v
+          git archive HEAD -o review-2nd-source.tar
+      - name: Exercise actual served review page
+        run: |
+          /tmp/review-tools/bin/python -m http.server 4198 --bind 127.0.0.1 --directory review-2nd-dist > /tmp/review-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_browser.py
+          REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_mobile_browser.py
+          REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_polish_browser.py
+          REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_cleanup_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: review-2nd-site-${{ github.sha }}
+          path: review-2nd-dist/
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: review-2nd-evidence-${{ github.sha }}
+          path: |
+            review-2nd-source.tar
+            test-results/
+          retention-days: 30
+  publish:
+    needs: build
+    uses: ./.github/workflows/review-2nd-host.yml
+    with:
+      commit: ${{ github.sha }}
+    secrets: inherit

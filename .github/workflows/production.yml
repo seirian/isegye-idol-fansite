@@ -40,25 +40,26 @@ jobs:
           php tests/auth/jwt_test.php
       - name: Validate source, isolation and rollback
         run: |
+          python -m pip install tinycss2==1.4.0
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated build and browser tools
         timeout-minutes: 6
         run: |
           python -m venv /tmp/archive-browser-tests
-          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 cryptography
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 tinycss2==1.4.0 cryptography
           bash scripts/ci_browser_install.sh /tmp/archive-browser-tests/bin/python
       - name: Verify authentication using local test identities only
         run: /tmp/archive-browser-tests/bin/python tests/auth/browser.py
       - name: Build credential-free authentication runtime
-        run: python scripts/build_auth_bundle.py
+        run: python scripts/build_review_2nd_host.py
       - name: Refresh public data and verify reviewed music sources
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
           /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
           /tmp/archive-browser-tests/bin/python scripts/schedule_feed.py --previous schedule/snapshot.json
       - name: Build approved simple home with LIVE preserved
-        run: npm run build
+        run: ISEGYE_BASELINE_ONLY=true npm run build
         env:
           PYTHON: /tmp/archive-browser-tests/bin/python
           DEPLOY_ENV: production
@@ -67,6 +68,14 @@ jobs:
           RELEASE_MODE: production
           RELEASE_OUT: test-results/production-candidate
         run: /tmp/archive-browser-tests/bin/python scripts/verify_release_v04.py
+      - name: Promote the approved final second review to the operating site
+        env:
+          DEPLOY_ENV: production
+        run: /tmp/archive-browser-tests/bin/python scripts/promote_review_2nd.py
+      - name: Verify promoted menus and existing runtime feed connections
+        run: /tmp/archive-browser-tests/bin/python scripts/verify_promoted_review.py
+      - name: Verify preserved first and second preview authentication
+        run: /tmp/archive-browser-tests/bin/python tests/review_2nd_host_browser.py
       - name: Activate Google access without pre-registering the administrator
         run: /tmp/archive-browser-tests/bin/python scripts/deploy_google_access.py
         env:
@@ -74,6 +83,9 @@ jobs:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
           ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
+      - name: Archive deployed source
+        if: always()
+        run: git archive HEAD -o release-source.tar
       - name: Save credential-free release report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -81,6 +93,7 @@ jobs:
           name: isegye-production-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             auth-deployment.json
+            release-source.tar
             dist/build-info.json
             schedule/snapshot.json
             test-results/
