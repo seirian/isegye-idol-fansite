@@ -21,7 +21,7 @@ final class View
             . '<p class="access-kicker">조금 더 좋은 모습으로 만나요</p><h1>현재 사이트는 <br>공사중입니다.</h1>'
             . '<p class="access-description">이세계아이돌의 소식을 더 편하게 만날 수 있도록<br class="wide-only"> 사이트를 준비하고 있어요.</p>'
             . '<div class="access-divider" aria-hidden="true"><span></span>✦<span></span></div>'
-            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', true, $signedIn ? '/account/' : '/auth/');
+            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', true, '/auth/');
     }
     public static function login(string $clientId, string $nonce, string $csrf): string
     {
@@ -52,23 +52,18 @@ final class View
         foreach (['terms'=>'이용약관','privacy'=>'개인정보처리방침'] as $id=>$label) {
             $tabs .= '<a href="/auth/' . $id . '"' . ($id === $kind ? ' aria-current="page"' : '') . '>' . $label . '</a>';
         }
-        $tabs .= '<a href="/#/guide">팬가이드</a><a href="/#/about">사이트소개</a></nav>';
-        $nav = '';
-        foreach (['home'=>'오늘의 이세돌','members'=>'멤버 소개','schedule'=>'소식·일정','music'=>'음악','live'=>'LIVE','history'=>'활동 기록'] as $id=>$label) {
-            $nav .= '<a href="/#/' . $id . '">' . $label . '</a>';
-        }
-        // Public disclosures must remain readable without session/account access or scripts.
+        $tabs .= '</nav>';
+        // Standalone public notices: no application menus, fan guide or about links.
+        // A maintenance visitor uses this presentation even with a member session.
         return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="strict-origin-when-cross-origin">'
-            . '<title>' . self::e($title) . ' · ISEGYE! 팬 아카이브</title><link rel="stylesheet" href="/auth/legal.css">'
-            . '</head><body class="legal-page legal-public"><div class="legal-site-announcement">이세계아이돌 비공식 팬 아카이브</div>'
-            . '<header class="legal-site-header"><div><a class="legal-site-brand" href="/"><span class="legal-site-mark" aria-hidden="true">✦</span><span><strong>ISEGYE<span>!</span></strong><small>팬 아카이브</small></span></a>'
-            . '<div class="legal-site-tagline">차원을 넘어,<br><b>좋아하는 마음이 모이는 곳.</b></div>'
-            . '<fieldset class="legal-public-theme"><legend>화면 테마</legend><label><input type="radio" name="legal-theme" value="auto" checked>자동</label><label><input type="radio" name="legal-theme" value="light">라이트</label><label><input type="radio" name="legal-theme" value="dark">다크</label></fieldset></div>'
-            . '<nav class="legal-site-nav" aria-label="주 메뉴">' . $nav . '</nav></header><div class="legal-public-layout">'
-            . '<main id="main"><div class="legal-shell" id="document-top"><div class="legal-navigation"><a href="/">← 사이트로</a></div>'
+            . '<title>' . self::e($title) . ' · ISEGYE! 이용 안내</title><link rel="stylesheet" href="/auth/legal.css">'
+            . '</head><body class="legal-page legal-public legal-standalone"><div class="legal-public-layout">'
+            . '<header class="legal-standalone-header"><p>ISEGYE! <span>이용 안내</span></p>'
+            . '<fieldset class="legal-public-theme"><legend>화면 테마</legend><label><input type="radio" name="legal-theme" value="auto" checked>자동</label><label><input type="radio" name="legal-theme" value="light">라이트</label><label><input type="radio" name="legal-theme" value="dark">다크</label></fieldset></header>'
+            . '<main id="main"><div class="legal-shell" id="document-top"><div class="legal-navigation"><a href="/">← 안내 화면으로</a></div>'
             . $tabs . '<article class="legal-document" data-policy="' . $kind . '" data-version="1.0">' . file_get_contents($file) . '</article></div></main>'
-            . '<footer class="legal-site-footer"><span>이세계아이돌 비공식 팬 프로젝트</span><nav aria-label="이용 안내"><a href="/auth/terms">이용약관</a><a href="/auth/privacy"><strong>개인정보처리방침</strong></a><a href="/#/guide">팬가이드</a><a href="/#/about">사이트소개</a></nav></footer></div></body></html>';
+            . '<footer class="legal-standalone-footer"><span>이세계아이돌 비공식 팬사이트 · 이용 안내</span><nav aria-label="이용 안내"><a href="/auth/terms">이용약관</a><a href="/auth/privacy"><strong>개인정보처리방침</strong></a></nav></footer></div></body></html>';
     }
     public static function privacy(): string { return self::document('privacy'); }
     public static function terms(): string { return self::document('terms'); }

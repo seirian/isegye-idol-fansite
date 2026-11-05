@@ -115,8 +115,9 @@ try:
   p=pub.new_page();p.on('pageerror',lambda e:errors.append(str(e)))
   for kind in ('terms','privacy'):
    p.goto(URL+'auth/'+kind,wait_until='networkidle')
-   check('public '+kind+' uses site branding',p.locator('.legal-site-header').count()==1 and p.locator('.access-backdrop').count()==0)
-   check('public '+kind+' tabs and footer',p.locator('.legal-tabs a').all_text_contents()==DOC_TABS and p.locator('.legal-site-footer a').all_text_contents()==DOC_TABS)
+   check('public '+kind+' standalone notice',p.locator('.legal-standalone-header').count()==1 and p.locator('.legal-site-header,.legal-site-nav,.site-header,.access-backdrop').count()==0)
+   check('public '+kind+' no guide or about links',p.locator('a[href*="/guide"],a[href*="/about"]').count()==0)
+   check('public '+kind+' tabs and footer',p.locator('.legal-tabs a').all_text_contents()==DOC_TABS[:2] and p.locator('.legal-standalone-footer a').all_text_contents()==DOC_TABS[:2])
    check('public '+kind+' no scripts or account actions',p.locator('script,.legal-site-header a[href="/auth/login"],.legal-navigation a[href="/auth/login"]').count()==0)
    check('public '+kind+' OS dark mode',bg(p)=='rgb(36, 33, 48)')
    p.get_by_role('radio',name='라이트',exact=True).check();check('public '+kind+' light control',bg(p)=='rgb(255, 255, 255)')
