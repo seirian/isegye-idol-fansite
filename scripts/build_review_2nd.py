@@ -7,6 +7,7 @@ import argparse, base64, hashlib, json, os, re, shutil
 import tinycss2
 import build_review_1st as first
 import review_2nd_polish as polish
+import review_2nd_cleanup as cleanup
 ROOT=Path(__file__).resolve().parents[1]
 PRODUCTION='b05d0c91f482dfd666e2b70e70c49ebe4ece2175'
 FIRST='013998a27293d28fc54ba17950e190f5ed9f6db5'
@@ -129,7 +130,7 @@ def build(baseline):
     if out.is_symlink():raise ValueError('Symlink output')
     if out.exists():shutil.rmtree(out)
     shutil.copytree(src,out)
-    app=polish.app(adapt_app((src/'app.js').read_text()))
+    app=cleanup.app(polish.app(adapt_app((src/'app.js').read_text())))
     legacy=polish.adapter(production_adapter(baseline),(baseline/'src/app.js').read_text())
     css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()
     (out/'app.js').write_text(app);(out/'production-ui.js').write_text(legacy);(out/'styles.css').write_text(css)

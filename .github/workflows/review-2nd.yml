@@ -48,6 +48,7 @@ jobs:
           REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_browser.py
           REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_mobile_browser.py
           REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_polish_browser.py
+          REVIEW_URL=http://127.0.0.1:4198/review.html /tmp/review-tools/bin/python tests/review_2nd_cleanup_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: review-2nd-site-${{ github.sha }}

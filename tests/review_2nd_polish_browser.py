@@ -14,7 +14,7 @@ URL = os.getenv('REVIEW_URL')
 checks, errors = [], []
 HEAD = '#main :is(.page-heading,.heading-row,.live-page-heading)'
 ROUTES = ['members', 'schedule', 'music', 'live', 'content', 'history',
-          'search', 'saved', 'guide', 'about', 'settings', 'status', 'review']
+          'search', 'saved', 'guide', 'about', 'status', 'review']
 METRICS = '''h=>{const out={};for(const [key,el] of [
  ['container',h],['label',h.querySelector('.eyebrow,.live-onair')],
  ['title',h.querySelector('h1')],['description',h.querySelector('h1+p')]]){

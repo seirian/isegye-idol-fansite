@@ -10,4 +10,11 @@ edits=[(55, 56, "    check('seven primary menus separate LIVE and content',p.loc
 for start,end,replacement in reversed(edits):lines[start:end]=[replacement]
 source=''.join(lines)
 assert hashlib.sha256(source.encode()).hexdigest()=='8535cd4e9ff831fc783661a99b6042a2b6186b0256bb5fd34353c5f61dae016e', 'Second-review suite mismatch'
+# The first-review baseline stays immutable; its settings UI was explicitly
+# discarded in the second-review follow-up. Keep every unrelated regression.
+a=source.index("    go(p,'settings');p.locator('[data-setting=gallery]')")
+b=source.index("    go(p,'review');check('second-review scope",a)
+source=source[:a]+"    go(p,'settings');check('removed settings bookmarks return home',p.evaluate('location.hash==\"#/home\"'));check('settings UI removed',p.locator('[data-setting]').count()==0)\n"+source[b:]
+source=source.replace("    go(p,'settings');p.locator('[data-setting=spoilers]').uncheck();p.locator('[data-setting=density]').select_option('cards')\n",'')
+source=source.replace(",('settings','settings')",'')
 exec(compile(source,str(ROOT/'tests/review_2nd_browser.py'),'exec'),{'__name__':'__main__','__file__':str(ROOT/'tests/review_2nd_browser.py')})
