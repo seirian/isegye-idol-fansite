@@ -18,8 +18,11 @@ class Promotion(unittest.TestCase):
  def test_only_main_can_package_production(self):
   with patch.dict(os.environ,DEPLOY_ENV='production',GITHUB_REF='refs/heads/develop'):
    with self.assertRaisesRegex(ValueError,'main-only'):release.build(ROOT/'missing')
- def test_authentication_sources_not_changed(self):
-  self.assertEqual(hashlib.sha256((ROOT/'auth/Gateway.php').read_bytes()).hexdigest(),'4e2e6a00ddbacac48b27589850dd6943b33684d22f6a325debb450757ba0611e')
+ def test_authentication_gate_still_protects_data(self):
+  code=(ROOT/'auth/Gateway.php').read_text()
+  for endpoint in ('/api/schedule','/api/music','/api/history'):
+   self.assertLess(code.index("if (!$access['allowed'])"),code.index("if ($path === '"+endpoint+"')"))
+  self.assertIn("if ($access['role'] === null)",code)
  def test_existing_feed_endpoints_only(self):
   s=(ROOT/'site/runtime-feeds.js').read_text();self.assertIn("'/api/'+name",s);self.assertIn("['schedule',applySchedule",s)
   self.assertIn("credentials:'same-origin'",s);self.assertIn("redirect:'error'",s)

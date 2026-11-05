@@ -5,6 +5,10 @@ import base64, hashlib, http.client, json, os, secrets, shutil, socket, ssl, sub
 from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'test-results/auth';OUT.mkdir(parents=True,exist_ok=True)
+if os.getenv('MEMBER_LEGAL_REAL')=='1':OUT=ROOT/'test-results/member-legal-auth';OUT.mkdir(parents=True,exist_ok=True)
+import sys
+sys.path.insert(0,str(ROOT/'tests/auth'))
+import legal_checks
 checks=[]
 def check(name,ok):
     checks.append({'name':name,'passed':bool(ok)})
@@ -28,6 +32,7 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
     (app/'src/app.js').write_text('const PROTECTED_DATA_FIXTURE=1;')
     schedule_fixture={'schemaVersion':1,'timezone':'Asia/Seoul','generatedAt':'2026-10-30T00:00:00Z','sources':[],'events':[],'news':[],'forecasts':[]}
     (app/'src/schedule.json').write_text(json.dumps(schedule_fixture))
+    legal_checks.install(ROOT,app)
     signing=base/'signing.pem';cert=base/'cert.pem'
     subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-keyout',str(signing),'-out',str(cert),'-days','1','-nodes','-subj','/CN=localhost'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     from cryptography.hazmat.primitives import serialization
@@ -130,9 +135,9 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             check('anonymous maintenance HTTP status',response.status==503)
             check('anonymous receives construction wording','현재 사이트는 공사중입니다.' in ' '.join(gp.locator('h1').inner_text().split()))
             check('construction background loads',guest.request.get(url+'/auth/background.webp').status==200)
-            check('maintenance omits legal navigation',gp.locator('a[href="/auth/terms"],a[href="/auth/privacy"]').count()==0)
+            check('maintenance offers public disclosures',gp.locator('a[href="/auth/terms"],a[href="/auth/privacy"]').count()==2)
             check('maintenance keeps Google login',gp.locator('a[href="/auth/login"]').count()==1)
-            check('signed-in member maintenance also omits legal links','href="/auth/terms"' not in member.request.get(url+'/').text() and 'href="/auth/privacy"' not in member.request.get(url+'/').text())
+            check('signed-in member gets separate legal links','href="/account/terms"' in member.request.get(url+'/').text() and 'href="/account/privacy"' in member.request.get(url+'/').text())
             check('member is blocked after owner signup',member.request.get(url+'/').status==503)
             check('schedule API blocked for anonymous during maintenance',guest.request.get(url+'/api/schedule').status==503)
             check('schedule API blocked for member during maintenance',member.request.get(url+'/api/schedule').status==503)
@@ -197,10 +202,12 @@ with tempfile.TemporaryDirectory(prefix='isegye-auth-http-') as temp:
             gp.set_viewport_size({'width':390,'height':844});gp.screenshot(path=str(OUT/'maintenance-mobile.png'),full_page=True)
             gp.goto(url+'/auth/login');gp.screenshot(path=str(OUT/'login-fixture.png'),full_page=True)
             check('maintenance page hides private owner email','owner.fixture@gmail.com' not in guest.request.get(url+'/').text())
+            legal_checks.verify(ROOT,OUT,check,guest,member,owner,url,private,app)
             op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()
             check('logout GET cannot end session',owner.request.get(url+'/auth/logout').status==403 and owner.request.get(url+'/auth/status').json()['administrator'])
             r=owner.request.post(url+'/auth/logout',form={'csrf':csrf},headers={'Origin':url},max_redirects=0)
             check('logout POST clears session',r.status==303 and not owner.request.get(url+'/auth/status').json()['authenticated'])
+            check('logged out member document redirects',owner.request.get(url+'/account/terms',max_redirects=0).status==303)
             check('logout never disables maintenance',guest.request.get(url+'/').status==503)
             saved=(private/'accounts.json').read_text()
             raw=saved+'\n'+''.join(x.read_text(errors='ignore') for x in (private/'sessions').glob('*'))

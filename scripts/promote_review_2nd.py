@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import build_review_1st as first
+import compose_member_legal as member_legal
 from review_2nd_polish import between, one
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -109,6 +110,8 @@ def build(baseline):
     data = first.extract((review/'data.js').read_text(),'REVIEW_DATA')
     app = adapt_app((review/'app.js').read_text())
     legacy = adapt_legacy((review/'production-ui.js').read_text(),baseline)
+    app = member_legal.adapt_app(app)
+    legacy = member_legal.adapt_legacy(legacy)
     feeds = runtime(baseline,data)
     if out.is_symlink(): raise ValueError('Symlink output refused')
     if out.exists(): shutil.rmtree(out)
@@ -122,6 +125,7 @@ def build(baseline):
     (out/'src/app.js').write_text(app)
     (out/'src/production-ui.js').write_text(legacy)
     (out/'src/runtime-feeds.js').write_text(feeds)
+    member_legal.member_bundle(app,legacy,out/'src')
     shutil.copyfile(baseline/'src/schedule.json',out/'src/schedule.json')
     html = (review/'index.html').read_text()
     html = html.replace('connect-src https://', "connect-src 'self' https://").replace("form-action 'none'", "form-action 'self' https://github.com")
