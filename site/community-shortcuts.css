@@ -1,0 +1,13 @@
+/* Official community links are separate from the scrollable seven-menu list. */
+.community-menu-row{display:flex;align-items:center;gap:24px}
+.community-menu-row .desktop-nav{flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.community-menu-row .desktop-nav>a{flex-shrink:0}
+.community-shortcuts{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto;margin-left:auto;padding-block:7px}
+.community-shortcuts .community-link{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-sizing:border-box;flex-shrink:0;transition:border-color .15s,background-color .15s}
+.community-shortcuts .community-link img{display:block;width:28px;height:28px;object-fit:contain;flex-shrink:0}
+.community-shortcuts .community-link[data-community="berriz"] img{border-radius:5px}
+.community-shortcuts .community-link:hover{border-color:var(--accent);background:var(--accent-soft)}
+.community-shortcuts .community-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:1100px){.community-menu-row{gap:16px}.community-menu-row .desktop-nav{gap:20px}}
+@media(max-width:640px){.community-menu-row{justify-content:flex-end;gap:0}.community-shortcuts{padding-block:2px 8px}}
+@media(prefers-reduced-motion:reduce){.community-shortcuts .community-link{transition:none}}

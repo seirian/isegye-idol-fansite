@@ -17,7 +17,7 @@ def main():
  servers=[];summary={'status':'failed','commit':os.getenv('GITHUB_SHA'),'suites':{},'productionWrites':False}
  try:
   servers.append(server(ROOT/'review-2nd-dist',4197));servers.append(server(ROOT/'dist',4198))
-  suites=[('accepted-ui','tests/review_2nd_browser.py'),('mobile','tests/review_2nd_mobile_browser.py'),('heading-footer','tests/review_2nd_polish_browser.py'),('cleanup','tests/review_2nd_cleanup_browser.py'),('production-runtime','tests/promoted_review_browser.py'),('member-legal-ui','tests/member_legal_browser.py'),('member-legal-auth','tests/auth/browser.py')]
+  suites=[('accepted-ui','tests/review_2nd_browser.py'),('mobile','tests/review_2nd_mobile_browser.py'),('heading-footer','tests/review_2nd_polish_browser.py'),('cleanup','tests/review_2nd_cleanup_browser.py'),('production-runtime','tests/promoted_review_browser.py'),('community-shortcuts','tests/community_shortcuts_browser.py'),('member-legal-ui','tests/member_legal_browser.py'),('member-legal-auth','tests/auth/browser.py')]
   for name,script in suites:
    env=dict(os.environ,REVIEW_URL='http://127.0.0.1:4197/review.html',PROMOTED_URL='http://127.0.0.1:4198/')
    if name=='member-legal-auth':env['MEMBER_LEGAL_REAL']='1'
