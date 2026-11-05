@@ -123,10 +123,12 @@ def adapt_app(text):
     if any(x in text for x in ('OUR TIMELINE','기록과 기록 사이의 이야기','LIVE·방송')):raise ValueError('Discarded first-review text remains')
     return text
 
-def build(baseline):
+def build(baseline, snapshot_path=None, output_path=None):
     if os.getenv('GITHUB_REF') not in (None,'refs/heads/feature/review-2nd') or os.getenv('DEPLOY_ENV')=='production':raise ValueError('Second review branch only')
-    first.build(baseline)
-    src=ROOT/'review-1st-dist';out=ROOT/'review-2nd-dist'
+    out=Path(output_path) if output_path else ROOT/'review-2nd-dist'
+    if out.parent.resolve()!=ROOT or (output_path and not out.name.startswith('release-')):raise ValueError('Invalid release intermediate output')
+    src=ROOT/(out.name+'-source') if output_path else ROOT/'review-1st-dist'
+    first.build(baseline, snapshot_path=snapshot_path, output_path=src if output_path else None)
     if out.is_symlink():raise ValueError('Symlink output')
     if out.exists():shutil.rmtree(out)
     shutil.copytree(src,out)
@@ -157,4 +159,4 @@ def build(baseline):
     return meta
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--baseline',required=True);args=parser.parse_args();build(Path(args.baseline).resolve())
+    parser=argparse.ArgumentParser();parser.add_argument('--baseline',required=True);parser.add_argument('--snapshot');parser.add_argument('--output');args=parser.parse_args();build(Path(args.baseline).resolve(), snapshot_path=args.snapshot, output_path=args.output)

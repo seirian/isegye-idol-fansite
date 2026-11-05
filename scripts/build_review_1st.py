@@ -23,7 +23,7 @@ def day(s):
     return datetime.fromisoformat(s.replace('Z','+00:00')).astimezone(KST).date().isoformat()
 def script_json(obj):return json.dumps(obj,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('\u2028','\\u2028').replace('\u2029','\\u2029')
 
-def build(baseline):
+def build(baseline, snapshot_path=None, output_path=None):
     if os.getenv('DEPLOY_ENV')=='production' or os.getenv('GITHUB_REF') in ('refs/heads/main','refs/heads/develop'):
         raise RuntimeError('First review is feature-branch/local only; production is untouched')
     if not (baseline/'build-info.json').is_file():raise ValueError('Build approved baseline with npm run build first')
@@ -31,7 +31,7 @@ def build(baseline):
     if meta.get('mode')!='preview':raise ValueError('Input must be a noindex review bundle')
     text=(baseline/'src/app.js').read_text()
     catalog=extract(text,'CATALOG'); history=extract(text,'HISTORY');archive=extract(text,'NOTICE_ARCHIVE');gallery=extract(text,'HOME_GROUP_GALLERY')
-    snapshot=json.loads((ROOT/'review-1st/fixtures/schedule-observed.json').read_text())
+    snapshot=json.loads((Path(snapshot_path) if snapshot_path else ROOT/'review-1st/fixtures/schedule-observed.json').read_text())
     sys.path.insert(0,str(ROOT/'scripts'))
     import schedule_feed,notice_policy
     schedule_feed.validate(snapshot)
@@ -84,7 +84,8 @@ def build(baseline):
     series=[{'id':'festival-2025','title':'2025 이세계페스티벌','subtitle':'공식 무대 영상 모아보기','description':'왁타버스에서 공개한 STARGAZERS·MEMORY·ELEVATE 무대 영상으로 이어집니다. 공연과 영상의 공개 날짜는 구분합니다.','videoIds':[i for i in ['MCyL9k_Tiok','nsVbRO_k9b8','7V7ZsMt6r-w'] if i in videos],'members':allids,'basis':'reviewed_official_performance','status':'공식 원본 연결'},
       {'id':'music-beginning','title':'처음 만나는 이세돌의 음악','subtitle':'입문 경로 · 운영자 선정','description':'데뷔곡과 단체 발매곡으로 만나는 짧은 감상 경로입니다. 인기순이나 공식 추천 목록이 아닙니다.','songIds':[r['id'] for r in songs if r['id'] in ['rewind','kidding','smile-for-you','smile','be-my-light']][:5],'members':allids,'basis':'editorial','status':'선정 기준 공개'}]
     data={'schemaVersion':1,'baseCommit':BASE,'builtAt':datetime.now(timezone.utc).isoformat(),'snapshotAt':snapshot['generatedAt'],'members':catalog['members'],'channels':list(channels.values()),'songs':songs,'albums':list(albums.values()),'videos':list(videos.values()),'notices':list(notices.values()),'events':events,'history':histories,'series':series,'sources':snapshot['sources'],'forecasts':snapshot['forecasts'],'scope':{'archiveFrom':archive['start'],'archiveThrough':archive['end'],'historicalComplete':False,'videoCheckedAt':catalog['videos']['checkedAt'],'musicCheckedAt':catalog['music']['checkedAt'],'historyCheckedAt':history['checkedAt'],'collectionHealth':snapshot.get('collectionHealth')},'gallery':[{**g,'src':g['src'].removeprefix('./')} for g in gallery],'assets':{'portraits':{i:'assets/portraits/'+i+'.webp' for i in allids},'soop':{i:'assets/soop-profiles/'+i+'.webp' for i in allids}}}
-    out=ROOT/'review-1st-dist'
+    out=Path(output_path) if output_path else ROOT/'review-1st-dist'
+    if out.parent.resolve()!=ROOT or (output_path and not out.name.startswith('release-')):raise ValueError('Invalid release intermediate output')
     if out.is_symlink():raise ValueError('Symlink output refused')
     if out.exists():shutil.rmtree(out)
     out.mkdir()
