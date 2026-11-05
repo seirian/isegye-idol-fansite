@@ -1,9 +1,10 @@
-"""Read owner-selected public Berriz menus without login, bodies or fan posts."""
+"""Read owner-selected public Berriz menus and bounded facts without login."""
 from datetime import datetime, timedelta, timezone, date
 from urllib.parse import urlsplit, parse_qs
 from urllib.robotparser import RobotFileParser
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 import re
+from notice_highlights import highlights
 KST=timezone(timedelta(hours=9))
 NOTICE='https://berriz.in/ko/isegyeidol/notice/'
 CALENDAR='https://berriz.in/ko/isegyeidol/calendar/'
@@ -91,11 +92,12 @@ def robots_ok(read=None):
     return raw.decode('utf-8')
  rules=read('https://berriz.in/robots.txt');p=RobotFileParser();p.parse(rules.splitlines())
  if not all(p.can_fetch(AGENT,u) for u in (NOTICE,CALENDAR)):raise BerrizError('robots_disallowed')
+ return p
 
 def read_public(now):
  """One anonymous session. No direct service API calls or account credentials."""
  from playwright.sync_api import sync_playwright
- robots_ok();result={};today=aware(now).strftime('%Y-%m');target_months=[month_shift(today,i) for i in (-1,0,1,2)]
+ rules=robots_ok();result={};today=aware(now).strftime('%Y-%m');target_months=[month_shift(today,i) for i in (-1,0,1,2)]
  with sync_playwright() as p:
   browser=p.chromium.launch();context=browser.new_context(locale='ko-KR',timezone_id='Asia/Seoul',user_agent=AGENT,viewport={'width':1440,'height':1000})
   def route(r):
@@ -125,7 +127,24 @@ def read_public(now):
      if stable>=2:break
      previous=count;page.evaluate('window.scrollTo(0,document.body.scrollHeight)');page.wait_for_timeout(900)
     if not news:raise BerrizError('no_public_notices')
-    result['berriz-notice']={'news':list(news.values()),'events':[],'coverage':{'mode':'public_list','count':len(news),'complete':False},'detail':'공개 공식 공지 목록 확인 · 본문·팬 글 수집 안 함'}
+    # Individual public articles are inspected anonymously, never bypassing
+    # robots, login, paywalls or account-specific restrictions.
+    detail_found=0
+    for row in list(news.values())[:24]:
+     try:
+      if not canonical(row['sourceUrl'],'berriz-notice') or not rules.can_fetch(AGENT,row['sourceUrl']):continue
+      visit(row['sourceUrl'])
+      body=page.locator('body').inner_text(timeout=7000)
+      if re.sub(r'\W+','',row['title'])[:18] not in re.sub(r'\W+','',body):continue
+      main=page.locator('main')
+      document=main.inner_text(timeout=3000) if main.count()==1 else body
+      lines=highlights(document,row['title'])
+      if lines:
+       row['contentHighlights']=lines
+       row['contentCheckedAt']=now
+       detail_found+=1
+     except Exception:pass # Restricted or changed detail page: link only.
+    result['berriz-notice']={'news':list(news.values()),'events':[],'coverage':{'mode':'public_list','count':len(news),'complete':False},'detail':'공개 공식 공지 목록 및 확인 가능한 상세 요점 '+str(detail_found)+'건 · 전문·팬 글 저장 안 함'}
    except Exception as e:result['berriz-notice']={'error':str(e) if isinstance(e,BerrizError) else 'public_browser_unavailable'}
    payloads={}
    def response(r):

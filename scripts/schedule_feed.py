@@ -16,6 +16,7 @@ from urllib.robotparser import RobotFileParser
 import hashlib, json, os, re, time, xml.etree.ElementTree as ET
 import notice_policy
 import berriz_feed
+from notice_highlights import highlights
 
 ROOT=Path(__file__).resolve().parents[1]
 KST=timezone(timedelta(hours=9))
@@ -198,6 +199,12 @@ def validate(doc):
     if r.get('time') and not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d',r['time']):raise FeedError('invalid_time')
    if r['sourceId'].startswith('berriz-') and not notice_policy.is_publishable(r):raise FeedError('invalid_berriz_source')
    if set(r)&{'body','html','email','memberKey','userId','cookie','token','comments'}:raise FeedError('unnecessary_data')
+   if 'contentHighlights' in r:
+    lines=r['contentHighlights']
+    if (r['sourceId'] not in ('berriz-notice','parable-web') or not isinstance(lines,list)
+      or not 1<=len(lines)<=6 or any(not isinstance(v,str) or not 8<=len(v)<=170 or '<' in v or '>' in v for v in lines)
+      or not iso(r.get('contentCheckedAt')) or iso(r['contentCheckedAt'])>iso(doc['generatedAt'])):
+     raise FeedError('invalid_content_highlights')
  return doc
 
 def merge(previous,current):
@@ -221,7 +228,12 @@ def merge(previous,current):
     byid={i:r for i,r in byid.items() if r['sourceUrl'] not in fresh_urls}
    for r in current[key]:
     old=byid.get(r['id'])
-    if old is None or iso(r['checkedAt'])>=iso(old['checkedAt']):byid[r['id']]=r
+    if old is None or iso(r['checkedAt'])>=iso(old['checkedAt']):
+     # A transient detail read failure must not discard verified facts.
+     # However a changed title or URL invalidates the old facts.
+     if old and old.get('title')==r.get('title') and old.get('sourceUrl')==r.get('sourceUrl') and not r.get('contentHighlights') and old.get('contentHighlights'):
+      r={**r,'contentHighlights':old['contentHighlights'],'contentCheckedAt':old['contentCheckedAt']}
+     byid[r['id']]=r
    if key=='forecasts':
     detailed={r['sourceUrl'] for r in byid.values() if r.get('sourceId')=='fan-roundup' and len(r.get('members',[]))==1}
     byid={i:r for i,r in byid.items() if not (r.get('sourceId')=='fan-roundup' and len(r.get('members',[]))>1 and r['sourceUrl'] in detailed)}
@@ -261,12 +273,14 @@ def parable(fetch,now):
    if not u or u in seen or not members_in(title) or '/category/' in u or '/tag/' in u:continue
    seen.add(u)
    detail=HTML(read(u).decode('utf-8',errors='replace'))
-   articles.append((title,u,detail.published,''))
+   articles.append((title,u,detail.published,detail.plain))
    if len(articles)>=8:break
  if not articles:raise FeedError('no_matching_items')
  news=[];events=[]
  for title,url,published,body in articles:
   n=public_item('parable-web',url,title,published,now,detail='패러블 공식 발표')
+  facts=highlights(body,title)
+  if facts:n.update(contentHighlights=facts,contentCheckedAt=now)
   news.append(n)
   event=event_from_title(title,published,True)
   # Body dates: only lines naming an event with explicit year and a single date.

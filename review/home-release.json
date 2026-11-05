@@ -27,7 +27,7 @@
     "scripts/notice_policy.py": "c352280618d31d35acf32071c3b221e6bb28706b7694e3b8fbc330200d1ca1ed",
     "schedule/approved-notices.json": "ca384f767a55e0dbc72c9972904bfe0f34a8ecb6dda6b69f1b1fab845ceaeb03",
     "schedule/notice-history-coverage.json": "24d6ffb398716129f79f0cf45a7c805cbc6fcf406bd098b4068c21a8b512f700",
-    "scripts/berriz_feed.py": "7fc7ae5c83a3500eb8be99e58cb28d10e6f62a1cc4dec3bf33454cb00568e001",
+    "scripts/berriz_feed.py": "533ce16c6821578bfb2eaf84e96a4789637fba1b480e403c9912914c2c6722f9",
     "scripts/compose_footer_navigation.py": "3b65ec324abf12668d14fdbadb38416196ee9f48a2d9d73cf0eb9b89c21084dc",
     "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5",
     "scripts/compose_legal_documents.py": "879a6f1c4b80864647e3e69733102a9f96102f1b4b5134feeedd569f75b42815",
@@ -42,7 +42,7 @@
     "scripts/cafe_runtime.py": "235575a97c108375d52af52d1698a371710e6db4ec811313c177991ae7f817c5",
     "scripts/refresh_reviewed_cafe.py": "f56247089a764667aac030b8f2bfbab02139fab0666dee45c551adf14f84bf67",
     "scripts/schedule_health.py": "4421d8fd9f39d3a960e963ad8318d9694596a9e129e0dd32ab701b2dc07a03f9",
-    "scripts/schedule_feed.py": "d84fac4f02f41ed742b919af880ea95965c052d03581eb9e19163729a662a1d6",
+    "scripts/schedule_feed.py": "2b75be5d0bb0871d37a2ffcb1726be545357cdf331d53f0e29b56b884e487c35",
     "scripts/publish_schedule_feed.py": "39ca0061bae46ca171f80fa68d9c21c0f97e9473da54dff1a3a34de8222260c0"
   },
   "rightsPermissionVerified": false,
@@ -111,6 +111,10 @@
     {
       "requestedAt": "2026-11-05",
       "scope": "Clarification: public and construction-page legal notices must be standalone, without application menus, fan guide or site introduction. Maintenance visitors use public notices regardless of session; authorized site legal pages retain shared navigation and theme. Canonical legal bodies, accounts, existing access limits, archived reviews and backup branches remain unchanged."
+    },
+    {
+      "requestedAt": "2026-11-05",
+      "scope": "Verified excerpt/factual highlights for publicly readable external official notices. Preserve restricted Cafe no-crawl, canonical origin links, original sources, and unchanged archived review visual sources. Public text limited to validated facts, not full mirroring."
     }
   ]
 }
