@@ -85,7 +85,7 @@ try:
             check('legal canonical alias '+alias,r.status==308 and r.headers.get('location')==target)
         page.goto(URL+'/',wait_until='networkidle')
         if legal_before['maintenance']:
-            check('maintenance omits terms and privacy links',page.locator('a[href="/auth/terms"],a[href="/auth/privacy"],a[href="https://isegye-idol.kr/auth/terms"],a[href="https://isegye-idol.kr/auth/privacy"]').count()==0)
+            check('maintenance offers public terms and privacy links',page.locator('a[href="/auth/terms"],a[href="/auth/privacy"],a[href="https://isegye-idol.kr/auth/terms"],a[href="https://isegye-idol.kr/auth/privacy"]').count()==2)
             check('maintenance retains login entry',page.locator('a[href="/auth/login"]').count()==1)
             page.set_viewport_size({'width':1440,'height':1000});page.screenshot(path=str(OUT/'maintenance-clean-desktop.png'),full_page=True)
             page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(OUT/'maintenance-clean-mobile.png'),full_page=True)

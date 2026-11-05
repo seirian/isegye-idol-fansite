@@ -111,6 +111,18 @@ final class Gateway
             else self::respond(200, View::login($this->config['clientId'], Session::issueNonce(), Session::csrf()));
             return;
         }
+        // Only these read-only document routes are available to authenticated
+        // members during maintenance. All application/API checks remain below.
+        if (in_array($path, ['/account/terms','/account/privacy','/account/legal.css','/account/legal.js'], true)) {
+            if ($access['role'] === null) {
+                if ($path === '/account/terms' || $path === '/account/privacy') {
+                    header('Location: /auth/' . basename($path), true, 303);
+                } else { self::respond(401, 'Authentication required', 'text/plain'); }
+                return;
+            }
+            require_once $this->runtime.'/MemberLegal.php';
+            MemberLegal::serve($this->release(), $this->runtime, $path); return;
+        }
         if (!$access['allowed']) {
             header('Retry-After: 3600'); header('X-Robots-Tag: noindex, nofollow');
             header("Content-Security-Policy: default-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");

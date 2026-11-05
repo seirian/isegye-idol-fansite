@@ -5,19 +5,21 @@ R=Path(__file__).resolve().parents[1]
 class PresentationTests(unittest.TestCase):
     def render(self, call):
         return subprocess.check_output(['php','-r', "require 'auth/View.php'; echo Isegye\\Access\\View::"+call+';'],cwd=R).decode()
-    def test_maintenance_has_no_policy_links(self):
+    def test_maintenance_policies_follow_login_state(self):
         for arg in ('true','false'):
             html=self.render('maintenance('+arg+')')
-            self.assertNotIn('href="/auth/terms"',html)
-            self.assertNotIn('href="/auth/privacy"',html)
+            base='/account/' if arg=='true' else '/auth/'
+            self.assertIn('href="'+base+'terms"',html)
+            self.assertIn('href="'+base+'privacy"',html)
             self.assertIn('href="/auth/login"',html)
             self.assertIn('access-backdrop',html)
             self.assertIn('현재 사이트는 <br>공사중입니다.',html)
     def test_login_and_account_disclosures_remain(self):
         for call in ("login('client','nonce','csrf')", "account('admin','csrf')", "account('member','csrf')"):
             html=self.render(call)
-            self.assertIn('href="/auth/terms"',html)
-            self.assertIn('href="/auth/privacy"',html)
+            base='/auth/' if call.startswith('login') else '/account/'
+            self.assertIn('href="'+base+'terms"',html)
+            self.assertIn('href="'+base+'privacy"',html)
     def test_policy_navigation_and_generic_operator(self):
         for kind in ('terms','privacy'):
             html=self.render(kind+'()')

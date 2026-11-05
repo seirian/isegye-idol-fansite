@@ -41,5 +41,5 @@ class LegalShell(unittest.TestCase):
  def test_maintenance_render_is_unchanged(self):
   html=subprocess.check_output(['php','-r',"require 'auth/View.php'; echo Isegye\\Access\\View::maintenance();"],cwd=R).decode()
   self.assertIn('access-backdrop',html);self.assertNotIn('legal-tabs',html)
-  self.assertNotIn('legal-public',html);self.assertNotIn('/auth/privacy',html)
+  self.assertNotIn('legal-public',html);self.assertIn('/auth/privacy',html);self.assertIn('/auth/terms',html)
 if __name__=='__main__':unittest.main()

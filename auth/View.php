@@ -4,9 +4,10 @@ namespace Isegye\Access;
 final class View
 {
     public static function e(string $text): string { return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-    public static function page(string $title, string $content, string $extra = '', string $layout = '', bool $legalLinks = true): string
+    public static function page(string $title, string $content, string $extra = '', string $layout = '', bool $legalLinks = true, string $legalBase = '/auth/'): string
     {
-        $footer = '비공식 팬사이트' . ($legalLinks ? ' · <a href="/auth/terms">이용약관</a> · <a href="/auth/privacy"><strong>개인정보처리방침</strong></a>' : '');
+        if (!in_array($legalBase, ['/auth/', '/account/'], true)) throw new \RuntimeException('Invalid legal base');
+        $footer = '비공식 팬사이트' . ($legalLinks ? ' · <a href="' . $legalBase . 'terms">이용약관</a> · <a href="' . $legalBase . 'privacy"><strong>개인정보처리방침</strong></a>' : '');
         return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="strict-origin-when-cross-origin">'
             . '<title>' . self::e($title) . ' · ISEGYE!</title><link rel="stylesheet" href="/auth/style.css">' . $extra
@@ -20,7 +21,7 @@ final class View
             . '<p class="access-kicker">조금 더 좋은 모습으로 만나요</p><h1>현재 사이트는 <br>공사중입니다.</h1>'
             . '<p class="access-description">이세계아이돌의 소식을 더 편하게 만날 수 있도록<br class="wide-only"> 사이트를 준비하고 있어요.</p>'
             . '<div class="access-divider" aria-hidden="true"><span></span>✦<span></span></div>'
-            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', false);
+            . '<a class="access-small-link" href="/auth/login">' . ($signedIn ? '로그인 상태 · 계정 관리' : 'Google 로그인') . '</a></section>', '', '', true, $signedIn ? '/account/' : '/auth/');
     }
     public static function login(string $clientId, string $nonce, string $csrf): string
     {
@@ -39,7 +40,7 @@ final class View
         return self::page('로그인 상태', '<section class="access-card"><p class="access-kicker">로그인되었습니다</p><h1>'
             . ($role === 'admin' ? '관리자 계정' : '일반회원 계정') . '</h1><p class="access-description">Google 로그인으로 인증된 계정입니다.</p>'
             . '<a class="access-button" href="/">사이트로 돌아가기</a><form method="post" action="/auth/logout">'
-            . '<input type="hidden" name="csrf" value="' . self::e($csrf) . '"><button class="access-secondary" type="submit">로그아웃</button></form></section>');
+            . '<input type="hidden" name="csrf" value="' . self::e($csrf) . '"><button class="access-secondary" type="submit">로그아웃</button></form></section>', '', '', true, '/account/');
     }
     public static function document(string $kind): string
     {
