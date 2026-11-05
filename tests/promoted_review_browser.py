@@ -79,10 +79,24 @@ try:
   # Validated test data tests new records absent from the compiled catalog.
   now=datetime.now(timezone.utc);gen=(now-timedelta(seconds=1)).isoformat();pub=(now-timedelta(hours=1)).isoformat()
   feed=json.loads((ROOT/'dist/src/schedule.json').read_text());feed['generatedAt']=gen
+  # Vetted official public content is visible on the on-site detail route.
+  sample={'id':'berriz-notice-999999','sourceId':'berriz-notice',
+    'sourceUrl':'https://berriz.in/ko/isegyeidol/notice/999999/',
+    'title':'[검사] 공식 영상통화 안내 예시','members':['lilpa'],
+    'publishedAt':pub,'checkedAt':gen,'contentCheckedAt':gen,
+    'contentHighlights':['행사 일시: 2026년 11월 15일 15:00 KST',
+      '응모 기간: 2026년 11월 4일~6일','판매처: 공식 행사 판매처']}
+  feed['news'].append(sample)
   row={'articleId':99990001,'menuId':345,'author':'lilpa','members':['lilpa'],'title':'[릴파] 런타임 검증용 공지','publishedAt':pub,'verifiedRole':'staff','public':True,'titleGeneralized':False,'checkedAt':gen}
   feed.setdefault('cafeEvidence',{'schemaVersion':1,'notices':[],'fanSeries':[]})['notices'].append(row)
   feed['news'].append({'id':'cafe-test-99990001','sourceId':'cafe-members','sourceUrl':'https://cafe.naver.com/steamindiegame/99990001','title':row['title'],'members':['lilpa'],'publishedAt':pub,'checkedAt':gen,'detail':'합성 회귀검사 자료'})
   p.evaluate('(f)=>ProductionFeeds.applySchedule(f)',feed)
+  go('notice/berriz-notice-999999')
+  check('official notice facts visible on site',p.locator('.archive-notice-facts li').count()==3)
+  check('official notice source check visible','내용 확인' in p.locator('#main').inner_text())
+  check('official notice original URL preserved',p.locator('a[href="https://berriz.in/ko/isegyeidol/notice/999999/"]').count()>0)
+  go('notice/99990001')
+  check('unfetched Cafe body not invented',p.locator('.archive-notice-facts li').count()==0)
   check('new approved cafe URL accepted',p.evaluate('notices.has("99990001")'))
   go('search?q=런타임+검증용');check('new cafe appears in global search','런타임 검증용 공지' in p.locator('#main').inner_text())
   go('notice/99990001');p.locator('[data-save="notice:99990001"]').click();go('saved');check('new cafe can be saved',p.locator('[data-item-key="notice:99990001"]').count()==1)
