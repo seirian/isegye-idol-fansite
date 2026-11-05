@@ -116,6 +116,9 @@ def build(baseline):
     shutil.copytree(review/'assets',out/'assets')
     for name in ('data.js','core.js','live-core.js','styles.css'):
         shutil.copyfile(review/name,out/'src'/name)
+    # The original floating account control must clear the newly approved mobile nav.
+    css=(out/'src/styles.css').read_text()+'\n@media(max-width:640px){body .isegye-account-link{bottom:calc(82px + env(safe-area-inset-bottom));}}\n'
+    (out/'src/styles.css').write_text(css)
     (out/'src/app.js').write_text(app)
     (out/'src/production-ui.js').write_text(legacy)
     (out/'src/runtime-feeds.js').write_text(feeds)

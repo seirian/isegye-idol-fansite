@@ -24,7 +24,7 @@ def offline():
  parts=[]
  for rel in re.findall(r'<script src="([^"]+)"></script>',html):
   parts.append(data if rel=='src/data.js' else (dist/rel).read_text())
- code='\n'.join(parts);css=(dist/'src/styles.css').read_text()
+ code='\n'.join(parts);css=(dist/'src/styles.css').read_text()+'\n'+(ROOT/'auth/account.css').read_text()
  sha=lambda s:base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()
  html=re.sub(r'<script src="[^"]+"></script>','',html).replace('<link rel="stylesheet" href="src/styles.css">','<style>'+css+'</style>')
  html=re.sub(r'<link rel="icon"[^>]+>','',html)
@@ -42,6 +42,11 @@ try:
   else:
    p.evaluate("""()=>{const data=new Map([['isegye:theme:v1','light'],['isegye:bookmarks:v1','[\"ine\",\"rewind\"]']]);Object.defineProperty(window,'localStorage',{value:{getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)},configurable:true})}""")
    p.set_content(offline(),wait_until='load')
+  # Only the visual account control is simulated here; authentication has its own TLS suite.
+  if URL:
+   p.route('**/auth/account.css',lambda r:r.fulfill(content_type='text/css',body=(ROOT/'auth/account.css').read_text()))
+   p.evaluate('()=>{const s=document.createElement("link");s.rel="stylesheet";s.href="/auth/account.css";document.head.append(s)}')
+  p.evaluate('()=>{const a=document.createElement("a");a.className="isegye-account-link";a.href="/auth/login";a.textContent="관리자 · 계정";document.body.append(a)}')
   def go(route):
    p.evaluate('(r)=>{location.hash="#/"+r;render()}',route);p.wait_for_timeout(35)
   go('home')
@@ -54,6 +59,10 @@ try:
   for theme in ('dark','light'):
    for width in (320,390,768,1440):
     p.set_viewport_size({'width':width,'height':1000});p.evaluate('(t)=>{prefs.theme=t}',theme)
+    go('home');p.evaluate('scrollTo(0,0)')
+    if width<=640:
+     a=p.locator('.isegye-account-link').bounding_box();n=p.locator('.mobile-nav').bounding_box()
+     check(f'{theme}/{width} account control clears mobile nav',a['y']+a['height']<=n['y'])
     for route,title in [('home','오늘의 이세돌'),('members','멤버 소개'),('live','지금, 우리와 함께 LIVE'),('content','콘텐츠'),('music','한 곡에서 시작되는 이야기'),('history','차곡차곡, 우리의 발자취.'),('schedule?month=2026-11&view=calendar','소식·일정'),('guide','좋아하는 마음이 오래 가도록')]:
      go(route);check(f'{theme}/{width}/{route} title',p.locator('h1').first.inner_text()==title)
      check(f'{theme}/{width}/{route} no overflow',p.evaluate('document.documentElement.scrollWidth<=innerWidth'))
