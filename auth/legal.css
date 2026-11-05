@@ -25,3 +25,15 @@
 
 /* Keep space between the header and the first tab row without a banner. */
 .legal-in-site{padding-block-start:clamp(14px,2vw,24px)}
+
+/* Maintenance/public disclosures are independent of the application shell. */
+.legal-standalone .legal-public-layout{max-width:1008px;padding-top:28px}
+.legal-standalone-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:0 0 24px}
+.legal-standalone-header p{margin:0;font-size:20px;font-weight:750;letter-spacing:-.02em}
+.legal-standalone-header p span{font-size:15px;font-weight:400;color:var(--muted);margin-left:10px;letter-spacing:normal}
+.legal-standalone-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--line);margin-top:32px;padding:24px 0;color:var(--muted);font-size:14px}
+.legal-standalone-footer nav{display:flex;gap:16px;flex-wrap:wrap}
+.legal-standalone-footer a{display:inline-flex;align-items:center;min-height:44px;text-underline-offset:4px}
+.legal-standalone .legal-body h2,.legal-standalone .legal-shell#document-top{scroll-margin-top:24px}
+@media(max-width:680px){.legal-standalone .legal-public-layout{padding-top:20px}.legal-standalone-header{gap:12px;padding-bottom:20px}}
+@media print{.legal-standalone-header,.legal-standalone-footer{display:none!important}}

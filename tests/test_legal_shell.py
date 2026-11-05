@@ -28,7 +28,9 @@ class LegalShell(unittest.TestCase):
   for kind in ('terms','privacy'):
    html=subprocess.check_output(['php','-r',"require 'auth/View.php'; echo Isegye\\Access\\View::"+kind+'();'],cwd=R).decode()
    self.assertIn((R/'auth'/f'{kind}.html').read_text(),html)
-   self.assertIn('legal-site-header',html);self.assertNotIn('<script',html)
+   self.assertIn('legal-standalone-header',html);self.assertNotIn('<script',html)
+   for removed in ('legal-site-header','legal-site-nav','/#/guide','/#/about','팬가이드','사이트소개'):
+    self.assertNotIn(removed,html)
    self.assertIn('value="dark"',html);self.assertIn('value="light"',html)
    self.assertNotIn('access-backdrop',html)
    # The unchanged privacy body intentionally explains account management.

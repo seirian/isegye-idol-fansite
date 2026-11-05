@@ -11,7 +11,7 @@ class MemberLegal(unittest.TestCase):
   with self.assertRaises(ValueError):legal.adapt_app('unrecognized renderer')
  def test_login_required_before_member_pages(self):
   s=(ROOT/'auth/Gateway.php').read_text();start=s.index("if (in_array($path, ['/account/terms'")
-  block=s[start:s.index("if (!$access['allowed'])",start)]
+  block=s[start:s.index("MemberLegal::serve",start)+len("MemberLegal::serve")]
   self.assertIn("if ($access['role'] === null)",block);self.assertLess(block.index("if ($access['role'] === null)"),block.index('MemberLegal::serve'))
   for route in ('/api/schedule','/api/music','/api/history'):
    self.assertLess(s.index("if (!$access['allowed'])"),s.index("if ($path === '"+route+"')"))
@@ -28,7 +28,7 @@ class MemberLegal(unittest.TestCase):
   for part in ('fetch(', 'XMLHttpRequest','REVIEW_DATA','ProductionFeeds','document.cookie','removeItem'):self.assertNotIn(part,s)
   self.assertIn('isegye:archive:prefs:v1',s);self.assertIn('p.theme=theme',s)
  def test_precise_public_and_account_links(self):
-  s=(ROOT/'auth/View.php').read_text();self.assertIn("$signedIn ? '/account/' : '/auth/'",s)
+  s=(ROOT/'auth/View.php').read_text();self.assertNotIn("$signedIn ? '/account/' : '/auth/'",s);self.assertIn("true, '/auth/'",s)
   self.assertIn("true, '/account/'",s)
  def test_archived_review_sources_unmodified(self):
   import promote_review_2nd

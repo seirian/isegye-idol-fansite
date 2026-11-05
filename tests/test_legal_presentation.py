@@ -5,10 +5,10 @@ R=Path(__file__).resolve().parents[1]
 class PresentationTests(unittest.TestCase):
     def render(self, call):
         return subprocess.check_output(['php','-r', "require 'auth/View.php'; echo Isegye\\Access\\View::"+call+';'],cwd=R).decode()
-    def test_maintenance_policies_follow_login_state(self):
+    def test_maintenance_policies_are_always_standalone(self):
         for arg in ('true','false'):
             html=self.render('maintenance('+arg+')')
-            base='/account/' if arg=='true' else '/auth/'
+            base='/auth/'
             self.assertIn('href="'+base+'terms"',html)
             self.assertIn('href="'+base+'privacy"',html)
             self.assertIn('href="/auth/login"',html)

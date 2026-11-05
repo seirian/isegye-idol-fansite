@@ -32,8 +32,8 @@
     "home-review/footer.css": "569c94f6d1cc2e74c99ab38c0fc196439541aacc2bd6a352c25594742a5b05a5",
     "scripts/compose_legal_documents.py": "879a6f1c4b80864647e3e69733102a9f96102f1b4b5134feeedd569f75b42815",
     "legal/ui.js": "40fec28b64b7212837bdca80e8dad6076b8bfae66af5b778c5fe014617dc57d8",
-    "auth/legal.css": "582537f07feae3a101edf434f62a1a57b3e1e56c1b35a025a27dc379d11c0712",
-    "auth/View.php": "2dec81d9cb72ae9558316347fab2229cebfcefa7ae6c49d3e9953ee8d77d92dd",
+    "auth/legal.css": "b244a99a3e6097f0dc862d7671ce5a5708977a778042c55baa7f4a1c3705c436",
+    "auth/View.php": "1b577bc93eb9ee72058fb15b36c94b9e075ee9a6f300fd4a1573f8b4a6ac750f",
     "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c",
     "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
@@ -107,6 +107,10 @@
     {
       "requestedAt": "2026-11-05",
       "scope": "Separate public legal disclosure from authenticated shared-shell terms/privacy. Retain canonical text and all content access gates; maintenance/footer links follow login state. Only the approved auth/View.php presentation hash is updated."
+    },
+    {
+      "requestedAt": "2026-11-05",
+      "scope": "Clarification: public and construction-page legal notices must be standalone, without application menus, fan guide or site introduction. Maintenance visitors use public notices regardless of session; authorized site legal pages retain shared navigation and theme. Canonical legal bodies, accounts, existing access limits, archived reviews and backup branches remain unchanged."
     }
   ]
 }
