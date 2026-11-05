@@ -112,6 +112,10 @@ def build(baseline):
     app = adapt_app((review/'app.js').read_text())
     legacy = adapt_legacy((review/'production-ui.js').read_text(),baseline)
     app = community.adapt_app(member_legal.adapt_app(app))
+    app = (ROOT/'site/notice-details.js').read_text() + '\n' + app
+    detail_anchor='<p class="detail-copy">${esc(r.summary)}</p><div class="notice-box"><strong>이 날짜는 공지가 게시된 날짜입니다.</strong>'
+    if app.count(detail_anchor)!=1:raise ValueError('Notice detail slot moved')
+    app=app.replace(detail_anchor,'<p class="detail-copy">${esc(r.summary)}</p>${archiveNoticeHighlights(r)}<div class="notice-box"><strong>이 날짜는 공지가 게시된 날짜입니다.</strong>',1)
     legacy = member_legal.adapt_legacy(legacy)
     feeds = runtime(baseline,data)
     if out.is_symlink(): raise ValueError('Symlink output refused')
@@ -122,7 +126,7 @@ def build(baseline):
         shutil.copyfile(review/name,out/'src'/name)
     # The original floating account control must clear the newly approved mobile nav.
     css=(out/'src/styles.css').read_text()+'\n@media(max-width:640px){body .isegye-account-link{bottom:calc(82px + env(safe-area-inset-bottom));}}\n'
-    css += '\n' + community.css()
+    css += '\n' + community.css() + '\n.notice-facts{padding-left:22px;line-height:1.8}.notice-facts li{padding:5px 0;overflow-wrap:anywhere}\n'
     (out/'src/styles.css').write_text(css)
     (out/'src/app.js').write_text(app)
     (out/'src/production-ui.js').write_text(legacy)
