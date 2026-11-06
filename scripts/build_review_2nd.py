@@ -139,6 +139,17 @@ def build(baseline, snapshot_path=None, output_path=None):
     meta=json.loads((out/'build-info.json').read_text());meta.update(review='review-2nd',branch='feature/review-2nd',firstReviewCommit=FIRST,operatingPagesCommit=PRODUCTION,accepted=['home-recent-content','music','history-layout','schedule-layout'],restored=['production-home-live','production-live-page','production-members-and-detail','member-colors','agency-notice-priority'],contentTabs=['videos','replay','series'],navigationCount=7)
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     data=first.extract((out/'data.js').read_text(),'REVIEW_DATA');copy=json.loads(json.dumps(data))
+    # The standalone gated HTML is a sample, not the operating catalog.
+    # Keep all records in data.js for review and production; only inline a
+    # bounded multi-channel selection to respect the existing 9 MiB cap.
+    by_channel={}
+    for item in sorted(copy['videos'],key=lambda v:v.get('publishedAt') or v.get('date',''),reverse=True):
+        key=item.get('channelKey','unknown')
+        bucket=by_channel.setdefault(key,[])
+        if len(bucket)<16:bucket.append(item)
+    copy['videos']=[item for bucket in by_channel.values() for item in bucket]
+    copy['scope']['offlineSample']=True
+
     inline=lambda p:'data:image/webp;base64,'+base64.b64encode((out/p.split('?')[0]).read_bytes()).decode()
     for group in copy['assets'].values():
         for k,v in group.items():group[k]=inline(v)
