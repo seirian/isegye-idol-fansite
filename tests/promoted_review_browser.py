@@ -73,6 +73,20 @@ try:
   for link in links:
    go(link);check('operating guide detail '+link,p.locator('.article').count()>0)
   go('report?record=fan-policy');check('existing report handoff retained',p.locator('#report-form').count()==1)
+  go('content?tab=videos')
+  check('content original links visible',p.locator('.content-card .content-origin-link').count()>0)
+  card=p.locator('.content-card').first
+  link=card.locator('.content-origin-link');saved=card.locator('[data-save]')
+  l=link.bounding_box();v=saved.bounding_box()
+  check('source link aligns left of save button',l is not None and v is not None and l['x']+l['width']<v['x'] and abs((l['y']+l['height']/2)-(v['y']+v['height']/2))<7)
+  check('safe source link',link.get_attribute('target')=='_blank' and 'noopener' in (link.get_attribute('rel') or ''))
+  check('content sort choices',set(p.locator('select[data-filter="sort"] option').all_text_contents())=={'영상 공개 최신순','아카이브 등록 최신순'})
+  check('channel filter choices',p.locator('select[data-filter="channel"] option').count()>=18)
+  go('content?tab=videos&sort=registered')
+  check('registered sort persists',p.locator('select[data-filter="sort"]').input_value()=='registered')
+  go('content?tab=replay')
+  check('replay links',p.locator('.content-card .content-origin-link').count()>0)
+  check('replay sort control',p.locator('select[data-filter="sort"]').count()==1)
   go('content?tab=series');check('removed multiview absent','같은 합방, 다른 시점' not in p.locator('#main').inner_text())
   for s in ('festival-2025','music-beginning'):
    go('series/'+s);check('removed context heading '+s,'맥락을 더 살펴보기' not in p.locator('#main').inner_text())

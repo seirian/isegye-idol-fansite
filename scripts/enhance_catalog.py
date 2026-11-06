@@ -27,10 +27,13 @@ def enhance(out,app,css,html):
  videos=json.loads((ROOT/'catalog/videos.json').read_text())
  assert len(profiles['members'])==6
  assert len({s['id'] for s in music['songs']})==len(music['songs'])
+ from refresh_catalog_videos import GROUP
  expected={c['key']:c for m in profiles['members'] for c in m['channels']}
- assert len(expected)==21 and set(expected)=={c['key'] for c in videos['channels']}
+ expected[GROUP['key']]=GROUP
+ assert len(expected)==22 and set(expected)=={c['key'] for c in videos['channels']}
  for c in videos['channels']:
-  assert c['channelId']==expected[c['key']]['channelId'] and len(c['videos'])<=3
+  assert c['channelId']==expected[c['key']]['channelId'] and isinstance(c['videos'],list)
+  assert len({v['id'] for v in c['videos']})==len(c['videos'])
   assert all(re.fullmatch(r'[A-Za-z0-9_-]{11}',v['id']) for v in c['videos'])
  data=(out/'src/data.js').read_text().replace("name:'입문·멤버'","name:'멤버 소개'")
  # Existing unrelated records stay intact; the preview owns the new catalog views.
@@ -61,6 +64,6 @@ def enhance(out,app,css,html):
  meta=json.loads((out/'build-info.json').read_text())
  meta['dailyMusic']={'schemaVersion':1,'endpoint':'/api/music','officialFormats':1,'waktaverseFormats':1,'reviewedBaseline':len(music['songs']),'registration':'daily-verified-public-uploads'}
  meta['musicVideoAudit']=music['videoAudit']
- meta['catalog']={'members':6,'channels':21,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'build-time-public-Atom-feed','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
+ meta['catalog']={'members':6,'channels':21,'officialGroupChannels':1,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'cumulative-public-Atom-and-optional-official-API','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
  (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
  return app,css,html
