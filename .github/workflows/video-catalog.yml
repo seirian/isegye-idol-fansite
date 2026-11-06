@@ -36,6 +36,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_catalog_feeds.py' -v
           python -m unittest discover -s tests -p 'test_full_video_archive.py' -v
+          python -m unittest discover -s tests -p 'test_video_durations.py' -v
           node --test tests/catalog.test.js
       - name: Collect recent public videos from every approved channel
         run: python scripts/refresh_catalog_videos.py
