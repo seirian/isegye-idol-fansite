@@ -30,7 +30,7 @@ def adapter(code, operating):
     about=(Path(__file__).resolve().parents[1]/'site/about-current.js').read_text()
     if about.count('function aboutView()')!=1 or 'function privacyView(' in about:
         raise ValueError('Invalid current site introduction')
-    helpers += about+'\\n'
+    helpers += about+'\n'
 
     helpers += between(operating, 'function legalNavigation(', 'function legalGuideView(')
     # The canonical public policy endpoints already render the operating documents.
