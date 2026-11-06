@@ -118,6 +118,13 @@ def build(baseline):
     if app.count(detail_anchor)!=1:raise ValueError('Notice detail slot moved')
     app=app.replace(detail_anchor,'<p class="detail-copy">${esc(r.summary)}</p>${archiveNoticeHighlights(r)}<div class="notice-box"><strong>이 날짜는 공지가 게시된 날짜입니다.</strong>',1)
     legacy = member_legal.adapt_legacy(legacy)
+    # Use the current introduction only in the operating bundle. The pinned,
+    # owner-approved second-review adapter remains byte-for-byte unchanged.
+    current_about=(ROOT/'site/about-current.js').read_text()
+    if current_about.count('function aboutView()')!=1:
+        raise ValueError('Invalid current about page')
+    legacy=one(legacy,between(legacy,'function aboutView()','function legalNavigation('),current_about+'\\n')
+
     feeds = runtime(baseline,data)
     if out.is_symlink(): raise ValueError('Symlink output refused')
     if out.exists(): shutil.rmtree(out)
