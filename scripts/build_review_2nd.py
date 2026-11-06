@@ -154,7 +154,17 @@ def build(baseline, snapshot_path=None, output_path=None):
     for group in copy['assets'].values():
         for k,v in group.items():group[k]=inline(v)
     for item in copy['gallery']:item['src']=inline(item['src'])
-    code='const REVIEW_DATA='+first.script_json(copy)+';\n'+(out/'core.js').read_text()+'\n'+(out/'live-core.js').read_text()+'\n'+legacy+'\n'+app
+    # The standalone preview also embeds the legacy catalog. Bound its
+    # duplicated per-channel video samples; the real production-ui.js and
+    # published catalog are not modified.
+    offline_catalog=first.extract(legacy,'CATALOG')
+    for channel in offline_catalog['videos']['channels']:
+        channel['videos']=channel['videos'][:3]
+    legacy_pattern=r'^const CATALOG=[^\\n]+;'
+    if len(re.findall(legacy_pattern,legacy,flags=re.M))!=1:
+        raise ValueError('Offline catalog slot changed')
+    offline_legacy=re.sub(legacy_pattern,lambda _: 'const CATALOG='+first.script_json(offline_catalog)+';',legacy,count=1,flags=re.M)
+    code='const REVIEW_DATA='+first.script_json(copy)+';\n'+(out/'core.js').read_text()+'\n'+(out/'live-core.js').read_text()+'\n'+offline_legacy+'\n'+app
     sha=lambda s:"'sha256-"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+"'"
     index=(src/'index.html').read_text().replace('1차 검토','2차 검토').replace('review-1st','review-2nd')
     index=index.replace('<script src="app.js"></script>','<script src="production-ui.js"></script><script src="app.js"></script>')
