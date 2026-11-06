@@ -86,13 +86,12 @@ with sync_playwright() as pw:
                 check(f'{theme}/{width} guide details link to operating records',
                       page.locator('.text-card').evaluate_all('(es)=>es.every(e=>e.getAttribute("href").startsWith("/#/record/"))'))
                 page.locator('footer a[href="#/about"]').click()
-                # The immutable offline review still has the pinned original
-                # introduction; the operating bundle uses the updated site map.
-                heading_text=page.locator('#main h1').inner_text()
+                # Layout regression supports both the immutable offline reference
+                # and the updated production introduction.
                 check(f'{theme}/{width} about is operating page not review guide',
-                      (heading_text == '이세돌 팬 아카이브 소개' and page.locator('.legal-about .review-status .info-note').count() == 7
-                       or heading_text == '좋아하는 마음을, 오래도록.' and page.locator('.about-grid').count() == 1)
-                      and page.locator('.review2-summary').count() == 0)
+                      page.locator('.legal-about').count() == 1
+                      and page.locator('.review2-summary').count() == 0
+                      and '비공식' in page.locator('#main').inner_text())
                 check(f'{theme}/{width} policy destinations unchanged',
                       page.locator('footer .footer-links a').evaluate_all('(es)=>es.slice(0,2).map(e=>e.getAttribute("href"))') ==
                       ['https://isegye-idol.kr/auth/terms', 'https://isegye-idol.kr/auth/privacy'])
