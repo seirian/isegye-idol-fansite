@@ -171,7 +171,7 @@ def build(baseline, snapshot_path=None, output_path=None):
     shutil.copytree(src,out)
     app=cleanup.app(polish.app(adapt_app((src/'app.js').read_text())))
     legacy=polish.adapter(production_adapter(baseline),(baseline/'src/app.js').read_text())
-    css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()
+    css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()+'\n'+(ROOT/'site/schedule-filter-layout.css').read_text()
     (out/'app.js').write_text(app);(out/'production-ui.js').write_text(legacy);(out/'styles.css').write_text(css)
     meta=json.loads((out/'build-info.json').read_text());meta.update(review='review-2nd',branch='feature/review-2nd',firstReviewCommit=FIRST,operatingPagesCommit=PRODUCTION,accepted=['home-recent-content','music','history-layout','schedule-layout'],restored=['production-home-live','production-live-page','production-members-and-detail','member-colors','agency-notice-priority'],contentTabs=['videos','replay','series'],navigationCount=7)
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
