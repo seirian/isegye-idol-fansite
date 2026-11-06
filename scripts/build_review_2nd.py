@@ -120,6 +120,13 @@ def adapt_app(text):
     text=text[:a]+(ROOT/'review-2nd/review-guide.js').read_text()+'\n'+text[b:]
     # Legacy incoming first-review links continue to select the right content tab.
     text=one(text,"function render(){const r=route(),root=r.parts[0];", "function render(){let r=route();if(r.parts[0]==='live'&&['videos','replay','series'].includes(r.params.get('tab'))){history.replaceState(null,'',url('content',Object.fromEntries(r.params)));r=route();}const root=r.parts[0];")
+    # Simplify only the schedule-page UI; retain source and member filters.
+    text=one(text,'<a class="button" href="${url(\'schedule\',{view})}">오늘</a>','')
+    text=one(text,"${choose('종류','kind',[['all','모든 일정·공지'],['event','실제 일정'],['notice','공지 게시 기록']],kind)}",'')
+    text=one(text,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    # Preserve '취소' and '미확정' warnings; a confirmed schedule already says '일정'.
+    text=one(text,"kind==='event'?badge(r.status==='cancelled'?'취소':r.certainty==='confirmed'?'확정':'미확정',r.status==='cancelled'?'warning':'good'):''",
+      "kind==='event'&&(r.status==='cancelled'||r.certainty!=='confirmed')?badge(r.status==='cancelled'?'취소':'미확정','warning'):''")
     if any(x in text for x in ('OUR TIMELINE','기록과 기록 사이의 이야기','LIVE·방송')):raise ValueError('Discarded first-review text remains')
     return text
 
