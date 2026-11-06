@@ -16,7 +16,8 @@ jobs:
   refresh:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     environment: production
-    runs-on: ubuntu-latest
+    # Playwright 1.56 Chromium does not support the ubuntu-26.04 latest runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
