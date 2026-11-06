@@ -124,6 +124,10 @@ def adapt_app(text):
     text=one(text,'<a class="button" href="${url(\'schedule\',{view})}">오늘</a>','')
     text=one(text,"${choose('종류','kind',[['all','모든 일정·공지'],['event','실제 일정'],['notice','공지 게시 기록']],kind)}",'')
     text=one(text,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    # The event detail page still needs cancellation and uncertainty warnings,
+    # but never repeats a 'confirmed' label next to a confirmed schedule.
+    text=one(text,"badge(approved?'확정 일정':r.status==='cancelled'?'취소 일정':'미확정 일정',approved?'good':'warning')",
+      "approved?'':badge(r.status==='cancelled'?'취소 일정':'미확정 일정','warning')")
     # Preserve '취소' and '미확정' warnings; a confirmed schedule already says '일정'.
     text=one(text,"kind==='event'?badge(r.status==='cancelled'?'취소':r.certainty==='confirmed'?'확정':'미확정',r.status==='cancelled'?'warning':'good'):''",
       "kind==='event'&&(r.status==='cancelled'||r.certainty!=='confirmed')?badge(r.status==='cancelled'?'취소':'미확정','warning'):''")
