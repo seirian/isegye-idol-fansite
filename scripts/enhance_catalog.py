@@ -25,6 +25,13 @@ def enhance(out,app,css,html):
  profiles=json.loads((ROOT/'catalog/members.json').read_text())
  music=load_music()
  videos=json.loads((ROOT/'catalog/videos.json').read_text())
+ duration_path=ROOT/'catalog/video-durations.json'
+ durations=json.loads(duration_path.read_text()).get('seconds',{}) if duration_path.exists() else {}
+ for channel in videos['channels']:
+  for video in channel['videos']:
+   seconds=durations.get(video['id'])
+   if type(seconds) is int and 0<=seconds<=2592000:video['durationSeconds']=seconds
+
  assert len(profiles['members'])==6
  assert len({s['id'] for s in music['songs']})==len(music['songs'])
  from refresh_catalog_videos import GROUP
