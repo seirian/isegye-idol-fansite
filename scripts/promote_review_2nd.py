@@ -123,7 +123,7 @@ def build(baseline):
     current_about=(ROOT/'site/about-current.js').read_text()
     if current_about.count('function aboutView()')!=1:
         raise ValueError('Invalid current about page')
-    legacy=one(legacy,between(legacy,'function aboutView()','function legalNavigation('),current_about+'\\n')
+    legacy=one(legacy,between(legacy,'function aboutView()','function legalNavigation('),current_about+'\n')
 
     feeds = runtime(baseline,data)
     if out.is_symlink(): raise ValueError('Symlink output refused')
