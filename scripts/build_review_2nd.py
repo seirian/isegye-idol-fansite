@@ -160,7 +160,7 @@ def build(baseline, snapshot_path=None, output_path=None):
     offline_catalog=first.extract(legacy,'CATALOG')
     for channel in offline_catalog['videos']['channels']:
         channel['videos']=channel['videos'][:3]
-    legacy_pattern=r'^const CATALOG=[^\\n]+;'
+    legacy_pattern=r'^const CATALOG=[^\n]+;'
     if len(re.findall(legacy_pattern,legacy,flags=re.M))!=1:
         raise ValueError('Offline catalog slot changed')
     offline_legacy=re.sub(legacy_pattern,lambda _: 'const CATALOG='+first.script_json(offline_catalog)+';',legacy,count=1,flags=re.M)
