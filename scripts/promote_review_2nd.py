@@ -129,12 +129,12 @@ def build(baseline):
     # The accepted review data stays unchanged; only production packaging is sharded.
     reviewed_data=first.extract((out/'src/data.js').read_text(),'REVIEW_DATA')
     published_videos=reviewed_data.pop('videos')
-    (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json({**reviewed_data,'videos':[]})+';\\n')
+    (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json({**reviewed_data,'videos':[]})+';\n')
     video_scripts=[]
     for offset in range(0,len(published_videos),2000):
         name='video-part-'+str(offset//2000+1).zfill(3)+'.js'
         rows=published_videos[offset:offset+2000]
-        (out/'src'/name).write_text('REVIEW_DATA.videos.push(...'+first.script_json(rows)+');\\n')
+        (out/'src'/name).write_text('REVIEW_DATA.videos.push(...'+first.script_json(rows)+');\n')
         video_scripts.append(name)
     # The original floating account control must clear the newly approved mobile nav.
     css=(out/'src/styles.css').read_text()+'\n@media(max-width:640px){body .isegye-account-link{bottom:calc(82px + env(safe-area-inset-bottom));}}\n'
