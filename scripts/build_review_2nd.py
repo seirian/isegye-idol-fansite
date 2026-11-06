@@ -147,7 +147,7 @@ function scheduleView(p){""")
     schedule=one(schedule,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
     schedule=one(schedule,'</div>${memberChips(p)}<form class="search-form" data-query-form>',
       '${memberChips(p)}</div><form class="search-form" data-query-form>')
-    schedule=one(schedule,' rows.sort((a,b)=>',' rows=scheduleUniqueRows(rows);\\n rows.sort((a,b)=>')
+    schedule=one(schedule,' rows.sort((a,b)=>',' rows=scheduleUniqueRows(rows);'+chr(10)+' rows.sort((a,b)=>')
 
     text=text[:start]+schedule+text[end:]
     # The event detail page still needs cancellation and uncertainty warnings,
