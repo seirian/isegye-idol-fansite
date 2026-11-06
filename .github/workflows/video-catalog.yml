@@ -5,6 +5,8 @@ on:
     paths:
       - scripts/refresh_catalog_videos.py
       - scripts/backfill_channel_videos.py
+      - scripts/enrich_video_durations.py
+      - scripts/compose_content_polish.py
       - .github/workflows/video-catalog.yml
   schedule:
     - cron: '15 22 * * *' # 07:15 KST next day
@@ -41,6 +43,10 @@ jobs:
         env:
           ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
         run: python scripts/backfill_channel_videos.py
+      - name: Enrich Shorts and short-video durations with public YouTube metadata
+        env:
+          ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+        run: python scripts/enrich_video_durations.py
       - name: Verify metadata integrity and report incomplete coverage
         run: |
           python - <<'PY'
@@ -48,6 +54,11 @@ jobs:
           sys.path.insert(0,'scripts')
           from refresh_catalog_videos import channels,VIDEO_ID
           d=json.load(open('catalog/videos.json'));expected={c['key']:c['channelId'] for c in channels()}
+          duration_file='catalog/video-durations.json'
+          if __import__('os').path.isfile(duration_file):
+            durations=json.load(open(duration_file))['seconds']
+            assert all(VIDEO_ID.fullmatch(id) and type(sec) is int and 0<=sec<=2592000 for id,sec in durations.items())
+            print(f'YouTube duration metadata: {len(durations)} videos')
           assert d['schemaVersion']==2 and {c['key']:c['channelId'] for c in d['channels']}==expected
           for c in d['channels']:
             assert isinstance(c['videos'],list) and len({r['id'] for r in c['videos']})==len(c['videos'])
@@ -61,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add -- catalog/videos.json
+          git add -- catalog/videos.json catalog/video-durations.json
           if git diff --cached --quiet; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
