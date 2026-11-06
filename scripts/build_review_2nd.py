@@ -123,7 +123,11 @@ def adapt_app(text):
     # Simplify only the schedule-page UI; retain source and member filters.
     text=one(text,'<a class="button" href="${url(\'schedule\',{view})}">오늘</a>','')
     text=one(text,"${choose('종류','kind',[['all','모든 일정·공지'],['event','실제 일정'],['notice','공지 게시 기록']],kind)}",'')
-    text=one(text,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    start=text.index('function scheduleView(p)')
+    end=text.index('function sourceBox(',start)
+    schedule=text[start:end]
+    schedule=one(schedule,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    text=text[:start]+schedule+text[end:]
     # The event detail page still needs cancellation and uncertainty warnings,
     # but never repeats a 'confirmed' label next to a confirmed schedule.
     text=one(text,"badge(approved?'확정 일정':r.status==='cancelled'?'취소 일정':'미확정 일정',approved?'good':'warning')",
