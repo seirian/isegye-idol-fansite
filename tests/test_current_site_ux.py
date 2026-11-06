@@ -24,7 +24,7 @@ class CurrentSiteUX(unittest.TestCase):
    self.assertIn(item,about)
   for old in ('8개 메뉴','미구현입니다','관리자 CMS는 없습니다','운영 도메인과 호스팅 연결'):
    self.assertNotIn(old,about)
-  adapter=(ROOT/'scripts/review_2nd_polish.py').read_text()
+  adapter=(ROOT/'scripts/promote_review_2nd.py').read_text()
   self.assertIn("site/about-current.js",adapter)
  def test_approved_base_is_not_modified(self):
   self.assertIn("reviewed_data.pop('videos')",(ROOT/'scripts/promote_review_2nd.py').read_text())
