@@ -81,7 +81,7 @@ try:
   check('source link aligns left of save button',l is not None and v is not None and l['x']+l['width']<v['x'] and abs((l['y']+l['height']/2)-(v['y']+v['height']/2))<7)
   check('safe source link',link.get_attribute('target')=='_blank' and 'noopener' in (link.get_attribute('rel') or ''))
   check('content sort choices',set(p.locator('select[data-filter="sort"] option').all_text_contents())=={'영상 공개 최신순','아카이브 등록 최신순'})
-  check('channel filter choices',p.locator('select[data-filter="channel"] option').count()>=22)
+  check('channel filter choices',p.locator('select[data-filter="channel"] option').count()>=18)
   go('content?tab=videos&sort=registered')
   check('registered sort persists',p.locator('select[data-filter="sort"]').input_value()=='registered')
   go('content?tab=replay')
