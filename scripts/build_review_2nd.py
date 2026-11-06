@@ -120,6 +120,21 @@ def adapt_app(text):
     text=text[:a]+(ROOT/'review-2nd/review-guide.js').read_text()+'\n'+text[b:]
     # Legacy incoming first-review links continue to select the right content tab.
     text=one(text,"function render(){const r=route(),root=r.parts[0];", "function render(){let r=route();if(r.parts[0]==='live'&&['videos','replay','series'].includes(r.params.get('tab'))){history.replaceState(null,'',url('content',Object.fromEntries(r.params)));r=route();}const root=r.parts[0];")
+    # Display-only schedule deduplication: identical member/date/title rows
+    # may arrive as both a notice publication and a derived schedule event.
+    # Keep underlying records and source links intact for detail pages.
+    text=one(text,'function scheduleView(p){',"""function scheduleUniqueRows(rows){
+ const seen=new Map();
+ const clean=v=>String(v||'').normalize('NFKC').toLocaleLowerCase('ko').replace(/[\\s\\u200b\\u200c\\u200d]+/g,'').replace(/[!~～.,!?·\\[\\]【】()]+/g,'');
+ for(const row of rows){
+  const members=[...(row.members||[])].sort().join(',');
+  const key=[row.date,members,clean(row.title)].join('|');
+  const old=seen.get(key);
+  if(!old||((row.kind==='event'?2:1)>(old.kind==='event'?2:1)))seen.set(key,row);
+ }
+ return [...seen.values()];
+}
+function scheduleView(p){""")
     # Old bookmarked URLs must not silently keep filters that are no longer visible.
     text=one(text,'function scheduleView(p){',
       "function scheduleView(p){p=new URLSearchParams(p);p.delete('kind');p.delete('match');")
@@ -130,6 +145,10 @@ def adapt_app(text):
     end=text.index('function sourceBox(',start)
     schedule=text[start:end]
     schedule=one(schedule,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    schedule=one(schedule,'</div>${memberChips(p)}<form class="search-form" data-query-form>',
+      '${memberChips(p)}</div><form class="search-form" data-query-form>')
+    schedule=one(schedule,' rows.sort((a,b)=>',' rows=scheduleUniqueRows(rows);\\n rows.sort((a,b)=>')
+
     text=text[:start]+schedule+text[end:]
     # The event detail page still needs cancellation and uncertainty warnings,
     # but never repeats a 'confirmed' label next to a confirmed schedule.
