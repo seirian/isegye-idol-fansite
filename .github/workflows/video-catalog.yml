@@ -1,0 +1,77 @@
+name: Content - verified channel video catalog
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/refresh_catalog_videos.py
+      - scripts/backfill_channel_videos.py
+      - .github/workflows/video-catalog.yml
+  schedule:
+    - cron: '15 22 * * *' # 07:15 KST next day
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: isegye-video-catalog-update
+  cancel-in-progress: false
+jobs:
+  catalog:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Respect pause control
+        env:
+          PAUSE_ALL: ${{ vars.PRODUCTION_PAUSED }}
+        run: test "$PAUSE_ALL" != 'true'
+      - name: Verify source ingestion guards
+        run: |
+          python -m unittest discover -s tests -p 'test_catalog_feeds.py' -v
+          python -m unittest discover -s tests -p 'test_full_video_archive.py' -v
+          node --test tests/catalog.test.js
+      - name: Collect recent public videos from every approved channel
+        run: python scripts/refresh_catalog_videos.py
+      - name: Backfill historical public uploads from official API when configured
+        env:
+          ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+        run: python scripts/backfill_channel_videos.py
+      - name: Verify metadata integrity and report incomplete coverage
+        run: |
+          python - <<'PY'
+          import json,sys
+          sys.path.insert(0,'scripts')
+          from refresh_catalog_videos import channels,VIDEO_ID
+          d=json.load(open('catalog/videos.json'));expected={c['key']:c['channelId'] for c in channels()}
+          assert d['schemaVersion']==2 and {c['key']:c['channelId'] for c in d['channels']}==expected
+          for c in d['channels']:
+            assert isinstance(c['videos'],list) and len({r['id'] for r in c['videos']})==len(c['videos'])
+            assert all(VIDEO_ID.fullmatch(r['id']) for r in c['videos'])
+          complete=sum(c.get('coverageComplete') is True for c in d['channels'])
+          print(f'Channels: {len(d["channels"])}, videos: {sum(len(c["videos"]) for c in d["channels"])}, full history verified: {complete}/{len(d["channels"])}')
+          if complete!=len(d['channels']):print('::warning::Historical backfill incomplete; configure ISEGYE_YOUTUBE_API_KEY for the official YouTube Data API.')
+          PY
+      - name: Commit only validated catalog to main
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -- catalog/videos.json
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'data(content): refresh verified public channel video catalog'
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" push https://github.com/seirian/isegye-idol-fansite.git HEAD:main
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+      - name: Trigger production rebuild with the updated catalog
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/production.yml/dispatches" -f ref=main

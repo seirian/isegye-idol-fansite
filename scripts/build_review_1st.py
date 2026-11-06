@@ -41,9 +41,23 @@ def build(baseline, snapshot_path=None, output_path=None):
     for person in catalog['members']:
         for ch in person['channels']:
             feed=next((r for r in catalog['videos']['channels'] if r['key']==ch['key']),{})
-            channels[ch['key']]={**ch,'member':person['id'],'checkedAt':feed.get('checkedAt'),'status':feed.get('status')}
+            channels[ch['key']]={**ch,'member':person['id'],'checkedAt':feed.get('checkedAt'),'status':feed.get('status'),'coverageComplete':feed.get('coverageComplete',False)}
             for row in feed.get('videos',[]):
-                vid=row['id'];videos[vid]={**row,'key':'video:'+vid,'kind':'video','date':day(row['publishedAt']),'url':'https://www.youtube.com/watch?v='+vid,'members':[person['id']],'memberBasis':'channel_owner','channelName':ch['name'],'channelKey':ch['key'],'channelUrl':ch['url'],'category':'replay' if ch['kind']=='다시보기' else 'member','format':ch['kind'],'checkedAt':feed.get('checkedAt'),'type':ch['kind'],'summary':'채널에 공개된 영상 목록입니다. 업로드일을 표시하며 실제 방송일·전체 출연진은 별도로 확인하지 않았습니다.','tags':[ch['kind'],person['en']]}
+                vid=row['id'];videos[vid]={**row,'key':'video:'+vid,'kind':'video','date':day(row['publishedAt']),'url':'https://www.youtube.com/watch?v='+vid,'members':[person['id']],'memberBasis':'channel_owner','channelName':ch['name'],'channelKey':ch['key'],'channelUrl':ch['url'],'category':'replay' if ch['kind']=='다시보기' else 'member','format':ch['kind'],'checkedAt':feed.get('checkedAt'),'firstSeenAt':row.get('firstSeenAt',feed.get('checkedAt')),'type':ch['kind'],'summary':'채널에 공개된 영상 목록입니다. 업로드일을 표시하며 실제 방송일·전체 출연진은 별도로 확인하지 않았습니다.','tags':[ch['kind'],person['en']]}
+    # Official group videos are the group's own uploads; Waktaverse is curated
+    # separately because its channel includes unrelated creator videos.
+    official=next((r for r in catalog['videos']['channels'] if r['key']=='isegye-official'),{})
+    channels['isegye-official']={'key':'isegye-official','name':'ISEGYE IDOL','kind':'단체 공식','channelId':'UCmblbE_WxTaFWcMEGFJ_97w',
+      'url':'https://www.youtube.com/@isegyeidol_ofcl','checkedAt':official.get('checkedAt'),'status':official.get('status'),
+      'coverageComplete':official.get('coverageComplete',False)}
+    for row in official.get('videos',[]):
+        vid=row['id'];videos[vid]={**row,'key':'video:'+vid,'kind':'video','date':day(row['publishedAt']),
+         'url':'https://www.youtube.com/watch?v='+vid,'members':allids,'memberBasis':'official_group_channel',
+         'channelName':'ISEGYE IDOL','channelKey':'isegye-official','channelUrl':'https://www.youtube.com/@isegyeidol_ofcl',
+         'category':'group','format':'단체 공식 영상','checkedAt':official.get('checkedAt'),
+         'firstSeenAt':row.get('firstSeenAt',official.get('checkedAt')),'type':'official_group',
+         'summary':'이세계아이돌 공식 채널에 공개된 영상입니다. 티저·MV·일반 콘텐츠를 원문 제목으로 구분해 주세요.',
+         'tags':['ISEGYE IDOL','이세계아이돌','단체 공식']}
     # Metadata already independently observed by the production music collector.
     from official_channel_music import OBSERVED_ATOM
     for (cid,vid,title),at in OBSERVED_ATOM.items():
@@ -83,7 +97,7 @@ def build(baseline, snapshot_path=None, output_path=None):
         histories.append({**row,'key':'history:'+row['id'],'kind':'history','summary':row.get('summary','') or row.get('note','') or '공개 출처를 바탕으로 정리한 주요 활동 기록입니다.','sourceLinks':[history['sources'][x] for x in row.get('sources',[]) if x in history['sources']],'checkedAt':history['checkedAt'],'tags':['활동 기록']})
     series=[{'id':'festival-2025','title':'2025 이세계페스티벌','subtitle':'공식 무대 영상 모아보기','description':'왁타버스에서 공개한 STARGAZERS·MEMORY·ELEVATE 무대 영상으로 이어집니다. 공연과 영상의 공개 날짜는 구분합니다.','videoIds':[i for i in ['MCyL9k_Tiok','nsVbRO_k9b8','7V7ZsMt6r-w'] if i in videos],'members':allids,'basis':'reviewed_official_performance','status':'공식 원본 연결'},
       {'id':'music-beginning','title':'처음 만나는 이세돌의 음악','subtitle':'입문 경로 · 운영자 선정','description':'데뷔곡과 단체 발매곡으로 만나는 짧은 감상 경로입니다. 인기순이나 공식 추천 목록이 아닙니다.','songIds':[r['id'] for r in songs if r['id'] in ['rewind','kidding','smile-for-you','smile','be-my-light']][:5],'members':allids,'basis':'editorial','status':'선정 기준 공개'}]
-    data={'schemaVersion':1,'baseCommit':BASE,'builtAt':datetime.now(timezone.utc).isoformat(),'snapshotAt':snapshot['generatedAt'],'members':catalog['members'],'channels':list(channels.values()),'songs':songs,'albums':list(albums.values()),'videos':list(videos.values()),'notices':list(notices.values()),'events':events,'history':histories,'series':series,'sources':snapshot['sources'],'forecasts':snapshot['forecasts'],'scope':{'archiveFrom':archive['start'],'archiveThrough':archive['end'],'historicalComplete':False,'videoCheckedAt':catalog['videos']['checkedAt'],'musicCheckedAt':catalog['music']['checkedAt'],'historyCheckedAt':history['checkedAt'],'collectionHealth':snapshot.get('collectionHealth')},'gallery':[{**g,'src':g['src'].removeprefix('./')} for g in gallery],'assets':{'portraits':{i:'assets/portraits/'+i+'.webp' for i in allids},'soop':{i:'assets/soop-profiles/'+i+'.webp' for i in allids}}}
+    data={'schemaVersion':1,'baseCommit':BASE,'builtAt':datetime.now(timezone.utc).isoformat(),'snapshotAt':snapshot['generatedAt'],'members':catalog['members'],'channels':list(channels.values()),'songs':songs,'albums':list(albums.values()),'videos':list(videos.values()),'notices':list(notices.values()),'events':events,'history':histories,'series':series,'sources':snapshot['sources'],'forecasts':snapshot['forecasts'],'scope':{'archiveFrom':archive['start'],'archiveThrough':archive['end'],'historicalComplete':False,'videoCoverageComplete':sum(bool(c.get('coverageComplete')) for c in catalog['videos']['channels']),'videoChannelCount':len(catalog['videos']['channels']),'videoCheckedAt':catalog['videos']['checkedAt'],'musicCheckedAt':catalog['music']['checkedAt'],'historyCheckedAt':history['checkedAt'],'collectionHealth':snapshot.get('collectionHealth')},'gallery':[{**g,'src':g['src'].removeprefix('./')} for g in gallery],'assets':{'portraits':{i:'assets/portraits/'+i+'.webp' for i in allids},'soop':{i:'assets/soop-profiles/'+i+'.webp' for i in allids}}}
     out=Path(output_path) if output_path else ROOT/'review-1st-dist'
     if out.parent.resolve()!=ROOT or (output_path and not out.name.startswith('release-')):raise ValueError('Invalid release intermediate output')
     if out.is_symlink():raise ValueError('Symlink output refused')

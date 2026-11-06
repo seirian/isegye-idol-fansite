@@ -23,7 +23,7 @@ def adapt_app(code):
  const direct=original?'<a class="content-origin-link" href="'+esc(original)+'" target="_blank" rel="noopener noreferrer" aria-label="원본 영상 새 탭에서 보기: '+esc(r.title)+'" title="원본 영상 바로가기">'+icon('external')+'</a>':'';
  const masked=""")
     card=one(card,"${prefs.watched.includes(r.key)?badge('직접 시청 표시','good'):''}","")
-    card=one(card,"${saveButton(r,masked)}</div></div>","${direct}${saveButton(r,masked)}</div></div>")
+    card=one(card,"${saveButton(r,masked)}</div></div>","<span class=\"content-card-actions\">${direct}${saveButton(r,masked)}</span></div></div>")
     code=code[:a]+card+code[b:]
     a=code.index('function videoView(id)');b=code.index('function seriesView(id)',a)
     video=code[a:b]
@@ -35,9 +35,32 @@ def adapt_app(code):
     code=code[:a]+video+code[b:]
     a=code.index(" const watched=event.target.closest('[data-watched]');")
     b=code.index(" const reveal=event.target.closest('[data-reveal]');",a)
-    return code[:a]+code[b:]
+    code=code[:a]+code[b:]
+    if 'function contentView(p)' not in code:
+        return code  # The first-review fixture has only liveView.
+    a=code.index('function contentView(p)');b=code.index('function videoView(id)',a)
+    section=code[a:b]
+    select="${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','자료에 선택 멤버 모두 표기']],p.get('match')||'any')}"
+    if section.count(select)!=1:raise ValueError('Content filter slot changed')
+    section=section.replace(select,select+"${choose('채널','channel',[['all','전체 채널'],...D.channels.filter(c=>tab==='replay'?c.kind==='다시보기':c.kind!=='다시보기').map(c=>[c.key,c.name])],p.get('channel')||'all')}${choose('정렬','sort',[['new','영상 공개 최신순'],['registered','아카이브 등록 최신순']],order)}")
+    anchor='const pg=paginate(rs,p);body='
+    if section.count(anchor)!=1:raise ValueError('Content sort slot changed')
+    replacement="""rs=p.get('channel')&&p.get('channel')!=='all'?rs.filter(v=>v.channelKey===p.get('channel')):rs;
+ const order=p.get('sort')==='registered'?'registered':'new';
+ const dateValue=(v,property)=>Date.parse(property==='registered'?(v.firstSeenAt||v.checkedAt||v.publishedAt||v.date):(v.publishedAt||v.date))||0;
+ rs.sort((x,y)=>dateValue(y,order)-dateValue(x,order)||x.id.localeCompare(y.id));
+ const pg=paginate(rs,p);body="""
+    section=section.replace(anchor,replacement,1)
+    old_display='${pg.html}`;'
+    new_display="${pg.html}<p class=\"data-note\">${D.scope.videoCoverageComplete===D.scope.videoChannelCount?\"등록된 전체 공개 영상 검증 완료\":`영상 ${rs.length}건 표시 · 전체 과거 영상 수집 ${D.scope.videoCoverageComplete||0}/${D.scope.videoChannelCount||22}채널 완료. 아직 일부만 수록됐을 수 있습니다.`}</p>`;"
+    if section.count(old_display)!=1:raise ValueError('Video listing tail changed')
+    section=section.replace(old_display,new_display,1)
+    return code[:a]+section+code[b:]
 def css():
     return """
+.content-card-actions{display:inline-flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+.content-card-actions .content-origin-link{margin:0}
+.content-card .card-bottom>span:first-child{min-width:0}
 .content-origin-link{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;border:1px solid var(--line,#61536b);border-radius:11px;color:inherit;text-decoration:none}
 .content-origin-link svg{width:18px;height:18px}
 .content-origin-link:hover,.content-origin-link:focus-visible{border-color:#ef99b7;background:rgba(238,150,183,.12);outline-offset:2px}
