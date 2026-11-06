@@ -16,6 +16,7 @@ class CurrentSiteUX(unittest.TestCase):
   self.assertNotIn('>오늘</a>',schedule)
   self.assertIn("choose('출처'",schedule)
   self.assertIn('memberChips(p)',schedule)
+  self.assertIn("p.delete('kind');p.delete('match')",schedule)
   self.assertIn("badge(r.status==='cancelled'?'취소':'미확정','warning')",app)
   self.assertNotIn("'확정 일정'",app[app.index('function eventView(id)'):app.index('function albumCard(')])
  def test_about_page_is_current_not_preview_copy(self):
