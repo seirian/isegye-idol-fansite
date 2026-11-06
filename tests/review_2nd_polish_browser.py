@@ -86,6 +86,7 @@ with sync_playwright() as pw:
                 check(f'{theme}/{width} guide details link to operating records',
                       page.locator('.text-card').evaluate_all('(es)=>es.every(e=>e.getAttribute("href").startsWith("/#/record/"))'))
                 page.locator('footer a[href="#/about"]').click()
+                expect(page.locator('#main [data-operating-page="about"]')).to_be_visible()
                 # Layout regression supports both the immutable offline reference
                 # and the updated production introduction.
                 check(f'{theme}/{width} about is operating page not review guide',
