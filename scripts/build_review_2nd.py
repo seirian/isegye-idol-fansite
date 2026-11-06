@@ -120,6 +120,9 @@ def adapt_app(text):
     text=text[:a]+(ROOT/'review-2nd/review-guide.js').read_text()+'\n'+text[b:]
     # Legacy incoming first-review links continue to select the right content tab.
     text=one(text,"function render(){const r=route(),root=r.parts[0];", "function render(){let r=route();if(r.parts[0]==='live'&&['videos','replay','series'].includes(r.params.get('tab'))){history.replaceState(null,'',url('content',Object.fromEntries(r.params)));r=route();}const root=r.parts[0];")
+    # Old bookmarked URLs must not silently keep filters that are no longer visible.
+    text=one(text,'function scheduleView(p){',
+      "function scheduleView(p){p=new URLSearchParams(p);p.delete('kind');p.delete('match');")
     # Simplify only the schedule-page UI; retain source and member filters.
     text=one(text,'<a class="button" href="${url(\'schedule\',{view})}">오늘</a>','')
     text=one(text,"${choose('종류','kind',[['all','모든 일정·공지'],['event','실제 일정'],['notice','공지 게시 기록']],kind)}",'')
