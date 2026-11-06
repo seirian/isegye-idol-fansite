@@ -5,6 +5,7 @@ The operating UI fragments come from the pinned production build, never a copy
 rewritten by hand. Detailed guide documents keep their operational destinations.
 """
 import re
+from pathlib import Path
 import tinycss2
 
 
@@ -25,7 +26,12 @@ def adapter(code, operating):
     if len(footer) != 1:
         raise ValueError('Expected one operating footer')
     helpers = between(operating, 'function guideView()', 'function detailView(')
-    helpers += between(operating, 'function aboutView()', 'function privacyView(')
+    # Replace outdated initial-preview introduction with the current site map.
+    about=(Path(__file__).resolve().parents[1]/'site/about-current.js').read_text()
+    if about.count('function aboutView()')!=1 or 'function privacyView(' in about:
+        raise ValueError('Invalid current site introduction')
+    helpers += about+'\\n'
+
     helpers += between(operating, 'function legalNavigation(', 'function legalGuideView(')
     # The canonical public policy endpoints already render the operating documents.
     # Guide record detail routes are also served by production, not the discarded
