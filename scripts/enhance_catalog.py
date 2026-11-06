@@ -64,6 +64,6 @@ def enhance(out,app,css,html):
  meta=json.loads((out/'build-info.json').read_text())
  meta['dailyMusic']={'schemaVersion':1,'endpoint':'/api/music','officialFormats':1,'waktaverseFormats':1,'reviewedBaseline':len(music['songs']),'registration':'daily-verified-public-uploads'}
  meta['musicVideoAudit']=music['videoAudit']
- meta['catalog']={'members':6,'channels':22,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'cumulative-public-Atom-and-optional-official-API','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
+ meta['catalog']={'members':6,'channels':21,'officialGroupChannels':1,'videos':sum(len(c['videos']) for c in videos['channels']),'songs':len(music['songs']),'sourceCheckedAt':music['checkedAt'],'videosCheckedAt':videos['checkedAt'],'videoRefresh':'cumulative-public-Atom-and-optional-official-API','types':{k:sum(s['type']==k for s in music['songs']) for k in ('original','cover','remake')}}
  (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
  return app,css,html
