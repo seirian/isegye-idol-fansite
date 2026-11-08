@@ -7,7 +7,7 @@ on:
 permissions: {contents: read}
 concurrency:
   group: albums-review-build
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   build:
     if: github.ref == 'refs/heads/feature/albums'
@@ -21,7 +21,13 @@ jobs:
       - name: Validate data rules and unchanged base catalog
         run: |
           npm test
-          python -m unittest discover -s tests -p 'test_albums_insights.py' -v
+          python -m unittest discover -s tests -p 'test_albums*.py' -v
+      - name: Restore only this feature's public observations
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: albums/snapshot.json
+          key: albums-review-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: albums-review-history-v1-
       - name: Collect official API snapshot without production writes
         run: python scripts/collect_album_insights.py
         env:
@@ -41,7 +47,10 @@ jobs:
         run: /tmp/albums-tools/bin/python tests/albums_browser.py
       - name: Build existing access gate with isolated preview extension
         run: |
-          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          php tests/auth/store_test.php
+          php tests/auth/jwt_test.php
           python scripts/build_albums_host.py
           php -l auth-bundle/AlbumsPreview.php
           php -l auth-bundle/Gateway.php
@@ -58,3 +67,48 @@ jobs:
             test-results/albums-browser/
             test-results/albums-host/
           retention-days: 14
+  host:
+    needs: build
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/albums'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://isegye-idol.kr/review-albums/
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Respect existing publication pause
+        env: {PRODUCTION_PAUSED: '${{ vars.PRODUCTION_PAUSED }}'}
+        run: test "$PRODUCTION_PAUSED" != true
+      - uses: actions/download-artifact@v4
+        with:
+          name: albums-review-${{ github.sha }}
+          path: /tmp/albums-artifact
+      - name: Use the exact artifact that passed browser and authorization tests
+        run: cp -a /tmp/albums-artifact/albums-dist ./albums-dist
+      - name: Build pinned existing identity runtime with preview-only extension
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          python scripts/build_albums_host.py
+          python -m venv /tmp/albums-host-tools
+          /tmp/albums-host-tools/bin/pip install paramiko==5.0.0
+      - name: Publish only the protected album review and verify production preservation
+        run: /tmp/albums-host-tools/bin/python scripts/deploy_albums_review.py
+        env:
+          REVIEW_COMMIT: ${{ github.sha }}
+          REVIEW_DEPLOY_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: albums-hosting-${{ github.run_id }}-${{ github.run_attempt }}
+          path: review-albums-deployment.json
+          retention-days: 30
