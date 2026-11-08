@@ -1,0 +1,27 @@
+name: Albums - isolated first review
+on:
+  push:
+    branches: ['feature/albums']
+    paths-ignore: ['docs/**', '.github/workflows/albums-source.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: albums-review-build
+  cancel-in-progress: true
+jobs:
+  build:
+    if: github.ref == 'refs/heads/feature/albums'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Collect official API snapshot without production writes
+        run: python scripts/collect_album_insights.py
+        env:
+          ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: albums-data-${{ github.sha }}
+          path: albums/snapshot.json
+          retention-days: 7
