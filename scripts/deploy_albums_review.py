@@ -12,6 +12,7 @@ from build_albums_host import patched
 from build_review_2nd_host import patched as previous_patched
 from deploy_google_access import upload_tree
 from production_release import EXISTING
+from albums_composer import preserved_root_metadata,runtime_id
 ROOT=Path(__file__).resolve().parents[1]
 FOLDER=d.ROOT+'/.review-albums'
 MARKER=b'isegye-albums-review:v1\n'
@@ -77,7 +78,12 @@ def publish(remote,commit,report):
         d.require(old_entry==a.entry(remote.read(old_folder+'/access.php.template'),old_runtime),'Existing entry changed')
         for name,value in files.items():
             if name not in ('Gateway.php','AlbumsPreview.php'):
-                d.require(remote.read(old_folder+'/'+name)==value,'Current auth source changed: '+name)
+                old_value=remote.read(old_folder+'/'+name)
+                if name=='vendor/composer/installed.php':
+                    try:files[name]=preserved_root_metadata(old_value,value)
+                    except ValueError as exc:d.require(False,'Composer root metadata: '+str(exc))
+                else:d.require(old_value==value,'Current auth source changed: '+name)
+        runtime=runtime_id(files)
         old_gateway=remote.read(old_folder+'/Gateway.php')
         d.require(old_gateway in (previous_patched((ROOT/'auth/Gateway.php').read_text()).encode(),files['Gateway.php']),'Unknown gateway modification')
         review_before={}
@@ -124,7 +130,7 @@ def publish(remote,commit,report):
         d.require(remote.snapshot()==protected and remote.read(d.ROOT+'/.htaccess')==router,'Shared routing changed')
         d.require(all(d.digest(remote.read(p))==value for p,value in production_hashes.items()),'Production UI files changed')
         d.require(all(d.http(u)==value for u,value in other_sites.items()),'Existing other site response changed')
-        report.update(status='gated_preview_published_and_verified',commit=commit,url=d.ORIGIN+'/review-albums/',release=release,runtime=runtime,htmlSha256=d.digest(html),productionRelease=production,productionUIUnchanged=True,firstReviewUnchanged=True,secondReviewUnchanged=True,apiSha256=d.digest(data),sharedRouterUnchanged=True,accountStoreReadOrWritten=False,privatePathsBlocked=True,anonymousPreviewBlocked=True,requiresExistingAdministrator=True,realGoogleLoginPerformed=False,authorizedRenderingVerification='local TLS synthetic accounts; live file bytes verified by SFTP readback')
+        report.update(status='gated_preview_published_and_verified',commit=commit,url=d.ORIGIN+'/review-albums/',release=release,runtime=runtime,htmlSha256=d.digest(html),productionRelease=production,productionUIUnchanged=True,composerMetadataPreserved=True,firstReviewUnchanged=True,secondReviewUnchanged=True,apiSha256=d.digest(data),sharedRouterUnchanged=True,accountStoreReadOrWritten=False,privatePathsBlocked=True,anonymousPreviewBlocked=True,requiresExistingAdministrator=True,realGoogleLoginPerformed=False,authorizedRenderingVerification='local TLS synthetic accounts; live file bytes verified by SFTP readback')
     except Exception:
         try:
             if entry_changed:
