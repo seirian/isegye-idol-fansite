@@ -20,8 +20,27 @@ jobs:
         run: python scripts/collect_album_insights.py
         env:
           ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+      - name: Inspect ordinary public music responses; do not retry access denials
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          import json,time
+          out=Path('test-results/albums-api-probe');out.mkdir(parents=True,exist_ok=True)
+          urls={'melon-hot100.html':'https://www.melon.com/chart/hot100/','melon-top100.html':'https://www.melon.com/chart/index.htm','melon-likes.json':'https://www.melon.com/commonlike/getSongLike.json?contsIds=603093102','melon-robots.txt':'https://www.melon.com/robots.txt'}
+          report={}
+          for name,url in urls.items():
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as r:
+                raw=r.read(2000000);(out/name).write_bytes(raw);report[name]={'status':r.status,'bytes':len(raw),'contentType':r.headers.get('Content-Type')}
+            except Exception as e:report[name]={'error':type(e).__name__,'status':getattr(e,'code',None)}
+            time.sleep(3)
+          (out/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-data-${{ github.sha }}
-          path: albums/snapshot.json
+          path: |
+            albums/snapshot.json
+            test-results/albums-api-probe/
           retention-days: 7
