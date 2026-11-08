@@ -1,0 +1,58 @@
+name: Albums domestic source check
+on:
+  push:
+    branches: ['feature/albums']
+    paths: ['.github/workflows/albums-domestic-probe.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/feature/albums'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Read public pages only, without accounts or bypass
+        run: |
+          python - <<'PY'
+          import json,time,concurrent.futures
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          from urllib.parse import quote
+          out=Path('domestic-probe');out.mkdir()
+          sources={
+            'melon-song':'https://www.melon.com/song/detail.htm?songId=603093102',
+            'melon-album':'https://www.melon.com/album/detail.htm?albumId=14547786',
+            'melon-search':'https://www.melon.com/search/album/index.htm?q='+quote('이세계아이돌'),
+            'melon-top100':'https://www.melon.com/chart/index.htm',
+            'melon-hot100':'https://www.melon.com/chart/hot100/index.htm',
+            'genie-album':'https://www.genie.co.kr/detail/albumInfo?axnm=88156286',
+            'genie-search':'https://www.genie.co.kr/search/searchAlbum?query='+quote('이세계아이돌'),
+            'genie-chart':'https://www.genie.co.kr/chart/top200',
+            'bugs-album':'https://music.bugs.co.kr/album/4155656',
+            'bugs-search':'https://music.bugs.co.kr/search/album?q='+quote('이세계아이돌'),
+            'bugs-chart':'https://music.bugs.co.kr/chart',
+            'flo':'https://www.music-flo.com/',
+            'spotify':'https://open.spotify.com/',
+            'apple':'https://music.apple.com/kr/new',
+            'youtube-music':'https://music.youtube.com/',
+            'youtube':'https://www.youtube.com/'
+          }
+          def get(item):
+            name,url=item
+            try:
+              req=Request(url,headers={'User-Agent':'Mozilla/5.0 (compatible; ISEGYE-Archive-Review/1.1)','Accept':'text/html,application/json'})
+              with urlopen(req,timeout=25) as r:
+                data=r.read(2500000); headers=dict(r.headers)
+                charset=r.headers.get_content_charset() or ('cp949' if name.startswith('genie') else 'utf-8')
+                (out/(name+'.html')).write_text(data.decode(charset,errors='replace'))
+                return name,{'url':url,'final':r.url,'status':r.status,'bytes':len(data),'headers':headers}
+            except Exception as e:return name,{'url':url,'error':type(e).__name__}
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool: report=dict(pool.map(get,sources.items()))
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps({k:{x:v[x] for x in ['status','bytes','error'] if x in v} for k,v in report.items()}))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: albums-domestic-probe-${{ github.sha }}
+          path: domestic-probe/
+          retention-days: 7
