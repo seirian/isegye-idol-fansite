@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""Compile only albums-dist, using the current approved application as a baseline.
-No production files, pinned approved sources, account store or batch are modified.
-"""
+"""Compile only albums-dist from the approved application; never modify production."""
 from pathlib import Path
 from datetime import datetime, timezone
 import base64, hashlib, json, os, re, shutil
 import build_review_1st as first
 ROOT = Path(__file__).resolve().parents[1]
 BASE = '0593d96d855760f51b4cc5b51cb4969eac987a23'
-
 def once(text, old, new):
     if text.count(old) != 1: raise ValueError('Album build anchor changed: '+old[:80])
     return text.replace(old, new, 1)
-
 def build():
     if os.getenv('DEPLOY_ENV') == 'production': raise ValueError('Album review is not a production build')
     baseline = ROOT/'dist'; out = ROOT/'albums-dist'
@@ -54,7 +50,7 @@ def build():
     app=once(app,"if(!location.hash)history.replaceState(null,'','#/home');render();", "if(!location.hash)history.replaceState(null,'','#/music?tab=albums');render();")
     addition=re.sub(r'^export ','',(ROOT/'albums/core.js').read_text(),flags=re.M)+'\n'+(ROOT/'albums/ui.js').read_text()
     app=once(app,"if(!location.hash)history.replaceState",addition+"\nif(!location.hash)history.replaceState")
-    css=(baseline/'src/styles.css').read_text()+'\n'+(ROOT/'albums/theme.css').read_text()
+    css=(baseline/'src/styles.css').read_text()+'\n'+(ROOT/'albums/theme.css').read_text()+'\n'+(ROOT/'albums/engagement.css').read_text()
     code='const ALBUMS_SEED='+first.script_json(snapshot)+';\nconst REVIEW_DATA='+first.script_json(data)+';\n'+(baseline/'src/core.js').read_text()+'\n'+(baseline/'src/live-core.js').read_text()+'\n'+legacy+'\n'+app
     code=code.replace('isegye:theme:v1','isegye:albums-review:theme:v1').replace('isegye:bookmarks:v1','isegye:albums-review:bookmarks:v1')
     sha=lambda s:"'sha256-"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+"'"
