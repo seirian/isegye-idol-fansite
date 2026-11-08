@@ -12,35 +12,55 @@ jobs:
   build:
     if: github.ref == 'refs/heads/feature/albums'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Validate data rules and unchanged base catalog
+        run: |
+          npm test
+          python -m unittest discover -s tests -p 'test_albums_insights.py' -v
+      - name: Inspect official Apple response schemas
+        run: |
+          python - <<'PY'
+          import sys,json,time
+          from pathlib import Path
+          from urllib.parse import urlencode
+          sys.path.insert(0,'scripts')
+          from collect_album_insights import fetch_json,CHART
+          out=Path('test-results/albums-api-probe');out.mkdir(parents=True,exist_ok=True)
+          for name,url in [('apple-chart.json',CHART)]+[(name+'-'+country+'.json','https://itunes.apple.com/search?'+urlencode({'term':term,'country':country,'entity':'song','limit':200})) for name,term in [('group','ISEGYE IDOL'),('gosegu','GOSEGU')] for country in ['US','KR']]:
+            try:
+              result=fetch_json(url);(out/name).write_text(json.dumps(result,ensure_ascii=False,indent=2));print(name,result.get('resultCount','feed'))
+            except Exception as exc:print(name,type(exc).__name__)
+            time.sleep(3.1)
+          PY
       - name: Collect official API snapshot without production writes
         run: python scripts/collect_album_insights.py
         env:
           ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
-      - name: Inspect ordinary public music responses; do not retry access denials
+      - name: Install isolated pinned build and browser tools
         run: |
-          python - <<'PY'
-          from urllib.request import Request,urlopen
-          from pathlib import Path
-          import json,time
-          out=Path('test-results/albums-api-probe');out.mkdir(parents=True,exist_ok=True)
-          urls={'melon-hot100.html':'https://www.melon.com/chart/hot100/','melon-top100.html':'https://www.melon.com/chart/index.htm','melon-likes.json':'https://www.melon.com/commonlike/getSongLike.json?contsIds=603093102','melon-robots.txt':'https://www.melon.com/robots.txt'}
-          report={}
-          for name,url in urls.items():
-            try:
-              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as r:
-                raw=r.read(2000000);(out/name).write_bytes(raw);report[name]={'status':r.status,'bytes':len(raw),'contentType':r.headers.get('Content-Type')}
-            except Exception as e:report[name]={'error':type(e).__name__,'status':getattr(e,'code',None)}
-            time.sleep(3)
-          (out/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
-          PY
+          python -m venv /tmp/albums-tools
+          /tmp/albums-tools/bin/pip install pillow==11.3.0 tinycss2==1.4.0 playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/albums-tools/bin/python
+      - name: Build approved baseline and isolated album review
+        env:
+          PYTHON: /tmp/albums-tools/bin/python
+        run: |
+          npm run build
+          /tmp/albums-tools/bin/python scripts/build_albums_review.py
+      - name: Test exact review artifact on desktop and mobile
+        run: /tmp/albums-tools/bin/python tests/albums_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with:
-          name: albums-data-${{ github.sha }}
+          name: albums-review-${{ github.sha }}
           path: |
+            albums-dist/
             albums/snapshot.json
             test-results/albums-api-probe/
-          retention-days: 7
+            test-results/albums-browser/
+          retention-days: 14
