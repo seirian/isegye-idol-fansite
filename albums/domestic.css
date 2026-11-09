@@ -1,0 +1,12 @@
+/* Requested revision: domestic artwork and recognizable first-party brand icons. */
+.ai-cover{position:relative;background:var(--surface,#181b20);overflow:hidden;isolation:isolate}
+.ai-cover::before,.ai-cover::after{display:none!important}
+.ai-cover img{display:block;width:100%;height:100%;object-fit:contain;aspect-ratio:1;border-radius:inherit}
+.ai-intro h1{max-width:600px;text-wrap:balance}
+.ai-platform-links{display:grid;gap:8px;margin-top:18px}
+.ai-platform-link{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);min-height:52px;text-decoration:none}
+.ai-platform-link:hover,.ai-platform-link:focus-visible{border-color:var(--accent);background:var(--surface)}
+.ai-platform-logo{display:block;flex:0 0 24px;object-fit:contain;width:24px;height:24px}
+.ai-platform-link>span{font-weight:700;flex:1}
+.ai-platform-link>small{font-size:11px;color:var(--muted);white-space:nowrap}
+@media(max-width:600px){.ai-intro h1{max-width:340px}.ai-platform-links{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-platform-link{gap:8px;padding:12px 10px;flex-wrap:wrap}.ai-platform-link>small{flex-basis:100%;padding-left:32px}.ai-platform-link>span{font-size:13px}}

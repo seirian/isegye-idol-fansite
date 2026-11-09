@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {albumDuration,albumSafeUrl,albumValidSnapshot,albumRankSeries,albumRankSummary,albumRankGeometry,albumDemoSeries} from '../albums/core.js';
+const end=Date.parse('2026-11-09T00:00:00Z');
+const point=(hour,rank,status='ranked')=>({at:new Date(end-hour*3600000).toISOString(),rank,status});
+test('duration does not confuse zero or missing with valid time',()=>{assert.equal(albumDuration(null),'미확인');assert.equal(albumDuration(0),'미확인');assert.equal(albumDuration(175000),'2:55');assert.equal(albumDuration(59999),'1:00');});
+test('only approved HTTPS music hosts without credentials',()=>{assert.equal(albumSafeUrl('javascript:alert(1)'),'');assert.equal(albumSafeUrl('https://evil.example/music.apple.com'),'');assert.equal(albumSafeUrl('https://user:pass@music.apple.com/kr'),'');assert.ok(albumSafeUrl('https://music.apple.com/kr/album/1'));});
+test('invalid snapshot is rejected',()=>{assert.equal(albumValidSnapshot({}),false);assert.equal(albumValidSnapshot({schemaVersion:1,generatedAt:'bad',providers:{},tracks:{}}),false);assert.equal(albumValidSnapshot({schemaVersion:1,generatedAt:new Date(end).toISOString(),providers:{},tracks:{x:{metadata:{title:'x',artist:'a',durationMs:1000}}}}),true);});
+test('rank zero, over100, future and malformed samples are discarded',()=>{assert.equal(albumRankSeries([point(1,0),point(1,101),point(-1,10),{at:'bad',rank:3,status:'ranked'}],24,end).length,0);});
+test('out of chart and API error are gaps, not rank 101 or 0',()=>{const rows=albumRankSeries([point(3,10),point(2,null,'out'),point(1,null,'error'),point(0,5)],24,end);const g=albumRankGeometry(rows,end-3*3600000,end);assert.equal(g.paths.length,2);assert.equal(g.points.length,2);assert.equal(rows[1].rank,null);assert.equal(rows[2].status,'error');});
+test('rank1 is above rank100 and time spacing is not evenly invented',()=>{const rows=albumRankSeries([point(24,100),point(23,50),point(0,1)],24,end);const g=albumRankGeometry(rows,end-24*3600000,end);assert.ok(g.points[0].y>g.points[2].y);assert.ok(g.points[1].x-g.points[0].x<g.points[2].x-g.points[1].x);});
+test('long unobserved intervals are not connected',()=>{const rows=albumRankSeries([point(24,30),point(0,20)],24,end);assert.equal(albumRankGeometry(rows,end-24*3600000,end,90*60000).paths.length,2);});
+test('deduplicate timestamps and respect selected range',()=>{assert.equal(albumRankSeries([point(25,1),point(1,20),point(1,18)],24,end).length,1);assert.equal(albumRankSeries([point(1,20),point(1,18)],24,end)[0].rank,18);});
+test('period best is observed best; missing transition has no delta',()=>{const rows=albumRankSeries([point(3,10),point(2,null,'out'),point(1,20)],24,end);assert.equal(albumRankSummary(rows).best,10);assert.equal(albumRankSummary(rows).change,null);assert.equal(albumRankSummary(rows).observations,3);});
+test('a single rank is just one point',()=>{const rows=albumRankSeries([point(0,23)],24,end);assert.equal(albumRankGeometry(rows,end-3600000,end).paths[0].length,1);assert.equal(albumRankSummary(rows).change,null);});
+test('positive delta means an improved ranking',()=>{assert.equal(albumRankSummary(albumRankSeries([point(1,20),point(0,12)],24,end)).change,8);});
+test('demo only exists when explicitly called',()=>{assert.equal(albumDemoSeries(24,end).length,16);assert.equal(albumRankSeries(undefined,24,end).length,0);});
