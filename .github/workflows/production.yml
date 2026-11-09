@@ -15,7 +15,7 @@ jobs:
       name: production
       url: https://isegye-idol.kr/
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -84,7 +84,7 @@ jobs:
           /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
           python scripts/build_albums_host.py
       - name: Activate Google access without pre-registering the administrator
-        run: /tmp/archive-browser-tests/bin/python scripts/deploy_google_access.py
+        run: /tmp/archive-browser-tests/bin/python -u scripts/deploy_verified_albums.py
         env:
           PRODUCTION_ENABLED: 'true'
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
