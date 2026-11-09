@@ -13,8 +13,38 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
       - run: git archive --format=zip --output=albums-source.zip HEAD
+      - name: Inspect public official song and chart source without credentials or bypass
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          from urllib.parse import urljoin,urlparse
+          import re,json,time
+          out=Path('test-results/melon-origin');out.mkdir(parents=True,exist_ok=True)
+          urls=[('song','https://www.melon.com/song/detail.htm?songId=603093102'),('chart','https://www.melon.com/chart/index.htm'),('hot','https://www.melon.com/chart/hot100/index.htm')]
+          report=[];scripts=[]
+          for name,url in urls:
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as r:
+                data=r.read(2000000);text=data.decode('utf-8','replace');(out/(name+'.html')).write_text(text)
+                report.append({'name':name,'url':url,'status':r.status,'final':r.url,'bytes':len(data)})
+                scripts.extend(urljoin(url,x) for x in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text,re.I) if any(v in x.lower() for v in ('chart','song','melon.link')))
+            except Exception as e:report.append({'name':name,'url':url,'error':type(e).__name__})
+            time.sleep(1)
+          for i,url in enumerate(dict.fromkeys(scripts)):
+            if i>=10:break
+            host=urlparse(url).hostname or ''
+            if not host.endswith('.melon.com') and not host.endswith('.melon.co.kr'):continue
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=15) as r:
+                data=r.read(2000000);(out/('script-'+str(i)+'.js')).write_bytes(data);report.append({'file':'script-'+str(i)+'.js','url':url,'bytes':len(data)})
+            except Exception as e:report.append({'url':url,'error':type(e).__name__})
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False))
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
-          path: albums-source.zip
+          path: |
+            albums-source.zip
+            test-results/melon-origin/
           retention-days: 7
