@@ -19,6 +19,10 @@ def build():
     if snapshot.get('schemaVersion') != 1 or not isinstance(snapshot.get('tracks'),dict): raise ValueError('Snapshot required')
     if any(t.get('melonPeaks', {}).get('sourceType') not in (None, 'melon_original_song_info') for t in snapshot['tracks'].values()):
         raise ValueError('Non-original Melon record in preview snapshot')
+    from collect_album_peak_fallback import reusable as valid_fallback
+    for item in snapshot['tracks'].values():
+        if 'melonPeakFallback' in item and not valid_fallback(item['melonPeakFallback'], item.get('melon',{})):
+            raise ValueError('Unverified secondary peak in preview snapshot')
     data = first.extract((baseline/'src/data.js').read_text(),'REVIEW_DATA')
     # Source-owned titles remain verbatim; only preview classification labels change.
     for entry in data['albums'] + data['songs']:
@@ -63,7 +67,7 @@ def build():
             raw=path.read_bytes()
             if hashlib.sha256(raw).hexdigest()!=asset['sha256'] or len(raw)>180000:raise ValueError('Album asset integrity/size')
             destination[key]='data:image/webp;base64,'+base64.b64encode(raw).decode()
-    addition='const ALBUMS_ART='+first.script_json(artwork)+';\nconst ALBUMS_BRANDS='+first.script_json(brands)+';\nconst ALBUMS_BADGES='+first.script_json(badges)+';\n'+re.sub(r'^export ','',(ROOT/'albums/core.js').read_text(),flags=re.M)+'\n'+(ROOT/'albums/ui.js').read_text()
+    addition='const ALBUMS_ART='+first.script_json(artwork)+';\nconst ALBUMS_BRANDS='+first.script_json(brands)+';\nconst ALBUMS_BADGES='+first.script_json(badges)+';\n'+re.sub(r'^export ','',(ROOT/'albums/core.js').read_text(),flags=re.M)+'\n'+re.sub(r'^export ','',(ROOT/'albums/peak-fallback.js').read_text().replace("import {albumVerifiedPeaks} from './core.js';",''),flags=re.M)+'\n'+(ROOT/'albums/ui.js').read_text()
     app=once(app,"if(!location.hash)history.replaceState",addition+"\nif(!location.hash)history.replaceState")
     css=(baseline/'src/styles.css').read_text()+'\n'+(ROOT/'albums/theme.css').read_text()+'\n'+(ROOT/'albums/engagement.css').read_text()+'\n'+(ROOT/'albums/domestic.css').read_text()+'\n'+(ROOT/'albums/records.css').read_text()
     code='const ALBUMS_SEED='+first.script_json(snapshot)+';\nconst REVIEW_DATA='+first.script_json(data)+';\n'+(baseline/'src/core.js').read_text()+'\n'+(baseline/'src/live-core.js').read_text()+'\n'+legacy+'\n'+app

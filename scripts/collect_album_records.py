@@ -17,6 +17,8 @@ HOSTS={'m2.melon.com','cdnimg.melon.co.kr'}
 
 def allowed(url):
     u=urlparse(url)
+    from collect_album_peak_fallback import allowed_source
+    if allowed_source(url): return url
     if u.scheme!='https' or u.hostname not in HOSTS or u.port not in (None,443) or u.username or u.password: raise ValueError('Unapproved record URL')
     return url
 class Redirect(HTTPRedirectHandler):
@@ -88,6 +90,8 @@ def collect(result,previous):
         report['awards']={'state':'ok','albums':len(awards),'source':HALL,'responseSha256':hashlib.sha256(raw).hexdigest()}
     except Exception as exc: report['awards']={'state':'error','error':type(exc).__name__}
     report['peaks']=collect_original_records(result,previous,fetch)
+    from collect_album_peak_fallback import collect_reference_peaks
+    report['fallbackPeaks']=collect_reference_peaks(result,previous,fetch)
     # Removed providers never survive restoration of the older feature cache.
     for name in ('flo','spotify'):result['providers'].pop(name,None);result['assets'].get('brands',{}).pop(name,None)
     for item in result['tracks'].values():

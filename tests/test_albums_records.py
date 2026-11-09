@@ -16,6 +16,6 @@ class RecordsTests(unittest.TestCase):
  def test_missing_issue_time_not_guessed(self):
   with self.assertRaises(ValueError):c.parse_hall(self.hall().replace('202308181800',''),self.expected())
  def test_untrusted_sources_blocked(self):
-  for u in ['http://m2.melon.com/a','https://m2.melon.com.evil.test/a','https://u:p@m2.melon.com/a','https://isegyechart.com/song/828','https://127.0.0.1/a']:
+  for u in ['http://m2.melon.com/a','https://m2.melon.com.evil.test/a','https://u:p@m2.melon.com/a','https://isegyechart.com/api/private','https://127.0.0.1/a']:
    with self.assertRaises(ValueError):c.allowed(u)
 if __name__=='__main__':unittest.main()
