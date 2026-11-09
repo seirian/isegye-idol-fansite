@@ -18,6 +18,10 @@ def build():
     snapshot = json.loads((ROOT/'albums/snapshot.json').read_text())
     if snapshot.get('schemaVersion') != 1 or not isinstance(snapshot.get('tracks'),dict): raise ValueError('Snapshot required')
     data = first.extract((baseline/'src/data.js').read_text(),'REVIEW_DATA')
+    # Source-owned titles remain verbatim; only preview classification labels change.
+    for entry in data['albums'] + data['songs']:
+        if isinstance(entry.get('format'), str):
+            entry['format'] = entry['format'].replace('음반', '앨범')
     all_videos=[]
     for path in sorted((baseline/'src').glob('video-part-*.js')):
         raw=path.read_text(); prefix='REVIEW_DATA.videos.push(...'
