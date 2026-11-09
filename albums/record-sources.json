@@ -1,0 +1,25 @@
+{
+  "scope": "Explicit public observation page IDs. Every response must match exact Melon song/album IDs; no UI or lyric copying.",
+  "discoverySource": "https://isegyechart.com/api/song-selector-list",
+  "tracks": {
+    "rewind": {"melonId": "34421197", "recordId": 795},
+    "winter-spring": {"melonId": "34748940", "recordId": 796},
+    "kidding": {"melonId": "36710003", "recordId": 799},
+    "misty-rainbow": {"melonId": "38852970", "recordId": 813},
+    "stargazers": {"melonId": "38958780", "recordId": 814},
+    "elevate": {"melonId": "38958781", "recordId": 815},
+    "memory": {"melonId": "38958782", "recordId": 816},
+    "be-my-light": {"melonId": "600406667", "recordId": 821},
+    "nameless": {"melonId": "600406668", "recordId": 822},
+    "white": {"melonId": "600740747", "recordId": 826},
+    "smile-for-you": {"melonId": "602294070", "recordId": 827},
+    "lockdown": {"melonId": "36549241", "recordId": 797},
+    "another-world": {"melonId": "36634860", "recordId": 798},
+    "syzygy": {"melonId": "38684087", "recordId": 812},
+    "over": {"melonId": "36820644", "recordId": 800},
+    "superhero": {"melonId": "36820645", "recordId": 801},
+    "cat-save-world": {"melonId": "603093102", "recordId": 828},
+    "your-turn": {"melonId": "603093103", "recordId": 829},
+    "pump-jump-bump": {"melonId": "603093104", "recordId": 830}
+  }
+}

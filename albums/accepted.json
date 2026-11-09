@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "operatorApprovedDeployment": true,
+  "acceptedCommit": "f2c00e2bb1f4a762e8ff1578f540584652d8053b",
+  "backupBranch": "backup/albums-before-promotion",
+  "backupCommit": "58baff4ceba202dcfe69bcb9f2404bd0b196577e",
+  "scope": "Promote reviewed album UI only; preserve full catalog, existing feeds, authentication and existing collection schedules.",
+  "sourceHashes": {
+    "albums/core.js": "60b38cd20c363c5f4e6e0de992013e72c836ef88f0f91eb559ca1f746208c073",
+    "albums/peak-fallback.js": "a647567780404951eae8fb78597ffb594a6e72eb5c6ee1d3be0ac616232bf471",
+    "albums/flow.js": "31c0e0ec2910741b08021bdd8b8519caf69f362aa45ca3190986f7a94f04343f",
+    "albums/ui.js": "32d22984166795d8642863477b2b18f4594b473d3ab893cb05ee05d7ac8b80b2",
+    "albums/flow-view.js": "68abb856d19cc81b27410e3c43a27894e7d9a3df22ca74ceb4169f89c17626f6",
+    "albums/theme.css": "54849828573f49232515586f89f4b0e5b9244ff547483c480a21ba33f988f58a",
+    "albums/engagement.css": "53167e56a72d848cf376ed8cc0697f222cea230762bce2718c5f1fa6b8ba73d3",
+    "albums/domestic.css": "6a7cbb01259f6790a8e6c72dd3f4214fc7e585134dc4d653eb3a78f74fdeb551",
+    "albums/records.css": "e54210a183188f0a26c38be6f902cd2756e6f4e16a61363883ee6204efaa61d9",
+    "albums/flow.css": "095054f9fa2bb587bde18f99b70bba644c772d520d3a67cc1f5ac0c2eb390fb3"
+  }
+}
