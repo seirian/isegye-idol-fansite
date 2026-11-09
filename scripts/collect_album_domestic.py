@@ -13,15 +13,13 @@ import hashlib, io, json, re, time
 ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
 HOSTS = {'www.melon.com','www.genie.co.kr','music.bugs.co.kr','cdnimg.melon.co.kr',
- 'image.genie.co.kr','image.bugsm.co.kr','file.bugsm.co.kr','www.music-flo.com',
- 'open.spotifycdn.com','music.apple.com','www.youtube.com','music.youtube.com'}
+ 'image.genie.co.kr','image.bugsm.co.kr','file.bugsm.co.kr',
+ 'music.apple.com','www.youtube.com','music.youtube.com'}
 ARTISTS = {'group': {'이세계아이돌isegyeidol','이세계아이돌','isegyeidol'}, 'gosegu': {'고세구','gosegu','고세구gosegu'}}
 BRANDS = {
  'melon':'https://www.melon.com/favicon.ico?2',
  'genie':'https://www.genie.co.kr/resources/favicon_32.ico?v=202602091400',
  'bugs':'https://file.bugsm.co.kr/wbugs/common/faviconBugs.ico',
- 'flo':'https://www.music-flo.com/favicon.ico',
- 'spotify':'https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png',
  'apple':'https://music.apple.com/assets/favicon/favicon-32.png',
  'youtube':'https://www.youtube.com/s/desktop/4e57be2c/img/favicon_48x48.png',
  'youtube_music':'https://music.youtube.com/img/favicon_48.png'}
@@ -102,9 +100,15 @@ def parse_album(html,provider,album_id):
         for row in soup.select('tr[trackid]'):
             title=row.select_one('.title a');artist=row.select_one('.artist a')
             if title and artist:rows.append({'trackId':row['trackid'],'title':text(title),'artist':text(artist)})
+    album_genre=''
+    if provider=='melon':
+        for dt in soup.select('.meta dt'):
+            if text(dt)=='장르': album_genre=text(dt.find_next_sibling('dd'))
     if not album or not rows or any(not r['trackId'].isdigit() for r in rows):raise ValueError('Album schema/identity missing')
     if len({r['trackId'] for r in rows})!=len(rows):raise ValueError('Duplicate album IDs')
-    for row in rows:row.update(album=album,albumId=str(album_id),url=TRACK_URLS[provider]+row['trackId'],albumUrl=ALBUM_URLS[provider]+str(album_id),cover=cover)
+    for row in rows:
+        if album_genre: row['genre']=album_genre
+        row.update(album=album,albumId=str(album_id),url=TRACK_URLS[provider]+row['trackId'],albumUrl=ALBUM_URLS[provider]+str(album_id),cover=cover)
     return rows
 
 def match(song,rows):
@@ -235,6 +239,6 @@ def collect(result,previous):
             local=(ROOT/old.get('path','invalid')).resolve()
             if local.is_relative_to((ROOT/'albums/asset-cache').resolve()) and local.is_file() and not local.is_symlink() and hashlib.sha256(local.read_bytes()).hexdigest()==old.get('sha256'):
                 result['assets']['brands'][name]=old
-    report['manual']=['FLO: approved chart/data endpoint or partner credentials required.', 'Spotify: server-side ISEGYE_SPOTIFY_CLIENT_ID and ISEGYE_SPOTIFY_CLIENT_SECRET for Web API metadata; Web API does not provide public stream counts.', 'Continuous review history: workflow push/manual collects only. No production scheduler modified.']
+    report['manual']=['Review collections run on feature push/manual only; no production scheduler modified.']
     path=ROOT/'test-results/albums-domestic';path.mkdir(parents=True,exist_ok=True);(path/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     return result

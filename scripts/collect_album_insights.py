@@ -135,7 +135,7 @@ def collect(previous=None):
             result['providers']['youtube']={'state':'error','checkedAt':stamp,'error':type(exc).__name__}
             for sid in official: result['tracks'][sid]['youtube']={'state':'error'}
     else: result['providers']['youtube']={'state':'not_configured'}
-    for name in ('melon','genie','bugs','flo','spotify'):
+    for name in ('melon','genie','bugs'):
         result['providers'][name]={'state':'not_configured','reason':'Verified provider access and exact track IDs required; no inferred rank.'}
     return result
 

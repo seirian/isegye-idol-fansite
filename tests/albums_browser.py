@@ -3,7 +3,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
 from functools import partial
 from playwright.sync_api import sync_playwright,expect
-import threading,json,re
+import threading,json,re,os
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'test-results/albums-browser';OUT.mkdir(parents=True,exist_ok=True)
 class Handler(SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
@@ -20,7 +20,7 @@ def check(name,condition):
     if not condition:raise AssertionError(name)
 try:
  with sync_playwright() as pw:
-    browser=pw.chromium.launch(headless=True)
+    browser=pw.chromium.launch(headless=True,executable_path=os.environ.get('BROWSER_EXECUTABLE_PATH'))
     context=browser.new_context();context.route(re.compile(r'https://'),lambda r:r.abort())
     page=context.new_page();errors=[];violations=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
@@ -29,6 +29,9 @@ try:
     expect(page.locator('[data-ai-api]')).to_have_text('동일 출처 API 확인')
     check('default route is album list','tab=albums' in page.url)
     expect(page.locator('#main h1')).to_have_text('한 곡에서 시작되는 이야기')
+    check('album terminology', '음반' not in page.locator('#main').inner_text())
+    check('no reset beside card/list',page.locator('.result-bar').get_by_text('초기화',exact=True).count()==0)
+    check('nine official album honors',page.locator('.ai-card .ai-honor').count()==9)
     check('removed coverage selector',page.locator('[data-filter=coverage]').count()==0)
     check('domestic album covers present',page.locator('.ai-card .ai-cover img').count()>=13)
     page.goto(url+'#/music?tab=albums&coverage=connected',wait_until='domcontentloaded');expect(page.locator('.ai-card')).to_have_count(15)
@@ -44,11 +47,19 @@ try:
     page.locator('.ai-chart .ai-dot').first.focus();check('keyboard-accessible points',page.locator('.ai-chart .ai-dot').first.get_attribute('aria-label') is not None)
     page.get_by_role('link',name='실제 데이터로 돌아가기').click();expect(page.locator('.ai-demo')).to_have_count(0)
     expect(page.locator('.ai-streaming h2')).to_have_text('음원 연결')
-    check('eight first-party logos before platform names',page.locator('.ai-streaming .ai-platform-logo').count()==8)
-    check('logos loaded and precede names',page.locator('.ai-platform-link').evaluate_all('(links)=>links.every(a=>a.firstElementChild.tagName===\"IMG\" && a.firstElementChild.complete && a.firstElementChild.naturalWidth>0)'))
+    check('six first-party logos before platform names',page.locator('.ai-streaming .ai-platform-logo').count()==6)
+    check('logos loaded and precede names',page.locator('.ai-platform-link').evaluate_all('(links)=>links.every(a=>a.firstElementChild.tagName==="IMG" && a.firstElementChild.complete && a.firstElementChild.naturalWidth>0)'))
     check('no trailing arrow icons on platform links',page.locator('.ai-streaming svg').count()==0)
     check('selected song has a domestic cover',page.locator('.ai-hero .ai-cover img').count()==1)
     check('three verified domestic direct track links',page.locator('.ai-streaming a[href*="songId="], .ai-streaming a[href*="xgnm="], .ai-streaming a[href*="/track/"]').count()>=3)
+    check('requested platform priority',page.locator('.ai-platform-link>span').all_text_contents()==['멜론','지니','벅스','유튜브 뮤직','유튜브','애플 뮤직'])
+    check('removed platform names',not re.search(r'FLO|Spotify|스포티파이',page.locator('#main').inner_text()))
+    check('three top historical peak cards',page.locator('.ai-peaks .ai-peak').count()==3)
+    check('real peak source not current snapshot',page.locator('[data-peak=top100] strong').inner_text()=='49위')
+    check('peak record provenance explicit','이세계차트 공개 관측 기록' in page.locator('.ai-peaks').inner_text())
+    check('official badge at title right',page.locator('.ai-hero .ai-title-row .ai-honor').count()==1)
+    check('peak block before graphs',page.locator('.ai-peaks').evaluate('(p)=>Boolean(p.compareDocumentPosition(document.querySelector(".ai-workspace"))&Node.DOCUMENT_POSITION_FOLLOWING)'))
+    check('Melon charts before video stats',page.locator('[aria-label="음원 순위 추이"]').evaluate('(p)=>Boolean(p.compareDocumentPosition(document.querySelector(".ai-video-panel"))&Node.DOCUMENT_POSITION_FOLLOWING)'))
     page.locator('select[data-filter=metric]').select_option('genie');expect(page.locator('select[data-filter=metric]')).to_have_value('genie')
     check('Genie TOP200 selectable',True)
     check('demo does not overwrite embedded real data',page.evaluate('Object.values(albumInsights.tracks).every(t=>!(t.appleHistory||[]).some(p=>p.demo))'))
@@ -61,7 +72,14 @@ try:
     page.goto(url+'#/music?tab=albums&view=list',wait_until='domcontentloaded');expect(page.locator('.ai-list-view')).to_be_visible()
     check('list mode works',page.locator('.ai-list-view .ai-card').count()==15)
     page.locator('[data-action=theme]').click();check('light mode',page.locator('html').get_attribute('data-theme')=='light');page.screenshot(path=str(OUT/'list-light.png'),full_page=True)
-    page.goto(url+'#/song/not-real',wait_until='domcontentloaded');expect(page.locator('#main h1')).to_contain_text('찾을 수 없는')
+    page.goto(url+'#/song/rewind',wait_until='domcontentloaded')
+    check('unawarded album has no invented badge',page.locator('.ai-hero .ai-honor').count()==0)
+    page.goto(url+'#/song/kidding',wait_until='domcontentloaded')
+    check('KIDDING has official 2M label',page.locator('.ai-hero .ai-honor b').inner_text()=='2M')
+    page.goto(url+'#/song/but-you-want-more',wait_until='domcontentloaded')
+    check('video-only track has no invented peak',page.locator('.ai-peaks strong').all_text_contents()==['—','—','—'])
+    check('video-only track has no invented badge',page.locator('.ai-hero .ai-honor').count()==0)
+    page.goto(url+'#/song/not-real' ,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_contain_text('찾을 수 없는')
     keys=page.evaluate('Object.keys(localStorage)');check('preview preferences isolated',all(k.startswith('isegye:albums-review:') for k in keys))
     check('no JavaScript exceptions',not errors);check('no CSP violations',not violations)
     context.route('**/review-albums/api/insights',lambda r:r.fulfill(status=503,body='unavailable'))

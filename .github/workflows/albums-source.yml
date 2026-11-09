@@ -12,30 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
-      - name: Inspect public record index script and explicit endpoint references
-        run: |
-          python - <<'PY'
-          from urllib.request import Request,urlopen
-          from urllib.parse import urljoin,urlparse
-          from pathlib import Path
-          import json,re,hashlib
-          out=Path('test-results/albums-record-contract');out.mkdir(parents=True,exist_ok=True)
-          def get(u):
-              with urlopen(Request(u,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as r:return r.read(4000000)
-          u='https://isegyechart.com/_astro/songSelector.CRkJNl7B.js';raw=get(u);(out/'selector.js').write_bytes(raw);print(raw.decode())
-          urls=[]
-          for link in re.findall(r'[\"\x27](/[^\"\x27]+)[\"\x27]',raw.decode()):
-              if any(k in link for k in ('api/','song','json')) and '${' not in link:urls.append(urljoin(u,link))
-          report=[]
-          for u in list(dict.fromkeys(urls))[:5]:
-              if urlparse(u).hostname!='isegyechart.com':continue
-              try:
-                  raw=get(u);name=hashlib.sha256(u.encode()).hexdigest()[:10]+'.txt';(out/name).write_bytes(raw);report.append({'url':u,'name':name,'size':len(raw)})
-              except Exception as e:report.append({'url':u,'error':type(e).__name__})
-          (out/'report.json').write_text(json.dumps(report,indent=2))
-          PY
+      - run: git archive --format=zip --output=albums-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
-          path: test-results/albums-record-contract/
+          path: albums-source.zip
           retention-days: 7

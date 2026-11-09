@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {albumProviderOrder,albumPreferredField,albumVerifiedHonor,albumVerifiedPeaks,albumSafeUrl} from '../albums/core.js';
+test('provider priority matches requested six services',()=>assert.deepEqual(albumProviderOrder,['melon','genie','bugs','youtube_music','youtube','apple']));
+test('Melon wins field conflicts; Apple fills only missing data',()=>{const row={melon:{genre:'댄스'},genie:{genre:'가요',durationMs:123000},metadata:{genre:'K-Pop',durationMs:124000}};assert.equal(albumPreferredField(row,'genre').provider,'melon');assert.equal(albumPreferredField(row,'durationMs').provider,'genie');assert.equal(albumPreferredField({metadata:row.metadata},'durationMs').provider,'apple');});
+test('video time is not substituted for audio duration',()=>assert.equal(albumPreferredField({youtube:{durationMs:200000}},'durationMs').value,null));
+test('removed services cannot be output as service links',()=>{assert.equal(albumSafeUrl('https://www.music-flo.com/'),'');assert.equal(albumSafeUrl('https://open.spotify.com/track/x'),'');});
+const honor={state:'verified',albumId:'123',scope:'album_first_24h',label:'2M',asset:'asset',source:'https://m2.melon.com/melonhall/sector/album/report.htm?albumId=123&issueDate=202308181800'};
+test('official album honor requires matching album and cached asset',()=>{assert.ok(albumVerifiedHonor({melon:{albumId:'123'},melonHonor:honor},{asset:'data:image/webp;base64,AA'}));assert.equal(albumVerifiedHonor({melon:{albumId:'124'},melonHonor:honor},{asset:'x'}),null);assert.equal(albumVerifiedHonor({melon:{albumId:'123'},melonHonor:honor},{}),null);});
+test('wrong honor source and song-scoped milestones are rejected',()=>{for(const patch of [{scope:'song'},{source:'https://evil.invalid/a'},{label:'<img>'}])assert.equal(albumVerifiedHonor({melon:{albumId:'123'},melonHonor:{...honor,...patch}},{asset:'x'}),null);});
+const peaks={state:'verified',trackId:'123',checkedAt:'2026-11-09T00:55:00Z',source:'https://isegyechart.com/song/828',ranks:{top100:49,hot100:12,realtime:18}};
+test('historical peaks are identity-checked and independent of recent chart arrays',()=>{assert.deepEqual(albumVerifiedPeaks({melon:{trackId:'123'},melonPeaks:peaks,charts:{melon_top100:[{rank:1}]}}).ranks,peaks.ranks);assert.equal(albumVerifiedPeaks({melon:{trackId:'124'},melonPeaks:peaks}),null);});
+test('missing peaks remain unknown rather than zero or 101',()=>{assert.equal(albumVerifiedPeaks({melon:{trackId:'123'},melonPeaks:{...peaks,ranks:{top100:null,hot100:null,realtime:1}}}).ranks.top100,null);assert.equal(albumVerifiedPeaks({melon:{trackId:'123'},melonPeaks:{...peaks,ranks:{top100:0,hot100:101,realtime:1}}}),null);});

@@ -35,10 +35,6 @@ jobs:
         run: python scripts/refresh_album_review.py
         env:
           ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
-          ISEGYE_SPOTIFY_CLIENT_ID: ${{ secrets.ISEGYE_SPOTIFY_CLIENT_ID }}
-          ISEGYE_SPOTIFY_CLIENT_SECRET: ${{ secrets.ISEGYE_SPOTIFY_CLIENT_SECRET }}
-      - name: Inspect remaining public source contracts without authentication
-        run: python scripts/inspect_album_sources.py
       - name: Install isolated pinned build and browser tools
         run: |
           python -m venv /tmp/albums-tools
@@ -71,6 +67,7 @@ jobs:
             albums-dist/
             albums/snapshot.json
             albums/asset-cache/
+            test-results/albums-records/
             test-results/albums-domestic/
             test-results/albums-api-probe/
             test-results/albums-browser/

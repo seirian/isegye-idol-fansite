@@ -46,19 +46,20 @@ def build():
     app=once(app,migration,'/* Preview storage is independent; no production preferences are read. */')
     for name in ('musicView','songView','albumView','albumCard'):
         app=once(app,'function '+name+'(', 'function albumsBase'+name[0].upper()+name[1:]+'(')
+    app=app.replace('음반','앨범')
     app=app.replace('isegye:archive:', 'isegye:albums-review:')
     app=once(app,"if(!location.hash)history.replaceState(null,'','#/home');render();", "if(!location.hash)history.replaceState(null,'','#/music?tab=albums');render();")
-    artwork={};brands={}
-    for group,destination in [('covers',artwork),('brands',brands)]:
+    artwork={};brands={};badges={}
+    for group,destination in [('covers',artwork),('brands',brands),('badges',badges)]:
         for key,asset in snapshot.get('assets',{}).get(group,{}).items():
             path=(ROOT/asset['path']).resolve()
             if not path.is_relative_to((ROOT/'albums/asset-cache').resolve()) or not path.is_file() or path.is_symlink():raise ValueError('Missing or unsafe album asset')
             raw=path.read_bytes()
             if hashlib.sha256(raw).hexdigest()!=asset['sha256'] or len(raw)>180000:raise ValueError('Album asset integrity/size')
             destination[key]='data:image/webp;base64,'+base64.b64encode(raw).decode()
-    addition='const ALBUMS_ART='+first.script_json(artwork)+';\nconst ALBUMS_BRANDS='+first.script_json(brands)+';\n'+re.sub(r'^export ','',(ROOT/'albums/core.js').read_text(),flags=re.M)+'\n'+(ROOT/'albums/ui.js').read_text()
+    addition='const ALBUMS_ART='+first.script_json(artwork)+';\nconst ALBUMS_BRANDS='+first.script_json(brands)+';\nconst ALBUMS_BADGES='+first.script_json(badges)+';\n'+re.sub(r'^export ','',(ROOT/'albums/core.js').read_text(),flags=re.M)+'\n'+(ROOT/'albums/ui.js').read_text()
     app=once(app,"if(!location.hash)history.replaceState",addition+"\nif(!location.hash)history.replaceState")
-    css=(baseline/'src/styles.css').read_text()+'\n'+(ROOT/'albums/theme.css').read_text()+'\n'+(ROOT/'albums/engagement.css').read_text()+'\n'+(ROOT/'albums/domestic.css').read_text()
+    css=(baseline/'src/styles.css').read_text()+'\n'+(ROOT/'albums/theme.css').read_text()+'\n'+(ROOT/'albums/engagement.css').read_text()+'\n'+(ROOT/'albums/domestic.css').read_text()+'\n'+(ROOT/'albums/records.css').read_text()
     code='const ALBUMS_SEED='+first.script_json(snapshot)+';\nconst REVIEW_DATA='+first.script_json(data)+';\n'+(baseline/'src/core.js').read_text()+'\n'+(baseline/'src/live-core.js').read_text()+'\n'+legacy+'\n'+app
     code=code.replace('isegye:theme:v1','isegye:albums-review:theme:v1').replace('isegye:bookmarks:v1','isegye:albums-review:bookmarks:v1')
     sha=lambda s:"'sha256-"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+"'"
@@ -69,7 +70,7 @@ def build():
     html=once(html,"script-src 'self'",'script-src '+sha(code))
     html=once(html,"style-src 'self'",'style-src '+sha(css))
     html=once(html,'</body>','<script>'+code+'</script></body>')
-    html=html.replace('<title>ISEGYE! · 이세계아이돌 비공식 팬 아카이브</title>','<title>음반 1차 검토 · ISEGYE!</title>')
+    html=html.replace('<title>ISEGYE! · 이세계아이돌 비공식 팬 아카이브</title>','<title>앨범 검토 · ISEGYE!</title>')
     if 'noindex,nofollow' not in html or len(html.encode())>=9*1024*1024: raise ValueError('Preview size or robots policy failed')
     if out.exists(): shutil.rmtree(out)
     out.mkdir()

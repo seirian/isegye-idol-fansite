@@ -7,7 +7,7 @@ export function albumDuration(ms) {
 export function albumSafeUrl(value) {
   try {
     const u = new URL(value);
-    return u.protocol === 'https:' && ['music.apple.com', 'itunes.apple.com', 'www.melon.com', 'www.genie.co.kr', 'music.bugs.co.kr', 'www.music-flo.com', 'open.spotify.com', 'www.youtube.com', 'music.youtube.com'].includes(u.hostname) && !u.username && !u.password ? u.href : '';
+    return u.protocol === 'https:' && ['music.apple.com', 'itunes.apple.com', 'www.melon.com', 'm2.melon.com', 'isegyechart.com', 'www.genie.co.kr', 'music.bugs.co.kr', 'www.youtube.com', 'music.youtube.com'].includes(u.hostname) && !u.username && !u.password ? u.href : '';
   } catch { return ''; }
 }
 export function albumValidSnapshot(value) {
@@ -51,4 +51,32 @@ export function albumRankGeometry(rows, start, end, gapMs = 36 * 3600000, maxRan
 export function albumDemoSeries(hours = 168, end = Date.now()) {
   const ranks = [72, 67, 64, 68, 61, 54, 49, 46, 51, 40, 35, 38, 30, 24, 28, 22];
   return ranks.map((rank, i) => ({at: new Date(end - (ranks.length - 1 - i) * hours * 3600000 / (ranks.length - 1)).toISOString(), rank, status: 'ranked'}));
+}
+
+// Per-field fallback keeps different services and units separate.
+export const albumProviderOrder = ['melon','genie','bugs','youtube_music','youtube','apple'];
+export const albumProviderNames = {melon:'멜론',genie:'지니',bugs:'벅스',youtube_music:'유튜브 뮤직',youtube:'유튜브',apple:'애플 뮤직 · US'};
+export function albumPreferredField(item, field) {
+  for (const provider of albumProviderOrder) {
+    // MV length / video publish date are not audio-track metadata.
+    if (provider === 'youtube') continue;
+    const row = provider === 'apple' ? item?.metadata : item?.[provider];
+    const value = row?.[field];
+    if (field === 'durationMs' ? Number.isFinite(value) && value > 0 && value < 3600000 : typeof value === 'string' && value.trim())
+      return {value,provider,label:albumProviderNames[provider]};
+  }
+  return {value:null,provider:null,label:'확인 전'};
+}
+export function albumVerifiedHonor(item, assets) {
+  const h=item?.melonHonor;
+  if (!h || h.state!=='verified' || h.albumId!==item?.melon?.albumId || h.scope!=='album_first_24h' || !assets?.[h.asset] || !/^[1-9][0-9]?M$/.test(h.label||'')) return null;
+  try { const u=new URL(h.source); if(u.origin!=='https://m2.melon.com' || u.pathname!=='/melonhall/sector/album/report.htm' || u.searchParams.get('albumId')!==h.albumId) return null; } catch {return null;}
+  return h;
+}
+export function albumVerifiedPeaks(item) {
+  const p=item?.melonPeaks;
+  if (!p || p.state!=='verified' || p.trackId!==item?.melon?.trackId || !Number.isFinite(Date.parse(p.checkedAt))) return null;
+  try {const u=new URL(p.source);if(u.origin!=='https://isegyechart.com'||!/^\/song\/\d+$/.test(u.pathname))return null;}catch{return null;}
+  if (!['top100','hot100','realtime'].every(k=>p.ranks?.[k]===null||(Number.isInteger(p.ranks?.[k])&&p.ranks[k]>=1&&p.ranks[k]<=100)))return null;
+  return p;
 }
