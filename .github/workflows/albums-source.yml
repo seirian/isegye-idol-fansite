@@ -21,7 +21,8 @@ jobs:
           python -m venv /tmp/albums-tools
           /tmp/albums-tools/bin/pip install pillow==11.3.0 tinycss2==1.4.0
           PYTHON=/tmp/albums-tools/bin/python npm run build
-      - run: git archive --format=zip --output=albums-source.zip HEAD
+      - name: Export tracked feature source for second-feedback review
+        run: git archive --format=zip --output=albums-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
