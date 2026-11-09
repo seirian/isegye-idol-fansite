@@ -14,21 +14,41 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - run: |
-          python -m venv /tmp/albums-tools
-          /tmp/albums-tools/bin/pip install pillow==11.3.0 tinycss2==1.4.0
-          PYTHON=/tmp/albums-tools/bin/python npm run build
-      - name: Export tracked feature source for second-feedback review
-        run: git archive --format=zip --output=albums-source.zip HEAD
+      - name: Inspect public official source contracts without authentication
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from urllib.parse import urljoin,urlparse
+          from pathlib import Path
+          import re,json,time,hashlib
+          out=Path('test-results/albums-melon-contract');out.mkdir(parents=True,exist_ok=True)
+          urls=[('magazine','https://www.melon.com/musicstory/detail.htm?mstorySeq=13308'),('mobile-song','https://m2.melon.com/song/detail.htm?songId=603093102'),('mobile-album','https://m2.melon.com/album/music.htm?albumId=14547786'),('song-chart','https://www.melon.com/song/detail.htm?songId=603093102')]
+          report=[];seen=set()
+          for name,url in urls:
+              if url in seen: continue
+              seen.add(url)
+              try:
+                  with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=15) as res:
+                      body=res.read(4000000);final=res.url
+                  text=body.decode('utf-8','replace');(out/(name+'.txt')).write_text(text)
+                  report.append({'name':name,'url':url,'final':final,'size':len(body)})
+                  if len(urls)<20:
+                      links=re.findall(r'(?:href|src)=[\"\x27]([^\"\x27]+)',text)
+                      for link in links:
+                          target=urljoin(final,link)
+                          if urlparse(target).hostname not in ('www.melon.com','m2.melon.com','cdnimg.melon.co.kr','m.melon.com'):continue
+                          if any(t in target.lower() for t in ('halloffame','million','honor','record','fame')) or ('m2.melon.com' in final and ('song' in target or 'album' in target) and '.js' in target):
+                              if target not in seen and len(urls)<25:urls.append(('linked-'+hashlib.sha256(target.encode()).hexdigest()[:10],target))
+              except Exception as exc:report.append({'name':name,'url':url,'error':type(exc).__name__,'message':str(exc)[:120]})
+              time.sleep(.5)
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report,ensure_ascii=False))
+          PY
+      - run: git archive --format=zip --output=albums-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
           path: |
             albums-source.zip
-            dist/
-            home-dist/
-            release-review-2nd/
+            test-results/albums-melon-contract/
           retention-days: 7
