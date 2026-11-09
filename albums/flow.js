@@ -1,8 +1,18 @@
 /* Melon-only chart presentation. Never add observations or alter stored ranks. */
 export const albumFlowKinds = Object.freeze({melon_top100:'멜론 TOP100',melon_hot100:'멜론 HOT100 · 100일'});
-export function albumFlowKind(requested, item = {}) {
+export function albumFlowKind(requested, item = {}, hours = 24, end = Date.now()) {
   if (Object.hasOwn(albumFlowKinds, requested)) return requested;
-  return Object.keys(albumFlowKinds).find(k => (item.charts?.[k] || item.melon?.[k.replace('melon_', '')+'History'] || []).at(-1)?.status === 'ranked') || 'melon_top100';
+  const start=end-([24,168,720].includes(hours)?hours:24)*3600000;
+  const choices=Object.keys(albumFlowKinds).map(key=>{
+    const rows=(item.charts?.[key] || item.melon?.[key.replace('melon_', '')+'History'] || [])
+      .filter(p=>Number.isFinite(Date.parse(p.at)) && Date.parse(p.at)>=start && Date.parse(p.at)<=end)
+      .sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+    const ranked=rows.filter(p=>p.status==='ranked' && Number.isInteger(p.rank) && p.rank>=1 && p.rank<=100);
+    return {key,count:ranked.length,active:rows.at(-1)?.status==='ranked'};
+  });
+  // Prefer a useful measured trend over a newly entered chart with one dot.
+  choices.sort((a,b)=>Number(b.active&&b.count>1)-Number(a.active&&a.count>1) || Number(b.active)-Number(a.active) || b.count-a.count);
+  return choices[0].key;
 }
 export function albumCurveSegments(points) {
   if (points.length < 2) return [];

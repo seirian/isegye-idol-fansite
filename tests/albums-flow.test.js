@@ -4,7 +4,7 @@ import {albumFlowKinds,albumFlowKind,albumCurveSegments,albumSmoothPath,albumFlo
 const end=Date.parse('2026-11-09T14:00:00Z');
 const p=(hour,rank,status='ranked')=>({t:end-hour*3600000,at:new Date(end-hour*3600000).toISOString(),rank,status});
 test('only Melon charts are options',()=>assert.deepEqual(Object.keys(albumFlowKinds),['melon_top100','melon_hot100']));
-test('legacy non-Melon selection resets to observed Melon chart',()=>{const item={charts:{melon_hot100:[p(0,20)]}};for(const key of ['genie','bugs','apple','youtube','unknown'])assert.equal(albumFlowKind(key,item),'melon_hot100');});
+test('legacy non-Melon selection resets to observed Melon chart',()=>{const item={charts:{melon_hot100:[p(0,20)]}};for(const key of ['genie','bugs','apple','youtube','unknown'])assert.equal(albumFlowKind(key,item,24,end),'melon_hot100');});
 test('explicit valid Melon selection is retained even out of chart',()=>assert.equal(albumFlowKind('melon_top100',{charts:{melon_hot100:[p(0,20)]}}),'melon_top100'));
 test('smooth path contains cubic curves and exact observed endpoints',()=>{const points=[{x:0,y:100},{x:20,y:70},{x:100,y:10}],d=albumSmoothPath(points);assert.ok(d.startsWith('M0,100 C'));assert.ok(d.endsWith('100,10'));assert.equal(albumCurveSegments(points).length,2);});
 test('one point never fabricates an area or a trend',()=>{const g=albumFlowGeometry([p(0,5)],end-86400000,end);assert.equal(g.segments[0].length,1);assert.equal(albumCurveSegments(g.points).length,0);assert.equal(g.gaps.length,0);});
@@ -26,3 +26,6 @@ test('stale statistics retain original verification time',()=>{const old=new Dat
 test('free Apple US metadata is distinct from paid MusicKit',()=>{const s=albumFreeServiceStatus('apple',{metadata:{title:'KIDDING',trackId:'1',checkedAt}},{itunes:{state:'ok'}},end);assert.equal(s.label,'연결됨');assert.match(s.detail,/iTunes Search · US/);});
 test('failed Apple metadata request is retry, not payment',()=>assert.match(albumFreeServiceStatus('apple',{}, {itunes:{state:'error'}},end).detail,/결제나 인증키 불필요/));
 test('video-only works do not demand paid Apple account',()=>assert.equal(albumFreeServiceStatus('apple',{match:'not_applicable'}, {},end).label,'대상 음원 없음'));
+
+test('default selects a measured trend instead of a new single-point TOP100 entry',()=>{const item={charts:{melon_top100:[p(0,94)],melon_hot100:[p(2,40),p(1,30),p(0,20)]}};assert.equal(albumFlowKind(null,item,24,end),'melon_hot100');assert.equal(albumFlowKind('melon_top100',item,24,end),'melon_top100');});
+test('default chart selection respects the selected period and ignores invalid ranks',()=>{const item={charts:{melon_top100:[p(50,90),p(49,80),p(48,70)],melon_hot100:[p(1,30),p(0,20),p(0,0)]}};assert.equal(albumFlowKind(null,item,24,end),'melon_hot100');assert.equal(albumFlowKind(null,item,168,end),'melon_top100');});

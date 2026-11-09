@@ -1,6 +1,6 @@
 /* View helpers for the isolated album preview; only aiChart/aiProviders use these. */
 function albumFlowView(s) {
-  const p=route().params, hours=aiHours(), kind=albumFlowKind(p.get('metric'),aiData(s.id));
+  const p=route().params, hours=aiHours(), kind=albumFlowKind(p.get('metric'),aiData(s.id),hours);
   const demo=p.get('demo')==='1', end=Date.now();
   const rows=albumRankSeries(demo?albumDemoSeries(hours,end):aiHistory(s,kind),hours,end,100);
   const summary=albumRankSummary(rows), latest=summary.latest;
