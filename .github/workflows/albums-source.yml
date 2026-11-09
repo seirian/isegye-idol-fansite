@@ -12,31 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
-      - name: Read official album awards and public source records
+      - name: Read album report identity and public track selector
         run: |
           python - <<'PY'
           from urllib.request import Request,urlopen
-          from urllib.parse import urlparse,urljoin
           from pathlib import Path
-          import json,time,re,hashlib
+          import json,time
           out=Path('test-results/albums-melon-contract');out.mkdir(parents=True,exist_ok=True)
-          ids=['10815040','10889597','11308283','11786572','11810611','12187919','12449013','13745404','11269236','11290352','11744103','11332440','14547786']
-          urls=[('hall-'+x,'https://m2.melon.com/melonhall/sector/album/report.htm?albumId='+x) for x in ids]+[('badges.png','https://cdnimg.melon.co.kr/services/img/mhall/ico-mhall-240116@3x.png'),('record-cat','https://isegyechart.com/song/828'),('record-smile','https://isegyechart.com/song/827'),('record-home','https://isegyechart.com/')]
-          report=[];seen=set()
+          dates={'10815040':'202112171800','10889597':'202203111800','11308283':'202308181800','11786572':'202504251800','11810611':'202505181800','12187919':'202511031800','12449013':'202512191800','13745404':'202606191800','11269236':'202306221800','11290352':'202307211800','11744103':'202503201800','11332440':'202309241800','14547786':'202609281800'}
+          urls=[('hall-'+x,'https://m2.melon.com/melonhall/sector/album/report.htm?albumId='+x+'&issueDate='+d) for x,d in dates.items()]+[('millions','https://m2.melon.com/melonhall/sector/album/millions.htm'),('selector','https://isegyechart.com/_astro/FeaturedSongSelectorIsland.2bPfPvn-.js')]
+          report=[]
           for name,url in urls:
-              if url in seen:continue
-              seen.add(url)
               try:
                   with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as res:body=res.read(4000000);final=res.url
-                  (out/(name if name.endswith('.png') else name+'.txt')).write_bytes(body)
-                  report.append({'name':name,'url':url,'final':final,'size':len(body)})
-                  if name=='record-cat':
-                      text=body.decode('utf-8','replace')
-                      for link in re.findall(r'<script[^>]+src=[\"\x27]([^\"\x27]+)',text):
-                          target=urljoin(final,link)
-                          if urlparse(target).hostname=='isegyechart.com' and len(urls)<23:urls.append(('record-script-'+hashlib.sha256(target.encode()).hexdigest()[:8],target))
-              except Exception as exc:report.append({'name':name,'url':url,'error':type(exc).__name__,'message':str(exc)[:100]})
-              time.sleep(.6)
+                  (out/(name+'.txt')).write_bytes(body);report.append({'name':name,'url':url,'final':final,'size':len(body)})
+              except Exception as exc:report.append({'name':name,'url':url,'error':type(exc).__name__})
+              time.sleep(.5)
           (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False))
           PY
       - run: git archive --format=zip --output=albums-source.zip HEAD
