@@ -82,7 +82,7 @@ def video_history(previous, point, now, ident):
         except (KeyError, ValueError, TypeError): continue
     return sorted(rows.values(),key=lambda p:p['at'])[-720:]
 
-def collect(previous=None):
+def collect(previous=None, include_apple_chart=True):
     now = datetime.now(timezone.utc); stamp = now.isoformat(); previous = previous or {}
     source = json.loads((ROOT/'catalog/music.json').read_text())['songs']
     result = {'schemaVersion':1,'generatedAt':stamp,'scope':'feature/albums review only','providers':{},'tracks':{}}
@@ -96,14 +96,17 @@ def collect(previous=None):
         time.sleep(3.1)
     result['providers']['itunes'] = {'state':'partial' if failures and rows else 'error' if failures else 'ok','storefront':'US','checkedAt':stamp,'source':'https://performance-partners.apple.com/search-api','errors':failures}
     ranks = {}; updated = stamp
-    try:
-        feed = fetch_json(CHART)
-        probe = ROOT/'test-results/albums-api-probe'; probe.mkdir(parents=True,exist_ok=True)
-        (probe/'apple-chart.json').write_text(json.dumps(feed,ensure_ascii=False))
-        ranks, updated = validate_chart(feed)
-        result['providers']['apple_chart'] = {'state':'ok','checkedAt':stamp,'updatedAt':updated,'source':CHART,'storefront':'KR','limit':100}
-    except Exception as exc:
-        result['providers']['apple_chart'] = {'state':'error','checkedAt':stamp,'source':CHART,'error':type(exc).__name__}
+    if include_apple_chart:
+        try:
+            feed = fetch_json(CHART)
+            probe = ROOT/'test-results/albums-api-probe'; probe.mkdir(parents=True,exist_ok=True)
+            (probe/'apple-chart.json').write_text(json.dumps(feed,ensure_ascii=False))
+            ranks, updated = validate_chart(feed)
+            result['providers']['apple_chart'] = {'state':'ok','checkedAt':stamp,'updatedAt':updated,'source':CHART,'storefront':'KR','limit':100}
+        except Exception as exc:
+            result['providers']['apple_chart'] = {'state':'error','checkedAt':stamp,'source':CHART,'error':type(exc).__name__}
+    else:
+        result['providers']['apple_chart']={'state':'excluded','reason':'Melon-only flow; free Apple metadata remains enabled.'}
     for s in source:
         row, state = match_track(s,rows); old = previous.get('tracks',{}).get(s['id'],{})
         item = {'match':state,'checkedAt':stamp,'appleHistory':[],'appleChartMatch':'unverified_storefront','youtube':{'state':'not_configured'}}
@@ -112,7 +115,7 @@ def collect(previous=None):
             safe = u if urlparse(u).scheme=='https' and urlparse(u).hostname in {'music.apple.com','itunes.apple.com'} else None
             item['metadata'] = {'trackId':ident,'storefront':'US','title':row['trackName'],'artist':row['artistName'],'album':row.get('collectionName'),'durationMs':duration if type(duration) is int and 0<duration<3600000 else None,'genre':row.get('primaryGenreName'),'releaseDate':row.get('releaseDate'),'url':safe,'checkedAt':stamp,'matchBasis':'exact reviewed title/artist; exact album preferred; unique ID only'}
             # US metadata absent from a KR chart is NOT evidence of being chart-out.
-            mapped = ident in ranks or (old.get('metadata',{}).get('trackId')==ident and old.get('appleChartMatch')=='observed_kr_feed')
+            mapped = include_apple_chart and (ident in ranks or (old.get('metadata',{}).get('trackId')==ident and old.get('appleChartMatch')=='observed_kr_feed'))
             if mapped:
                 item['appleChartMatch']='observed_kr_feed'
                 status = ('ranked' if ident in ranks else 'out') if result['providers']['apple_chart']['state']=='ok' else 'error'

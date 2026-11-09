@@ -5,10 +5,10 @@ const aiData = id => albumInsights.tracks[id] || {};
 const aiNumber = n => Number.isFinite(n) ? new Intl.NumberFormat('ko-KR').format(n) : '미확인';
 const aiRelated = a => (a?.songIds || []).map(id => songs.get(id)).filter(Boolean);
 const aiMetaCount = rows => rows.filter(s => aiData(s.id).melon?.state==='ok').length;
-const aiHours = () => ({'24h':24,'7d':168,'30d':720}[route().params.get('range')] || 168);
+const aiHours = () => ({'24h':24,'7d':168,'30d':720}[route().params.get('range')] || 24);
 const aiStale = () => !Number.isFinite(Date.parse(albumInsights.generatedAt)) || Date.now() - Date.parse(albumInsights.generatedAt) > 36*3600000;
-const aiKinds = {melon_top100:'멜론 TOP100',melon_hot100:'멜론 HOT100 · 100일',genie:'지니 TOP200',bugs:'벅스 TOP100',apple:'Apple Music · KR TOP100'};
-const aiLimit = kind => kind === 'genie' ? 200 : 100;
+const aiKinds = albumFlowKinds;
+const aiLimit = () => 100;
 function aiArt(a, selected = null) {
   const candidates = selected ? [selected, ...aiRelated(a)] : aiRelated(a);
   const artwork = candidates.map(song => aiData(song.id).artwork).find(v => v && ALBUMS_ART[v.asset]);
@@ -65,25 +65,15 @@ function aiStreaming(s) {
   }).join('')}</div>${!official&&s.videoId?'<p class="ai-footnote">현재 영상 연결은 공식 MV로 확인된 링크가 아닙니다. 기존 출처 구분을 유지합니다.</p>':''}</section>`;
 }
 
-function aiProviders(s) {
-  const p=albumInsights.providers, item=aiData(s.id), charts=albumInsights.domesticCharts||{};
-  const rows=[
-    ['멜론',item.melon?.url?(charts.melon_top100?.state==='ok'?'곡 · 차트 확인':'곡 연결 · 차트 확인 실패'):'음원 매칭 대기'],
-    ['지니',item.genie?.url?(charts.genie?.state==='ok'?'곡 · TOP200 확인':'곡 연결 · 차트 확인 실패'):'음원 매칭 대기'],
-    ['벅스',item.bugs?.url?(charts.bugs?.state==='ok'?'곡 · TOP100 확인':'곡 연결 · 차트 확인 실패'):'음원 매칭 대기'],
-    ['유튜브 뮤직','검색 연결 · 별도 재생수 미제공'],
-    ['유튜브 지표',aiServiceState(item.youtube?.state)],
-    ['애플 뮤직 메타데이터 · US',item.metadata?'API 확인':'음원 매칭 대기']
-  ];
-  return `<section class="ai-panel ai-subsection"><p class="ai-kicker">DATA SOURCES</p><h2>서비스 연결 상태</h2>${rows.map(([name,state])=>`<div class="ai-provider-row"><span>${esc(name)}</span><small>${esc(state)}</small></div>`).join('')}<p class="ai-footnote">멜론·지니·벅스는 공개 페이지에서 검증한 정보입니다. Apple·YouTube는 공식 API를 사용합니다. 미연동과 차트 밖은 다릅니다.</p></section>`;
-}
+function aiProviders(s) { return albumProviderPanel(s); }
 
 function aiSpark(s) {
-  const rows = albumRankSeries(aiHistory(s,aiDefaultKind(s)),168), valid = rows.filter(p=>p.rank!==null);
+  const rows=albumRankSeries(aiHistory(s,aiDefaultKind(s)),168), valid=rows.filter(p=>p.rank!==null);
   if(valid.length<2)return `<span class="ai-footnote">${rows.length?'이력 축적 중':'순위 이력 수집 전'}</span>`;
-  const g = albumRankGeometry(rows,rows[0].t,rows.at(-1).t,aiDefaultKind(s)==='apple'?36*3600000:90*60000);
-  return `<svg class="ai-spark" viewBox="0 0 760 280" role="img" aria-label="최근 7일 순위 추이 · 상세에서 수치 확인">${g.paths.map(p=>`<polyline points="${p.map(v=>v.x+','+v.y).join(' ')}" fill="none" stroke="currentColor" stroke-width="12"/>`).join('')}</svg>`;
+  const g=albumRankGeometry(rows,rows[0].t,rows.at(-1).t,90*60000);
+  return `<svg class="ai-spark" viewBox="0 0 760 280" role="img" aria-label="최근 7일 멜론 관측 순위 · 상세에서 수치 확인">${g.paths.filter(p=>p.length>1).map(p=>`<path d="${albumSmoothPath(p)}" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>`).join('')}</svg>`;
 }
+
 function aiLengthSpark(rs) {
   const values=rs.map(s=>albumPreferredField(aiData(s.id),'durationMs').value).filter(v=>Number.isFinite(v)&&v>0).slice(0,8);
   if(!values.length)return '<span class="ai-footnote">API 확인 전</span>';
@@ -120,16 +110,8 @@ function aiTrackList(a,activeId='') {
   const related=aiRelated(a), titles=a.tracks.length?a.tracks:related.map(s=>s.title);
   return `<section class="ai-panel ai-subsection"><p class="ai-kicker">TRACKS / ${String(titles.length).padStart(2,'0')}</p><h2>같은 앨범, 다른 이야기</h2><div class="ai-track-list">${titles.map((title,i)=>{const s=related.find(s=>normalized(s.title)===normalized(title)), info=s?aiData(s.id):{};return `<div class="ai-track"><span>${String(i+1).padStart(2,'0')}</span><div><h3>${s?`<a href="#/song/${esc(s.id)}" ${s.id===activeId?'aria-current="true"':''}>${esc(title)} ${s.id===activeId?'· 보고 있는 곡':'↗'}</a>`:esc(title)}</h3><small>${s?info.melon?.state==='ok'?'멜론 정보 확인':info.genie?.state==='ok'?'지니 정보 확인':info.bugs?.state==='ok'?'벅스 정보 확인':info.metadata?'애플 뮤직 정보 확인':'음원 정보 확인 전':'트랙명 확인 · 상세 준비 중'}</small></div><div class="ai-track-meta">${albumDuration(albumPreferredField(info,'durationMs').value)}</div></div>`;}).join('')}</div></section>`;
 }
-function aiChart(s) {
-  const p=route().params, hours=aiHours(), kind=Object.hasOwn(aiKinds,p.get('metric'))?p.get('metric'):aiDefaultKind(s);
-  const demo=p.get('demo')==='1', limit=aiLimit(kind), end=Date.now(), rows=albumRankSeries(demo?albumDemoSeries(hours,end):aiHistory(s,kind),hours,end,limit), stats=albumRankSummary(rows);
-  const g=albumRankGeometry(rows,end-hours*3600000,end,demo?hours*3600000:kind==='apple'?36*3600000:90*60000,limit),last=stats.latest,change=stats.change;
-  const timeLabel=t=>new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',hour12:false}).format(new Date(t));
-  let chart='';
-  if(g.points.length)chart=`<svg class="ai-chart" viewBox="0 0 760 280" role="img" aria-label="${demo?'예시 데이터 · 실제 순위 아님. ':''}${esc(aiKinds[kind])} 순위 추이. 1위가 위쪽이며 확인되지 않은 구간은 연결하지 않습니다."><title>${demo?'예시 그래프 (실제 순위 아님)':'확인된 순위 이력'}</title>${(limit===200?[1,50,100,150,200]:[1,25,50,75,100]).map(rank=>{const y=20+(rank-1)/(limit-1)*228;return `<line class="ai-grid-line" x1="44" y1="${y}" x2="740" y2="${y}"/><text x="0" y="${y+4}">${rank}위</text>`;}).join('')}${g.paths.filter(path=>path.length>1).map(path=>`<polyline class="ai-line" points="${path.map(v=>v.x+','+v.y).join(' ')}"/>`).join('')}${g.points.map(v=>`<circle class="ai-dot" cx="${v.x}" cy="${v.y}" r="4" tabindex="0" role="img" aria-label="${esc(stamp(v.at))} ${v.rank}위${demo?' · 예시':''}"><title>${esc(stamp(v.at))} · ${v.rank}위${demo?' (예시)':''}</title></circle>`).join('')}<text x="44" y="275">${esc(timeLabel(end-hours*3600000))}</text><text x="740" y="275" text-anchor="end">${esc(timeLabel(end))} KST</text></svg>`;
-  else chart=`<div class="ai-empty">${icon('music')}<strong>${last?.status==='out'?`확인된 시점에는 TOP${limit} 밖입니다`:last?.status==='error'?'차트 응답을 확인하지 못했습니다':'이 구간의 순위 이력이 아직 없습니다'}</strong><p>${last?.status==='out'?'차트 밖은 임의의 순위나 0위로 바꾸어 그리지 않습니다.':last?.status==='error'?'실패한 요청을 차트 밖으로 표시하지 않습니다. 원본 확인 후 다시 수집합니다.':kind==='apple'&&aiData(s.id).appleChartMatch==='unverified_storefront'?'미국 메타데이터와 한국 차트 ID의 연결을 확인 중입니다. 이를 차트 밖으로 표시하지 않습니다.':'첫 수집부터 기록을 쌓습니다. 과거 순위를 임의로 생성하지 않습니다.'}</p></div>`;
-  return `<section class="ai-panel" aria-label="음원 순위 추이"><div class="ai-panel-head"><div><p class="ai-kicker">CHART EXPLORER</p><h2>음원의 흐름</h2><p class="ai-muted">서비스와 기간을 선택해 한 그래프에 집중하세요.</p></div><a class="text-link small" href="${esc(patch({demo:demo?null:'1'}))}" aria-pressed="${demo}">${demo?'실제 데이터로 돌아가기':'그래프 예시 보기'}</a></div><div class="ai-controls"><label><span class="sr-only">차트 선택</span><select data-filter="metric">${Object.entries(aiKinds).map(([value,label])=>`<option value="${value}" ${value===kind?'selected':''}>${esc(label)}</option>`).join('')}</select></label><div class="ai-segments" aria-label="조회 기간">${[['24h','24시간',24],['7d','7일',168],['30d','30일',720]].map(([value,label,h])=>`<a href="${esc(patch({range:value}))}" aria-current="${hours===h}">${label}</a>`).join('')}</div></div>${demo?'<div class="ai-demo" role="note"><strong>예시 데이터 · 실제 순위가 아닙니다.</strong> 그래프 동작과 배치 검토 전용입니다.</div>':''}${rows.length?`<div class="ai-metrics"><div class="ai-metric"><span>${demo?'예시 마지막 순위':'선택 기간 마지막 기록'}</span><strong>${aiRankLabel(last,limit)}</strong><small>${last?esc(stamp(last.at)):'기록 없음'}</small></div><div class="ai-metric"><span>${demo?'예시 구간 최고':'선택 기간 관측 최고'}</span><strong>${stats.best===null?'—':stats.best+'위'}</strong><small>역대 최고 순위 아님</small></div><div class="ai-metric"><span>직전 관측 대비</span><strong class="${change>0?'ai-up':''}">${change===null?'—':change===0?'유지':(change>0?'↑ ':'↓ ')+Math.abs(change)}</strong><small>두 시점 모두 차트인일 때</small></div><div class="ai-metric"><span>확인된 시점</span><strong>${stats.observations}<small>개</small></strong><small>${demo?'예시 기록':'수집 실패 포함 · 빈 구간 보간 없음'}</small></div></div>`:''}${chart}<div class="ai-chart-status"><span>${g.points.length===1?'순위 기록 1개 · 추세선을 아직 그리지 않습니다.':'숫자가 작을수록 높은 순위 · 점에 포커스하면 수치를 확인할 수 있습니다.'}</span><span>${demo?'SAMPLE ONLY':aiStale()?'오래된 스냅샷':'수집 시점 기준'}</span></div>${rows.length?`<details class="ai-detail-toggle"><summary>그래프 수치 표로 보기 · ${rows.length}개 시점</summary><div class="ai-table-wrap"><table class="ai-table"><caption>${demo?'예시 데이터 · 실제 기록 아님':esc(aiKinds[kind])+' · 수집된 기록만 표시'}</caption><thead><tr><th>기준 시각 (KST)</th><th>순위 / 상태</th></tr></thead><tbody>${rows.slice().reverse().map(v=>`<tr><td>${esc(stamp(v.at))}</td><td>${aiRankLabel(v,limit)}</td></tr>`).join('')}</tbody></table></div></details>`:''}<p class="ai-footnote">멜론을 우선 표시하고 지니·벅스, 애플 뮤직 순으로 차트를 선택할 수 있습니다. 국내 차트는 공개 페이지, 애플 뮤직은 한국 most-played 공식 피드입니다. 유튜브 뮤직·유튜브의 영상 통계는 음원 순위로 환산하지 않습니다. 차트 기준 시각과 수집 시각은 구분하며, 자동 정기 수집은 아직 활성화하지 않았습니다.</p></section>`;
-}
+function aiChart(s) { return albumFlowView(s); }
+
 function aiSongFacts(s) {
   const item=aiData(s.id),genre=albumPreferredField(item,'genre'), duration=albumPreferredField(item,'durationMs'),y=item.youtube;
   const facts=[

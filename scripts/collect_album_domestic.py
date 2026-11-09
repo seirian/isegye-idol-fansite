@@ -171,7 +171,7 @@ def image_asset(url,key,size=400):
     local=directory/(digest+'.webp');local.write_bytes(data)
     return {'key':key,'path':'albums/asset-cache/'+digest+'.webp','sha256':digest,'source':url}
 
-def collect(result,previous):
+def collect(result,previous,chart_kinds=None):
     now=datetime.now(timezone.utc);stamp=now.isoformat();songs=json.loads((ROOT/'catalog/music.json').read_text())['songs']
     result['domesticCharts']={};result['assets']={'covers':{},'brands':{}};report={'checkedAt':stamp,'providers':{},'charts':{},'assets':{},'manual':[]}
     allrows={}
@@ -209,6 +209,7 @@ def collect(result,previous):
         report['melonLikes']={'state':'ok','matched':len(likes)}
     except Exception as exc:report['melonLikes']={'state':'error','error':type(exc).__name__}
     for kind,(provider,url,limit) in CHARTS.items():
+        if chart_kinds is not None and kind not in chart_kinds:continue
         ranks={};at=stamp;state='error'
         try:
             if provider=='genie':

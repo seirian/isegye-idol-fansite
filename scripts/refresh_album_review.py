@@ -10,8 +10,8 @@ if __name__=='__main__':
     path=ROOT/'albums/snapshot.json'
     try: previous=json.loads(path.read_text()) if path.exists() else {}
     except (ValueError,OSError): previous={}
-    data=collect(previous)
-    data=domestic_collect(data,previous)
+    data=collect(previous, include_apple_chart=False)
+    data=domestic_collect(data,previous,chart_kinds={'melon_top100','melon_hot100'})
     data=records_collect(data,previous)
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
