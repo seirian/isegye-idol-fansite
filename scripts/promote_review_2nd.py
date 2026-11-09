@@ -118,6 +118,13 @@ def build(baseline):
     if app.count(detail_anchor)!=1:raise ValueError('Notice detail slot moved')
     app=app.replace(detail_anchor,'<p class="detail-copy">${esc(r.summary)}</p>${archiveNoticeHighlights(r)}<div class="notice-box"><strong>이 날짜는 공지가 게시된 날짜입니다.</strong>',1)
     legacy = member_legal.adapt_legacy(legacy)
+    # Use the current introduction only in the operating bundle. The pinned,
+    # owner-approved second-review adapter remains byte-for-byte unchanged.
+    current_about=(ROOT/'site/about-current.js').read_text()
+    if current_about.count('function aboutView()')!=1:
+        raise ValueError('Invalid current about page')
+    legacy=one(legacy,between(legacy,'function aboutView()','function legalNavigation('),current_about+'\n')
+
     feeds = runtime(baseline,data)
     if out.is_symlink(): raise ValueError('Symlink output refused')
     if out.exists(): shutil.rmtree(out)
@@ -125,6 +132,17 @@ def build(baseline):
     shutil.copytree(review/'assets',out/'assets')
     for name in ('data.js','core.js','live-core.js','styles.css'):
         shutil.copyfile(review/name,out/'src'/name)
+    # Split reviewed public video rows into bounded local script parts.
+    # The accepted review data stays unchanged; only production packaging is sharded.
+    reviewed_data=first.extract((out/'src/data.js').read_text(),'REVIEW_DATA')
+    published_videos=reviewed_data.pop('videos')
+    (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json({**reviewed_data,'videos':[]})+';\n')
+    video_scripts=[]
+    for offset in range(0,len(published_videos),2000):
+        name='video-part-'+str(offset//2000+1).zfill(3)+'.js'
+        rows=published_videos[offset:offset+2000]
+        (out/'src'/name).write_text('REVIEW_DATA.videos.push(...'+first.script_json(rows)+');\n')
+        video_scripts.append(name)
     # The original floating account control must clear the newly approved mobile nav.
     css=(out/'src/styles.css').read_text()+'\n@media(max-width:640px){body .isegye-account-link{bottom:calc(82px + env(safe-area-inset-bottom));}}\n'
     css += '\n' + community.css() + '\n' + content_polish.css() + '\n.notice-facts{padding-left:22px;line-height:1.8}.notice-facts li{padding:5px 0;overflow-wrap:anywhere}\n'
@@ -138,6 +156,9 @@ def build(baseline):
     html = html.replace('connect-src https://', "connect-src 'self' https://").replace("form-action 'none'", "form-action 'self' https://github.com")
     html = re.sub(r'(<script src=")([^"/]+\.js)(")',r'\1src/\2\3',html)
     html = html.replace('href="styles.css"','href="src/styles.css"')
+    html=html.replace('<script src="src/data.js"></script>',
+      '<script src="src/data.js"></script>'+''.join('<script src="src/'+name+'"></script>' for name in video_scripts))
+
     html = html.replace('<script src="src/app.js"></script>', '<script src="src/app.js"></script><script src="src/runtime-feeds.js"></script>')
     html = re.sub(r'<title>.*?</title>', '<title>ISEGYE! · 이세계아이돌 비공식 팬 아카이브</title>',html)
     html = re.sub(r'<meta name="description"[^>]+>', '<meta name="description" content="이세계아이돌의 소식과 일정, 음악과 콘텐츠, 함께한 활동 기록을 찾는 비공식 팬 아카이브.">',html)

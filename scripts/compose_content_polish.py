@@ -17,12 +17,21 @@ def adapt_app(code):
     snippet=("if(!REVIEW_DATA.videos.some(v=>v.id==='1ELogGmCh9Q'))"
       "REVIEW_DATA.videos.push("+json.dumps(TEASER,ensure_ascii=False,separators=(',',':'))+");\n")
     code=one(code,'const D=REVIEW_DATA,',snippet+'const D=REVIEW_DATA,')
+    code=one(code,'function mediaCard(r)',"""function videoLengthClass(v){
+ if(v.kind!=='video')return 'other';
+ if(/(?:^|\\s)#shorts(?=\\s|$|[^a-z])/iu.test(v.title||''))return 'tagged';
+ if(Number.isInteger(v.durationSeconds)&&v.durationSeconds>=0)return v.durationSeconds<=180?'candidate':'long';
+ return 'unknown';
+}
+function mediaCard(r)""")
     a=code.index('function mediaCard(r)');b=code.index('function rowCard(r)',a)
     card=code[a:b]
     card=one(card,'function mediaCard(r){const masked=',"""function mediaCard(r){const original=r.kind==='video'?safeExternal(r.url):null;
  const direct=original?'<a class="content-origin-link" href="'+esc(original)+'" target="_blank" rel="noopener noreferrer" aria-label="원본 영상 새 탭에서 보기: '+esc(r.title)+'" title="원본 영상 바로가기">'+icon('external')+'</a>':'';
  const masked=""")
     card=one(card,"${prefs.watched.includes(r.key)?badge('직접 시청 표시','good'):''}","")
+    card=one(card,"${badge(r.kind==='song'?(songTypes[r.type]||r.type):(r.format||'영상'),'neutral')}",
+     "${badge(r.kind==='song'?(songTypes[r.type]||r.type):(r.format||'영상'),'neutral')}${r.kind==='video'&&videoLengthClass(r)==='tagged'?badge('쇼츠 #shorts','neutral'):r.kind==='video'&&videoLengthClass(r)==='candidate'?badge('짧은 영상 · 쇼츠 여부 미확인','neutral'):''}")
     card=one(card,"${saveButton(r,masked)}</div></div>","<span class=\"content-card-actions\">${direct}${saveButton(r,masked)}</span></div></div>")
     code=code[:a]+card+code[b:]
     a=code.index('function videoView(id)');b=code.index('function seriesView(id)',a)
@@ -42,10 +51,14 @@ def adapt_app(code):
     section=code[a:b]
     select="${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','자료에 선택 멤버 모두 표기']],p.get('match')||'any')}"
     if section.count(select)!=1:raise ValueError('Content filter slot changed')
-    section=section.replace(select,select+"${choose('채널','channel',[['all','전체 채널'],...D.channels.filter(c=>tab==='replay'?c.kind==='다시보기':c.kind!=='다시보기').map(c=>[c.key,c.name])],p.get('channel')||'all')}${choose('정렬','sort',[['new','영상 공개 최신순'],['registered','아카이브 등록 최신순']],order)}")
+    section=section.replace(select,select+"${choose('영상 유형','length',[['all','전체 영상'],['shorts','쇼츠·짧은 영상'],['long','일반 길이 영상'],['unknown','길이 미확인']],p.get('length')||'all')}${choose('채널','channel',[['all','전체 채널'],...D.channels.filter(c=>tab==='replay'?c.kind==='다시보기':c.kind!=='다시보기').map(c=>[c.key,c.name])],p.get('channel')||'all')}${choose('정렬','sort',[['new','영상 공개 최신순'],['registered','아카이브 등록 최신순']],order)}")
     anchor='const pg=paginate(rs,p);body='
     if section.count(anchor)!=1:raise ValueError('Content sort slot changed')
     replacement="""rs=p.get('channel')&&p.get('channel')!=='all'?rs.filter(v=>v.channelKey===p.get('channel')):rs;
+ const length=p.get('length')||'all';
+ if(length==='shorts')rs=rs.filter(v=>['tagged','candidate'].includes(videoLengthClass(v)));
+ else if(length==='long')rs=rs.filter(v=>videoLengthClass(v)==='long');
+ else if(length==='unknown')rs=rs.filter(v=>videoLengthClass(v)==='unknown');
  const order=p.get('sort')==='registered'?'registered':'new';
  const dateValue=(v,property)=>Date.parse(property==='registered'?(v.firstSeenAt||v.checkedAt||v.publishedAt||v.date):(v.publishedAt||v.date))||0;
  rs.sort((x,y)=>dateValue(y,order)-dateValue(x,order)||x.id.localeCompare(y.id));

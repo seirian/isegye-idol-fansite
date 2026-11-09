@@ -120,6 +120,43 @@ def adapt_app(text):
     text=text[:a]+(ROOT/'review-2nd/review-guide.js').read_text()+'\n'+text[b:]
     # Legacy incoming first-review links continue to select the right content tab.
     text=one(text,"function render(){const r=route(),root=r.parts[0];", "function render(){let r=route();if(r.parts[0]==='live'&&['videos','replay','series'].includes(r.params.get('tab'))){history.replaceState(null,'',url('content',Object.fromEntries(r.params)));r=route();}const root=r.parts[0];")
+    # Display-only schedule deduplication: identical member/date/title rows
+    # may arrive as both a notice publication and a derived schedule event.
+    # Keep underlying records and source links intact for detail pages.
+    text=one(text,'function scheduleView(p){',"""function scheduleUniqueRows(rows){
+ const seen=new Map();
+ const clean=v=>String(v||'').normalize('NFKC').toLocaleLowerCase('ko').replace(/[\\s\\u200b\\u200c\\u200d]+/g,'').replace(/[!~～.,!?·\\[\\]【】()]+/g,'');
+ for(const row of rows){
+  const members=[...(row.members||[])].sort().join(',');
+  const key=[row.date,members,clean(row.title)].join('|');
+  const old=seen.get(key);
+  if(!old||((row.kind==='event'?2:1)>(old.kind==='event'?2:1)))seen.set(key,row);
+ }
+ return [...seen.values()];
+}
+function scheduleView(p){""")
+    # Old bookmarked URLs must not silently keep filters that are no longer visible.
+    text=one(text,'function scheduleView(p){',
+      "function scheduleView(p){p=new URLSearchParams(p);p.delete('kind');p.delete('match');")
+    # Simplify only the schedule-page UI; retain source and member filters.
+    text=one(text,'<a class="button" href="${url(\'schedule\',{view})}">오늘</a>','')
+    text=one(text,"${choose('종류','kind',[['all','모든 일정·공지'],['event','실제 일정'],['notice','공지 게시 기록']],kind)}",'')
+    start=text.index('function scheduleView(p)')
+    end=text.index('function sourceBox(',start)
+    schedule=text[start:end]
+    schedule=one(schedule,"${choose('멤버 조건','match',[['any','선택 멤버 중 누구나'],['all','선택 멤버 모두']],p.get('match')||'any')}",'')
+    schedule=one(schedule,'</div>${memberChips(p)}<form class="search-form" data-query-form>',
+      '${memberChips(p)}</div><form class="search-form" data-query-form>')
+    schedule=one(schedule,' rows.sort((a,b)=>',' rows=scheduleUniqueRows(rows);'+chr(10)+' rows.sort((a,b)=>')
+
+    text=text[:start]+schedule+text[end:]
+    # The event detail page still needs cancellation and uncertainty warnings,
+    # but never repeats a 'confirmed' label next to a confirmed schedule.
+    text=one(text,"badge(approved?'확정 일정':r.status==='cancelled'?'취소 일정':'미확정 일정',approved?'good':'warning')",
+      "approved?'':badge(r.status==='cancelled'?'취소 일정':'미확정 일정','warning')")
+    # Preserve '취소' and '미확정' warnings; a confirmed schedule already says '일정'.
+    text=one(text,"kind==='event'?badge(r.status==='cancelled'?'취소':r.certainty==='confirmed'?'확정':'미확정',r.status==='cancelled'?'warning':'good'):''",
+      "kind==='event'&&(r.status==='cancelled'||r.certainty!=='confirmed')?badge(r.status==='cancelled'?'취소':'미확정','warning'):''")
     if any(x in text for x in ('OUR TIMELINE','기록과 기록 사이의 이야기','LIVE·방송')):raise ValueError('Discarded first-review text remains')
     return text
 
@@ -134,16 +171,37 @@ def build(baseline, snapshot_path=None, output_path=None):
     shutil.copytree(src,out)
     app=cleanup.app(polish.app(adapt_app((src/'app.js').read_text())))
     legacy=polish.adapter(production_adapter(baseline),(baseline/'src/app.js').read_text())
-    css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()
+    css=polish.without_review_footer((src/'styles.css').read_text())+'\n'+scoped_css((baseline/'src/styles.css').read_text())+'\n'+(ROOT/'review-2nd/changes.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()+'\n'+(ROOT/'site/schedule-filter-layout.css').read_text()
     (out/'app.js').write_text(app);(out/'production-ui.js').write_text(legacy);(out/'styles.css').write_text(css)
     meta=json.loads((out/'build-info.json').read_text());meta.update(review='review-2nd',branch='feature/review-2nd',firstReviewCommit=FIRST,operatingPagesCommit=PRODUCTION,accepted=['home-recent-content','music','history-layout','schedule-layout'],restored=['production-home-live','production-live-page','production-members-and-detail','member-colors','agency-notice-priority'],contentTabs=['videos','replay','series'],navigationCount=7)
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     data=first.extract((out/'data.js').read_text(),'REVIEW_DATA');copy=json.loads(json.dumps(data))
+    # The standalone gated HTML is a sample, not the operating catalog.
+    # Keep all records in data.js for review and production; only inline a
+    # bounded multi-channel selection to respect the existing 9 MiB cap.
+    by_channel={}
+    for item in sorted(copy['videos'],key=lambda v:v.get('publishedAt') or v.get('date',''),reverse=True):
+        key=item.get('channelKey','unknown')
+        bucket=by_channel.setdefault(key,[])
+        if len(bucket)<16:bucket.append(item)
+    copy['videos']=[item for bucket in by_channel.values() for item in bucket]
+    copy['scope']['offlineSample']=True
+
     inline=lambda p:'data:image/webp;base64,'+base64.b64encode((out/p.split('?')[0]).read_bytes()).decode()
     for group in copy['assets'].values():
         for k,v in group.items():group[k]=inline(v)
     for item in copy['gallery']:item['src']=inline(item['src'])
-    code='const REVIEW_DATA='+first.script_json(copy)+';\n'+(out/'core.js').read_text()+'\n'+(out/'live-core.js').read_text()+'\n'+legacy+'\n'+app
+    # The standalone preview also embeds the legacy catalog. Bound its
+    # duplicated per-channel video samples; the real production-ui.js and
+    # published catalog are not modified.
+    offline_catalog=first.extract(legacy,'CATALOG')
+    for channel in offline_catalog['videos']['channels']:
+        channel['videos']=channel['videos'][:3]
+    legacy_pattern=r'^const CATALOG=[^\n]+;'
+    if len(re.findall(legacy_pattern,legacy,flags=re.M))!=1:
+        raise ValueError('Offline catalog slot changed')
+    offline_legacy=re.sub(legacy_pattern,lambda _: 'const CATALOG='+first.script_json(offline_catalog)+';',legacy,count=1,flags=re.M)
+    code='const REVIEW_DATA='+first.script_json(copy)+';\n'+(out/'core.js').read_text()+'\n'+(out/'live-core.js').read_text()+'\n'+offline_legacy+'\n'+app
     sha=lambda s:"'sha256-"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+"'"
     index=(src/'index.html').read_text().replace('1차 검토','2차 검토').replace('review-1st','review-2nd')
     index=index.replace('<script src="app.js"></script>','<script src="production-ui.js"></script><script src="app.js"></script>')

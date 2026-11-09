@@ -15,3 +15,10 @@ if (process.env.ISEGYE_BASELINE_ONLY !== 'true' && !['refs/heads/feature/review-
   if(promotion.error)throw promotion.error;
   if(promotion.status!==0)throw new Error('Accepted second-review production packaging failed');
 }
+
+// User-approved album promotion follows the complete operating application.
+if (process.env.ISEGYE_BASELINE_ONLY !== 'true' && !['refs/heads/feature/albums','refs/heads/feature/review-1st','refs/heads/feature/review-2nd'].includes(process.env.GITHUB_REF)) {
+  const albums=spawnSync(process.env.PYTHON||'python3',['scripts/promote_albums.py'],{cwd:resolve(import.meta.dirname,'..'),env:process.env,stdio:'inherit'});
+  if(albums.error)throw albums.error;
+  if(albums.status!==0)throw new Error('Approved album production packaging failed');
+}

@@ -17,7 +17,7 @@ MAX_PAGES=450
 MAX_BYTES=8_000_000
 class APIError(RuntimeError):pass
 def request(resource,params,key,fetch=None):
- if resource not in ('channels','playlistItems'):raise APIError('endpoint_not_allowed')
+ if resource not in ('channels','playlistItems','videos'):raise APIError('endpoint_not_allowed')
  if not isinstance(key,str) or len(key)<16 or not re.fullmatch(r'[A-Za-z0-9_-]+',key):raise APIError('api_key_missing_or_invalid')
  url=API+resource+'?'+urlencode({**params,'key':key})
  if fetch is None:
