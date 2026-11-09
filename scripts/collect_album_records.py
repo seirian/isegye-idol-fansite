@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Bounded, read-only record enrichment for the album review.
-Official Melon album awards and separately attributed third-party historical
-chart observations. Never copy lyrics, reference-site UI, or inferred peaks.
+Official Melon album awards and original daily-chart achievements. Never copy lyrics, reference-site UI, or inferred peaks.
 """
 from pathlib import Path
 from datetime import datetime, timezone
@@ -10,10 +9,11 @@ from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
 import hashlib, io, json, re, time
 from collect_album_domestic import norm, text
+from collect_album_melon_record import collect_original_records
 ROOT=Path(__file__).resolve().parents[1]
 HALL='https://m2.melon.com/melonhall/sector/album/millions.htm'
 SPRITE='https://cdnimg.melon.co.kr/services/img/mhall/ico-mhall-240116@3x.png'
-HOSTS={'m2.melon.com','cdnimg.melon.co.kr','isegyechart.com'}
+HOSTS={'m2.melon.com','cdnimg.melon.co.kr'}
 
 def allowed(url):
     u=urlparse(url)
@@ -75,43 +75,6 @@ def badge_asset(raw,tier):
     data=buf.getvalue();sha=hashlib.sha256(data).hexdigest();path=ROOT/'albums/asset-cache'/f'{sha}.webp';path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(data)
     return sha,{'path':str(path.relative_to(ROOT)),'sha256':sha,'source':SPRITE,'spriteSha256':hashlib.sha256(raw).hexdigest(),'crop':[x,y,180,180],'officialCssClass':f'ico-badge-{tier}m-big'}
 
-def unastro(value):
-    if isinstance(value,list) and len(value)==2 and type(value[0]) is int:return unastro(value[1])
-    if isinstance(value,list):return [unastro(v) for v in value]
-    if isinstance(value,dict):return {k:unastro(v) for k,v in value.items() if k!='lyrics'}
-    return value
-
-def parse_peaks(html, melon, source_id):
-    soup=BeautifulSoup(html,'html.parser');info=None
-    for island in soup.select('astro-island[props]'):
-        if 'FeaturedSongSelector' in island.get('component-url',''):
-            info=unastro(json.loads(island['props'])).get('songInfo');break
-    if not isinstance(info,dict) or str(info.get('id'))!=str(source_id):raise ValueError('Record page identity missing')
-    if str(info.get('idMap',{}).get('melonId'))!=melon['trackId'] or str(info.get('albumIdMap',{}).get('melonId'))!=melon['albumId']:raise ValueError('Wrong Melon song or album ID')
-    if norm(info.get('name'))!=norm(melon['title']):raise ValueError('Record title mismatch')
-    # ID equality is mandatory; normalized artist supports official English suffix.
-    artist=norm(info.get('artistName'));expected=norm(melon['artist'])
-    if artist!=expected and not ({artist,expected}<={'이세계아이돌','이세계아이돌isegyeidol'}):raise ValueError('Record artist mismatch')
-    labels={'TOP100':'top100','HOT100 (100일)':'hot100','실시간차트':'realtime'};ranks={k:None for k in labels.values()};dates={};seen=set()
-    if '멜론 최고 성적' not in soup.get_text(' ',strip=True):raise ValueError('Missing peak section')
-    for heading in soup.select('h3'):
-        label=text(heading)
-        if label not in labels:continue
-        key=labels[label]
-        if key in seen:raise ValueError('Duplicate peak label')
-        seen.add(key);cell=heading.parent
-        content=text(cell);values=re.findall(r'(?<!\d)(\d+)위',content)
-        if len(values)>1:raise ValueError('Ambiguous peak value')
-        if values:
-            rank=int(values[0])
-            if not 1<=rank<=100:raise ValueError('Invalid peak rank')
-            ranks[key]=rank
-        date=re.search(r'(?<!\d)(\d{2})\.(\d{1,2})\.(\d{1,2})(?!\d)',content)
-        if date:
-            y,m,d=map(int,date.groups());dates[key]=datetime(2000+y,m,d,tzinfo=timezone.utc).date().isoformat()
-    if not seen:raise ValueError('No peak headings')
-    return {'state':'verified','trackId':melon['trackId'],'albumId':melon['albumId'],'ranks':ranks,'dates':dates,'source':f'https://isegyechart.com/song/{source_id}','sourceType':'third_party_observed_records','hot100WindowDays':100,'coverage':'provider-observed historical peak; not certified all-time by Melon'}
-
 def collect(result,previous):
     stamp=datetime.now(timezone.utc).isoformat();expected={t['melon']['albumId']:t['melon'] for t in result['tracks'].values() if t.get('melon',{}).get('state')=='ok'}
     report={'checkedAt':stamp,'awards':{},'peaks':{}};result.setdefault('assets',{})['badges']={}
@@ -124,15 +87,7 @@ def collect(result,previous):
             if award:item['melonHonor']={**award,'asset':by_tier[award['spriteTier']],'checkedAt':stamp}
         report['awards']={'state':'ok','albums':len(awards),'source':HALL,'responseSha256':hashlib.sha256(raw).hexdigest()}
     except Exception as exc: report['awards']={'state':'error','error':type(exc).__name__}
-    mappings=json.loads((ROOT/'albums/record-sources.json').read_text())['tracks']
-    for sid,entry in mappings.items():
-        item=result['tracks'].get(sid,{});m=item.get('melon',{})
-        if not m.get('trackId') or m['trackId']!=entry['melonId']:continue
-        url=f"https://isegyechart.com/song/{entry['recordId']}"
-        try:
-            raw=fetch(url);peaks=parse_peaks(raw.decode('utf-8'),m,entry['recordId']);item['melonPeaks']={**peaks,'checkedAt':stamp,'responseSha256':hashlib.sha256(raw).hexdigest()}
-            report['peaks'][sid]={'state':'verified','ranks':peaks['ranks'],'source':url}
-        except Exception as exc:report['peaks'][sid]={'state':'error','error':type(exc).__name__}
+    report['peaks']=collect_original_records(result,previous,fetch)
     # Removed providers never survive restoration of the older feature cache.
     for name in ('flo','spotify'):result['providers'].pop(name,None);result['assets'].get('brands',{}).pop(name,None)
     for item in result['tracks'].values():

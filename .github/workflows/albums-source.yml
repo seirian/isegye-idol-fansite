@@ -13,39 +13,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
       - run: git archive --format=zip --output=albums-source.zip HEAD
-      - name: Read official chart reports without credentials or borrowed app keys
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from urllib.request import Request,build_opener,HTTPRedirectHandler
-          from urllib.parse import urlparse
-          import json,time,hashlib
-          class Redirect(HTTPRedirectHandler):
-            def redirect_request(self,req,fp,code,msg,headers,newurl):
-              if urlparse(newurl).hostname!=urlparse(req.full_url).hostname:raise ValueError('Cross-origin redirect')
-              return super().redirect_request(req,fp,code,msg,headers,newurl)
-          out=Path('test-results/melon-origin');out.mkdir(parents=True,exist_ok=True)
-          urls=[('song-info-v5','https://m2.melon.com/m6/v5/song/info.json?songId=603093102'),('active-report','https://m2.melon.com/m6/chart/song/chartReport.json?songId=603712834')]
-          report=[]
-          def scrub(x):
-            if isinstance(x,dict):return {k:scrub(v) for k,v in x.items() if 'LYRIC' not in k.upper()}
-            if isinstance(x,list):return [scrub(v) for v in x]
-            return x
-          for name,url in urls:
-            try:
-              with build_opener(Redirect).open(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.0'}),timeout=20) as r:
-                data=r.read(2000000);text=data.decode('utf-8','replace')
-                try:text=json.dumps(scrub(json.loads(text)),ensure_ascii=False,indent=2)
-                except ValueError:pass
-                (out/(name+'.txt')).write_text(text);report.append({'name':name,'url':url,'status':r.status,'final':r.url,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
-            except Exception as e:report.append({'name':name,'url':url,'error':type(e).__name__,'status':getattr(e,'code',None)})
-            time.sleep(1)
-          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2));print(json.dumps(report,ensure_ascii=False))
-          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
-          path: |
-            albums-source.zip
-            test-results/melon-origin/
+          path: albums-source.zip
           retention-days: 7

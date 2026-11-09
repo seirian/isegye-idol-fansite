@@ -17,6 +17,8 @@ def build():
     before = {p: hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in ['dist/src/app.js','dist/index.html','review-1st/app.js','auth/Gateway.php']}
     snapshot = json.loads((ROOT/'albums/snapshot.json').read_text())
     if snapshot.get('schemaVersion') != 1 or not isinstance(snapshot.get('tracks'),dict): raise ValueError('Snapshot required')
+    if any(t.get('melonPeaks', {}).get('sourceType') not in (None, 'melon_original_song_info') for t in snapshot['tracks'].values()):
+        raise ValueError('Non-original Melon record in preview snapshot')
     data = first.extract((baseline/'src/data.js').read_text(),'REVIEW_DATA')
     # Source-owned titles remain verbatim; only preview classification labels change.
     for entry in data['albums'] + data['songs']:

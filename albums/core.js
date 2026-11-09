@@ -7,7 +7,7 @@ export function albumDuration(ms) {
 export function albumSafeUrl(value) {
   try {
     const u = new URL(value);
-    return u.protocol === 'https:' && ['music.apple.com', 'itunes.apple.com', 'www.melon.com', 'm2.melon.com', 'isegyechart.com', 'www.genie.co.kr', 'music.bugs.co.kr', 'www.youtube.com', 'music.youtube.com'].includes(u.hostname) && !u.username && !u.password ? u.href : '';
+    return u.protocol === 'https:' && ['music.apple.com', 'itunes.apple.com', 'www.melon.com', 'm2.melon.com', 'www.genie.co.kr', 'music.bugs.co.kr', 'www.youtube.com', 'music.youtube.com'].includes(u.hostname) && !u.username && !u.password ? u.href : '';
   } catch { return ''; }
 }
 export function albumValidSnapshot(value) {
@@ -75,8 +75,11 @@ export function albumVerifiedHonor(item, assets) {
 }
 export function albumVerifiedPeaks(item) {
   const p=item?.melonPeaks;
-  if (!p || p.state!=='verified' || p.trackId!==item?.melon?.trackId || !Number.isFinite(Date.parse(p.checkedAt))) return null;
-  try {const u=new URL(p.source);if(u.origin!=='https://isegyechart.com'||!/^\/song\/\d+$/.test(u.pathname))return null;}catch{return null;}
-  if (!['top100','hot100','realtime'].every(k=>p.ranks?.[k]===null||(Number.isInteger(p.ranks?.[k])&&p.ranks[k]>=1&&p.ranks[k]<=100)))return null;
+  if (!p || p.state!=='verified' || p.sourceType!=='melon_original_song_info' || p.recordScope!=='daily' || p.trackId!==item?.melon?.trackId || p.albumId!==item?.melon?.albumId || !Number.isFinite(Date.parse(p.checkedAt))) return null;
+  try {const u=new URL(p.source);if(u.origin!=='https://m2.melon.com'||u.username||u.password||u.pathname!=='/m6/v5/song/info.json'||u.searchParams.get('songId')!==p.trackId||[...u.searchParams].length!==1||u.hash)return null;}catch{return null;}
+  if (!['top100','hot100','realtime'].every(k=>p.ranks?.[k]===null)) return null;
+  if (p.dailyBestRank!==null && (!Number.isInteger(p.dailyBestRank)||p.dailyBestRank<1||p.dailyBestRank>1000||!/^\d{4}-\d{2}-\d{2}$/.test(p.dailyBestDate||'')||!Number.isFinite(Date.parse(p.dailyBestDate)))) return null;
+  if (p.dailyBestRank!==null && (new Date(p.dailyBestDate).toISOString().slice(0,10)!==p.dailyBestDate || p.dailyBestDate>new Date(Date.parse(p.checkedAt)+9*3600000).toISOString().slice(0,10))) return null;
+  if (p.dailyBestRank===null && p.dailyBestDate!==null) return null;
   return p;
 }
