@@ -69,6 +69,8 @@ def official_bindings(source):
         if line.startswith('#') or not line.strip(): continue
         sid, vid, kind, channel = line.split('\t')
         if kind.startswith('official_') and re.fullmatch(r'[\w-]{11}', vid): approved[sid] = vid
+    from album_releases import video_bindings
+    approved.update({sid: row['videoId'] for sid, row in video_bindings(ROOT).items()})
     return {s['id']: approved[s['id']] for s in source if s['id'] in approved}
 
 def video_history(previous, point, now, ident):
@@ -84,7 +86,8 @@ def video_history(previous, point, now, ident):
 
 def collect(previous=None, include_apple_chart=True):
     now = datetime.now(timezone.utc); stamp = now.isoformat(); previous = previous or {}
-    source = json.loads((ROOT/'catalog/music.json').read_text())['songs']
+    from album_releases import load_catalog
+    source = load_catalog(ROOT)['songs']
     result = {'schemaVersion':1,'generatedAt':stamp,'scope':'feature/albums review only','providers':{},'tracks':{}}
     rows = []; failures = []
     for term in ('ISEGYE IDOL', 'GOSEGU'):

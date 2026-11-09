@@ -45,9 +45,14 @@ def adapt(app):
             start=code.index('function aiBanner()');end=code.index('function aiLink(',start)
             code=code[:start]+"function aiBanner() { return ''; }\n"+code[end:]
             code=once(code,"if(!location.pathname.startsWith('/review-albums/'))return;","if(location.protocol==='file:')return;")
-            code=once(code,"fetch('/review-albums/api/insights'","fetch('/src/albums-insights.json'")
+            code=once(code,"fetch('/review-albums/api/insights'","fetch('/api/albums'")
             code=code.replace('검토 스냅샷','마지막 확인 데이터').replace('API 응답 실패 · 내장 검토본 표시','갱신 확인 실패 · 마지막 확인 데이터 표시')
+            code=once(code,"if(next.generatedAt!==albumInsights.generatedAt)throw new Error('Snapshot version mismatch');","if(!albumAcceptRuntime(next))throw new Error('Invalid runtime album snapshot');")
+            code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")
+        if name=='flow-view.js':
+            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매일 07:13 KST 및 음악 배치 성공 후 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다. HOT100은 01~07시 새 차트 미제공 구간에 원문의 마지막 발표 시각을 유지합니다.')
         pieces.append(code)
+    pieces.append((ROOT/'albums/runtime.js').read_text())
     # Objects stay shared with the existing song/album maps; source titles are untouched.
     normalization="for(const row of [...D.albums,...D.songs])if(typeof row.format==='string')row.format=row.format.replaceAll('음반','앨범');\n"
     return once(app,"if(!location.hash)history.replaceState",normalization+'\n'.join(pieces)+"\nif(!location.hash)history.replaceState")
@@ -59,6 +64,13 @@ def build(directory=None):
     if meta.get('mode')=='production' and os.getenv('GITHUB_REF')!='refs/heads/main':raise ValueError('Production is main-only')
     if meta.get('albumPromotion'):raise ValueError('Album promotion must run once on a fresh baseline')
     data=snapshot();before=first.extract((out/'src/data.js').read_text(),'REVIEW_DATA')
+    from album_releases import extend_music,compose_review
+    legacy_path=out/'src/production-ui.js';legacy=legacy_path.read_text()
+    catalog=first.extract(legacy,'CATALOG');catalog['music']=extend_music(catalog['music'])
+    composed=compose_review(before,catalog['music'])
+    (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json(composed)+';\n')
+    legacy=re.sub(r'^const CATALOG=[^\n]+;',lambda _: 'const CATALOG='+first.script_json(catalog)+';',legacy,count=1,flags=re.M)
+    legacy_path.write_text(legacy)
     preserved={p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in (out/'src').glob('video-part-*.js')}
     assets={};target=out/'assets/albums';target.mkdir(parents=True,exist_ok=True)
     for group,name in [('covers','ALBUMS_ART'),('brands','ALBUMS_BRANDS'),('badges','ALBUMS_BADGES')]:
@@ -76,11 +88,14 @@ def build(directory=None):
     with (out/'src/styles.css').open('a') as f:f.write('\n'+'\n'.join((ROOT/'albums'/name).read_text() for name in STYLES))
     html=(out/'index.html').read_text();html=once(html,'<script src="src/app.js"></script>','<script src="src/albums-data.js"></script><script src="src/app.js"></script>')
     (out/'index.html').write_text(html)
-    meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/src/albums-insights.json','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':False}
+    meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/api/albums','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':True}
+    from album_releases import load_catalog
+    meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'매일 07:13 KST; 음악 배치 성공 후 추가 실행'}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
-    assert first.extract((out/'src/data.js').read_text(),'REVIEW_DATA')==before
+    assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums'))
+    assert all(composed[k]==before[k] for k in before if k not in ('songs','albums'))
     assert all(hashlib.sha256((out/p).read_bytes()).hexdigest()==digest for p,digest in preserved.items())
-    for name in ('app.js','albums-data.js'):subprocess.run(['node','--check',str(out/'src'/name)],check=True)
+    for name in ('app.js','albums-data.js','data.js','production-ui.js'):subprocess.run(['node','--check',str(out/'src'/name)],check=True)
     if meta['mode']=='production':
         from inour_sftp import load_payload
         load_payload(out,meta['commit'])

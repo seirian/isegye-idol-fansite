@@ -15,8 +15,10 @@ class PromotionTests(unittest.TestCase):
   result=p.adapt(app)
   self.assertIn("'#/home'",result);self.assertIn('isegye:archive:prefs:v1',result)
   self.assertIn("function aiBanner() { return ''; }",result)
-  self.assertIn("fetch('/src/albums-insights.json'",result)
+  self.assertIn("fetch('/api/albums'",result)
   self.assertNotIn('/review-albums/api',result)
+  self.assertIn('albumAcceptRuntime(next)',result)
+  self.assertNotIn('next.generatedAt!==albumInsights.generatedAt',result)
   self.assertNotIn('관리자 검토 전용',result)
  def test_missing_build_anchor_fails_closed(self):
   with self.assertRaises(ValueError):p.adapt('function songView(){}')
