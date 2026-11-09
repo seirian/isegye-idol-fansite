@@ -25,7 +25,7 @@ def payload(directory,commit):
     html=(folder/'review.html').read_bytes();meta=json.loads((folder/'build-info.json').read_text())
     d.require(10000<len(html)<9*1024*1024,'Unexpected review HTML size')
     d.require(meta.get('branch')=='feature/albums' and meta.get('commit')==commit and meta.get('mode')=='isolated-preview','Review identity mismatch')
-    text=html.decode();d.require('noindex,nofollow' in text and '음반 1차 검토' in text and "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'Review HTML policy mismatch')
+    text=html.decode();d.require('noindex,nofollow' in text and '앨범 1차 검토' in text and "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'Review HTML policy mismatch')
     for tag in ('script','style'):
         blocks=re.findall('<'+tag+'>([\\s\\S]*?)</'+tag+'>',text)
         d.require(len(blocks)==1,'Unexpected inline payload count')
