@@ -3,7 +3,9 @@ on:
   push:
     branches: ['release/albums-approved']
     paths: ['.github/workflows/albums-promotion-source.yml']
-permissions: {contents: read}
+permissions:
+  contents: write
+  actions: read
 jobs:
   source:
     if: github.ref == 'refs/heads/release/albums-approved'
@@ -11,7 +13,25 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: {persist-credentials: false}
+        with:
+          ref: release/albums-approved
+      - uses: actions/download-artifact@v4
+        with:
+          name: albums-review-f2c00e2bb1f4a762e8ff1578f540584652d8053b
+          run-id: 42633213321
+          github-token: ${{ github.token }}
+          path: /tmp/albums-approved-artifact
+      - name: Import only checksum-verified public approved data
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python scripts/seed_approved_albums.py /tmp/albums-approved-artifact
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add albums/release-seed
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore(albums): pin verified public review snapshot for approved release'
+            git push origin HEAD:release/albums-approved
+          fi
       - run: git archive --format=zip --output=albums-promotion-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
