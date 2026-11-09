@@ -95,6 +95,24 @@ class AlbumsDaily(unittest.TestCase):
         self.assertIn('melon:rebels',daily.health(doc)['incompleteRequired'])
         doc=complete_data();doc['domesticCharts']['melon_hot100']['updatedAt']=(datetime.now(timezone.utc)-timedelta(hours=4)).isoformat()
         self.assertIn('melon_hot100',daily.health(doc)['incompleteRequired'])
+    def test_hot100_official_night_pause_is_not_a_fresh_rank(self):
+        observed=datetime.fromisoformat('2026-11-10T06:00:00+09:00')
+        chart={'state':'ok','source':daily.HOT100_SOURCE,
+            'checkedAt':observed.isoformat(),'updatedAt':'2026-11-10T01:00:00+09:00'}
+        self.assertTrue(daily.hot100_night_pause(chart,observed))
+        self.assertEqual(chart['updatedAt'],'2026-11-10T01:00:00+09:00')
+        for change in ({'updatedAt':'2026-11-09T01:00:00+09:00'},
+                       {'updatedAt':'2026-11-10T02:00:00+09:00'},
+                       {'updatedAt':'2026-11-10T01:30:00+09:00'},
+                       {'checkedAt':'2026-11-10T02:00:00+09:00'},
+                       {'state':'error'},{'source':'https://example.invalid/'}):
+            self.assertFalse(daily.hot100_night_pause(chart|change,observed))
+        self.assertFalse(daily.hot100_night_pause(chart,datetime.fromisoformat('2026-11-10T07:13:00+09:00')))
+        doc=complete_data();doc['generatedAt']=observed.isoformat()
+        doc['domesticCharts']['melon_hot100']=chart
+        report=daily.health(doc)
+        self.assertNotIn('melon_hot100',report['incompleteRequired'])
+        self.assertEqual(report['scheduledSourcePauses'][0]['lastPublishedAt'],chart['updatedAt'])
     def test_stale_run_refused(self):
         doc=complete_data();doc['generatedAt']=(datetime.now(timezone.utc)-timedelta(hours=3)).isoformat()
         with self.assertRaises(ValueError):daily.validate(doc,exact=True,fresh=True)

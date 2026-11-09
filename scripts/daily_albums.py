@@ -2,7 +2,7 @@
 Keeps real observation times and failed chart gaps instead of inventing zeroes.
 """
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import argparse
 import hashlib
@@ -17,6 +17,8 @@ from collect_album_records import collect as records_collect
 ROOT = Path(__file__).resolve().parents[1]
 KINDS = {'melon_top100', 'melon_hot100'}
 MAX_BYTES = 2_000_000
+HOT100_POLICY = 'https://help.melon.com/web/faq/content.htm?faqId=2642'
+HOT100_SOURCE = 'https://www.melon.com/chart/hot100/index.htm?chartType=D100'
 
 def clock(value):
     result = datetime.fromisoformat(value.replace('Z', '+00:00'))
@@ -98,8 +100,24 @@ def preserve(previous, result):
             item['artwork'] = deepcopy(old['artwork'])
     return result
 
+def hot100_night_pause(chart, observed):
+    """Official 01:00-07:00 KST non-publication window, not a new rank observation.
+    Accept only a freshly fetched full chart retaining today's midnight/01:00
+    published timestamp. Yesterday's data and arbitrary stale times stay errors.
+    """
+    try:
+        local = observed.astimezone(timezone(timedelta(hours=9)))
+        at = clock(chart['updatedAt']).astimezone(local.tzinfo)
+        checked = clock(chart['checkedAt'])
+        return (chart.get('state') == 'ok' and chart.get('source') == HOT100_SOURCE
+                and 1 <= local.hour < 7 and at.date() == local.date()
+                and at.hour in (0, 1) and at.minute == 0 and at.second == 0
+                and at <= local and -600 <= (observed-checked).total_seconds() <= 7200)
+    except (KeyError, ValueError, TypeError, AttributeError):
+        return False
+
 def health(data):
-    missing, warnings = [], []
+    missing, warnings, pauses = [], [], []
     observed=clock(data['generatedAt'])
     def current(value):
         try:return -600 <= (observed-clock(value)).total_seconds() <= 7200
@@ -122,13 +140,17 @@ def health(data):
                 missing.append('cover:'+track['id'])
     for kind in sorted(KINDS):
         chart=data.get('domesticCharts', {}).get(kind, {})
-        if chart.get('state') != 'ok' or not current(chart.get('checkedAt')) or not current(chart.get('updatedAt')):
+        paused = kind == 'melon_hot100' and hot100_night_pause(chart, observed)
+        if chart.get('state') != 'ok' or not current(chart.get('checkedAt')) or not (current(chart.get('updatedAt')) or paused):
             missing.append(kind)
+        if paused:
+            pauses.append({'source': kind, 'state': 'scheduled_night_pause',
+                'lastPublishedAt': chart['updatedAt'], 'policySource': HOT100_POLICY})
     for name in ('itunes', 'youtube', 'genie', 'bugs'):
         state = data.get('providers', {}).get(name, {}).get('state', 'missing')
         if state != 'ok': warnings.append(name+':'+state)
     return {'state': 'complete' if not missing else 'partial', 'incompleteRequired': sorted(set(missing)),
-            'optionalWarnings': warnings, 'catalogTracks': len(data['tracks']),
+            'optionalWarnings': warnings, 'scheduledSourcePauses': pauses, 'catalogTracks': len(data['tracks']),
             'releaseTracks': [t['id'] for r in releases(ROOT) for t in r['tracks']],
             'scope': 'registered releases; current verified Melon catalog and observed TOP100/HOT100; not exhaustive historical ranks'}
 
@@ -140,6 +162,10 @@ def collect(previous):
     data = preserve(previous, data)
     data['scope'] = 'production album observations; data-only daily refresh'
     data['feed'] = 'daily-albums'
+    chart = data.get('domesticCharts', {}).get('melon_hot100', {})
+    if hot100_night_pause(chart, clock(data['generatedAt'])):
+        chart.update(availability='scheduled_night_pause', policySource=HOT100_POLICY,
+            availabilityNote='HOT100은 01~07시 새 차트 미제공; 원문 마지막 발표 시각 유지')
     data['collectionHealth'] = health(data)
     validate(data, exact=True, fresh=True)
     return data

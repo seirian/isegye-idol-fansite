@@ -50,7 +50,7 @@ def adapt(app):
             code=once(code,"if(next.generatedAt!==albumInsights.generatedAt)throw new Error('Snapshot version mismatch');","if(!albumAcceptRuntime(next))throw new Error('Invalid runtime album snapshot');")
             code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")
         if name=='flow-view.js':
-            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매일 07:13 KST 및 음악 배치 성공 후 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다.')
+            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매일 07:13 KST 및 음악 배치 성공 후 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다. HOT100은 01~07시 새 차트 미제공 구간에 원문의 마지막 발표 시각을 유지합니다.')
         pieces.append(code)
     pieces.append((ROOT/'albums/runtime.js').read_text())
     # Objects stay shared with the existing song/album maps; source titles are untouched.
