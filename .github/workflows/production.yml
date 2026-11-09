@@ -40,24 +40,26 @@ jobs:
           php tests/auth/jwt_test.php
       - name: Validate source, isolation and rollback
         run: |
-          python -m pip install tinycss2==1.4.0
+          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0
           npm test
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated build and browser tools
         timeout-minutes: 6
         run: |
           python -m venv /tmp/archive-browser-tests
-          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 tinycss2==1.4.0 cryptography
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 tinycss2==1.4.0 beautifulsoup4==4.14.3 cryptography
           bash scripts/ci_browser_install.sh /tmp/archive-browser-tests/bin/python
       - name: Verify authentication using local test identities only
         run: /tmp/archive-browser-tests/bin/python tests/auth/browser.py
       - name: Build credential-free authentication runtime
-        run: python scripts/build_review_2nd_host.py
+        run: python scripts/build_albums_host.py
       - name: Refresh public data and verify reviewed music sources
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
           /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
           /tmp/archive-browser-tests/bin/python scripts/schedule_feed.py --previous schedule/snapshot.json
+      - name: Restore the exact approved public album snapshot
+        run: /tmp/archive-browser-tests/bin/python scripts/prepare_album_release.py
       - name: Build approved simple home with LIVE preserved
         run: ISEGYE_BASELINE_ONLY=true npm run build
         env:
@@ -76,6 +78,11 @@ jobs:
         run: /tmp/archive-browser-tests/bin/python scripts/verify_promoted_review.py
       - name: Verify preserved first and second preview authentication
         run: /tmp/archive-browser-tests/bin/python tests/review_2nd_host_browser.py
+      - name: Promote and test the approved final album UI
+        run: |
+          /tmp/archive-browser-tests/bin/python scripts/promote_albums.py
+          /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
+          python scripts/build_albums_host.py
       - name: Activate Google access without pre-registering the administrator
         run: /tmp/archive-browser-tests/bin/python scripts/deploy_google_access.py
         env:
