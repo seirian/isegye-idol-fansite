@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
       - run: git archive --format=zip --output=albums-source.zip HEAD
-      - name: Read official chart reports without credentials, app keys or bypass
+      - name: Read official chart reports without credentials or borrowed app keys
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -25,7 +25,7 @@ jobs:
               if urlparse(newurl).hostname!=urlparse(req.full_url).hostname:raise ValueError('Cross-origin redirect')
               return super().redirect_request(req,fp,code,msg,headers,newurl)
           out=Path('test-results/melon-origin');out.mkdir(parents=True,exist_ok=True)
-          urls=[('song-info','https://m2.melon.com/m6/v3/song/info.json?songId=603093102'),('chart-report','https://m2.melon.com/m6/chart/song/chartReport.json?songId=603093102'),('mobile-chart','https://m2.melon.com/chart/index.htm')]
+          urls=[('song-info-v5','https://m2.melon.com/m6/v5/song/info.json?songId=603093102'),('active-report','https://m2.melon.com/m6/chart/song/chartReport.json?songId=603712834')]
           report=[]
           def scrub(x):
             if isinstance(x,dict):return {k:scrub(v) for k,v in x.items() if 'LYRIC' not in k.upper()}
