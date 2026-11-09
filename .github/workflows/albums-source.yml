@@ -12,9 +12,54 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
+      - name: Read original scope and explicit fallback without credentials
+        run: |
+          python -m pip install beautifulsoup4==4.14.3
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          from datetime import datetime,timezone
+          import json,hashlib,time
+          out=Path('test-results/peak-source-check');out.mkdir(parents=True,exist_ok=True)
+          def unastro(v):
+            if isinstance(v,list) and len(v)==2 and type(v[0]) is int:return unastro(v[1])
+            if isinstance(v,list):return [unastro(x) for x in v]
+            if isinstance(v,dict):return {k:unastro(x) for k,x in v.items() if k!='lyrics'}
+            return v
+          urls=[('melon-cat','https://m2.melon.com/m6/v5/song/info.json?songId=603093102'),('melon-kidding','https://m2.melon.com/m6/v5/song/info.json?songId=36710003'),('report-cat','https://m2.melon.com/m6/chart/song/chartReport.json?songId=603093102'),('report-kidding','https://m2.melon.com/m6/chart/song/chartReport.json?songId=36710003'),('report-active','https://m2.melon.com/m6/chart/song/chartReport.json?songId=603712834'),('past-top100','https://www.melon.com/chart/index.htm?dayTime=2023081909'),('reference-cat','https://isegyechart.com/song/828'),('reference-kidding','https://isegyechart.com/song/799'),('reference-terms','https://isegyechart.com/terms')]
+          results=[]
+          for name,url in urls:
+            r={'name':name,'url':url,'checkedAt':datetime.now(timezone.utc).isoformat()}
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.4'}),timeout=18) as resp:
+                raw=resp.read(3000001)
+                if len(raw)>3000000:raise ValueError('response too large')
+                r.update(status=resp.status,final=resp.url,sha256=hashlib.sha256(raw).hexdigest())
+              if 'melon.com/m6/' in url:
+                b=json.loads(raw).get('response',{});r['keys']=list(b)
+                r['achievement']=b.get('SONGACHIEVEMENTINFO');r['daily']=b.get('YESTERCHARTINFO')
+                r['rankScope']=b.get('RANKCHART',{}).get('INFO');r['message']={k:v for k,v in b.items() if k in ('RESULTCODE','RESPONSE','MESSAGE','MSG')}
+              elif name.startswith('reference-') and name!='reference-terms':
+                soup=BeautifulSoup(raw,'html.parser');r['identity']=None
+                for el in soup.select('astro-island[props]'):
+                  if 'FeaturedSongSelector' in el.get('component-url',''):
+                    info=unastro(json.loads(el['props'])).get('songInfo',{});r['identity']={k:info.get(k) for k in ('id','idMap','albumIdMap','name','artistName')}
+                r['headings']=[{'label':h.get_text(' ',strip=True),'text':h.parent.get_text(' ',strip=True),'titles':[e.get('title') for e in h.parent.select('[title]')]} for h in soup.select('h3')]
+              elif name=='reference-terms':
+                soup=BeautifulSoup(raw,'html.parser');main=soup.select_one('main') or soup;r['text']=main.get_text(' ',strip=True)
+              else:
+                soup=BeautifulSoup(raw,'html.parser');r['dateText']=[e.get_text(' ',strip=True) for e in soup.select('.year,.hour,.time_layer,.calendar_prid')];r['chartRows']=len(soup.select('tr.lst50,tr.lst100'))
+            except Exception as exc:r.update(error=type(exc).__name__,status=getattr(exc,'code',None))
+            results.append(r);time.sleep(.5)
+          (out/'report.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
+          print(json.dumps([{k:r[k] for k in ('name','status','error') if k in r} for r in results]))
+          PY
       - run: git archive --format=zip --output=albums-source.zip HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: albums-source-${{ github.sha }}
-          path: albums-source.zip
+          path: |
+            albums-source.zip
+            test-results/peak-source-check/
           retention-days: 7
