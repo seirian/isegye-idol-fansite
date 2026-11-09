@@ -64,6 +64,10 @@ jobs:
         run: |
           /tmp/release-tools/bin/python scripts/promote_albums.py
           /tmp/release-tools/bin/python tests/albums_production_browser.py
+      - name: Verify album feed uses the unchanged access gate
+        run: |
+          python scripts/build_albums_host.py
+          /tmp/release-tools/bin/python tests/albums_feed_browser.py
       - name: Validate main-only production packaging without upload
         env:
           PYTHON: /tmp/release-tools/bin/python

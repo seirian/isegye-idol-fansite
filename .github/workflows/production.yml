@@ -83,6 +83,8 @@ jobs:
           /tmp/archive-browser-tests/bin/python scripts/promote_albums.py
           /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
           python scripts/build_albums_host.py
+      - name: Verify album feed and image authorization before any upload
+        run: /tmp/archive-browser-tests/bin/python tests/albums_feed_browser.py
       - name: Activate Google access without pre-registering the administrator
         run: /tmp/archive-browser-tests/bin/python -u scripts/deploy_verified_albums.py
         env:

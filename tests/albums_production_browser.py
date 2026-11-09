@@ -17,11 +17,16 @@ try:
   browser=pw.chromium.launch(headless=True,executable_path=os.getenv("BROWSER_PATH") or None);ctx=browser.new_context(viewport={'width':1440,'height':1000});page=ctx.new_page();errors=[]
   page.on('pageerror',lambda e:errors.append(str(e)))
   ctx.route('**/*',lambda r:r.continue_() if r.request.url.startswith(url) else r.abort())
-  for path in ('schedule','music','history'):ctx.route('**/api/'+path,lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
+  for path in ('schedule','music','history','albums'):ctx.route('**/api/'+path,lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
   page.goto(url,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
   check('home remains default',page.url.endswith('#/home'))
   page.goto(url+'#/music?tab=albums',wait_until='domcontentloaded');expect(page.locator('#main h1')).to_have_text('한 곡에서 시작되는 이야기')
-  check('all fifteen albums',page.locator('.ai-card').count()==15)
+  check('existing fifteen plus new album',page.locator('.ai-card').count()==16)
+  new_album=page.evaluate("D.albums.find(a=>a.title==='Across Dimensions')")
+  check('new album has five registered tracks',len(new_album['songIds'])==5)
+  page.goto(url+'#/album/'+new_album['id'],wait_until='domcontentloaded')
+  expect(page.locator('#main h1')).to_have_text('Across Dimensions')
+  check('new album ordered track links',page.locator('.ai-track h3 a').count()==5)
   check('no preview banner',page.locator('.ai-review').count()==0)
   check('no removed filters or reset',page.locator('[data-filter=coverage]').count()==0 and '초기화' not in page.locator('#main').inner_text())
   snap=json.loads((ROOT/'dist/src/albums-insights.json').read_text());keys=['top100','hot100','realtime','hot100_30','daily','new_week','new_month']
@@ -54,6 +59,22 @@ try:
   check('approved commit recorded',meta['albumPromotion']['acceptedCommit']=='f2c00e2bb1f4a762e8ff1578f540584652d8053b')
   check('existing feeds unchanged',meta['runtimeFeeds']==['/api/schedule','/api/music','/api/history'])
   check('complete video catalog not sampled',page.evaluate('D.videos.length')>10000 and not page.evaluate('D.scope.offlineSample||false'))
+  from datetime import datetime,timezone
+  from copy import deepcopy
+  from PIL import Image
+  import io,hashlib
+  fresh=deepcopy(snap);fresh.update(generatedAt=datetime.now(timezone.utc).isoformat(),feed='daily-albums')
+  buf=io.BytesIO();Image.new('RGB',(2,2)).save(buf,format='WEBP');image=buf.getvalue();sha=hashlib.sha256(image).hexdigest()
+  fresh.setdefault('assets',{}).setdefault('covers',{})[sha]={'sha256':sha,'path':'albums/asset-cache/'+sha+'.webp'}
+  fresh['tracks']['rebels']={'match':'unmatched','artwork':{'asset':sha,'provider':'melon'},'melon':{'state':'ok','title':'REBELS','album':'Across Dimensions','trackId':'test-fixture','albumId':'15120216','checkedAt':fresh['generatedAt']}}
+  ctx.route('**/api/albums',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps(fresh)))
+  ctx.route('**/api/albums/assets/'+sha+'.webp',lambda r:r.fulfill(status=200,content_type='image/webp',body=image))
+  page.goto(url+'#/song/rebels');page.reload(wait_until='domcontentloaded')
+  expect(page.locator('.ai-hero .ai-cover img')).to_be_visible()
+  check('newer feed accepted',page.evaluate('albumInsights.generatedAt')==fresh['generatedAt'])
+  expect(page.locator('.ai-hero .ai-cover img')).to_have_attribute('src','/api/albums/assets/'+sha+'.webp')
+  check('dynamic cover bytes loaded',page.locator('.ai-hero .ai-cover img').evaluate('(e)=>e.complete&&e.naturalWidth>0'))
+  check('existing and new songs survive music feed refresh',page.evaluate("D.songs.filter(s=>s.videoId==='y-klhPVFblg').length") == 1)
   check('no JavaScript exceptions',not errors)
   browser.close()
 finally:
