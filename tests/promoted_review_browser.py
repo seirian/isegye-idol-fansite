@@ -19,7 +19,7 @@ def offline():
  def embed(m):
   path=dist/m.group(1).split('?')[0]
   return json.dumps('data:image/webp;base64,'+base64.b64encode(path.read_bytes()).decode())
- data=re.sub(r'"(assets/[^"]+\.webp(?:\?[^\"]*)?)"',embed,data)
+ data=re.sub(r'"(assets/[^"]+\.webp(?:\?[^"]*)?)"',embed,data)
  # All asset references present in data; other failed thumbnails remain readable.
  parts=[]
  for rel in re.findall(r'<script src="([^"]+)"></script>',html):
@@ -40,7 +40,7 @@ try:
    p.route('**/api/*',lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
    p.goto(URL,wait_until='load')
   else:
-   p.evaluate("""()=>{const data=new Map([['isegye:theme:v1','light'],['isegye:bookmarks:v1','[\"ine\",\"rewind\"]']]);Object.defineProperty(window,'localStorage',{value:{getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)},configurable:true})}""")
+   p.evaluate("""()=>{const data=new Map([['isegye:theme:v1','light'],['isegye:bookmarks:v1','["ine","rewind"]']]);Object.defineProperty(window,'localStorage',{value:{getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)},configurable:true})}""")
    p.set_content(offline(),wait_until='load')
   # Only the visual account control is simulated here; authentication has its own TLS suite.
   if URL:
@@ -115,6 +115,16 @@ try:
   hist={'schemaVersion':1,'feed':'monthly-history','generatedAt':gen,'windowStart':'2026-10-01','through':((now+timedelta(hours=9)).date().replace(day=1)-timedelta(days=1)).isoformat(),'events':[{'id':hid,'date':'2026-10-15','title':'월간 기록 검증 항목','type':'content','members':['lilpa'],'sources':[key],'summary':'합성 회귀검사 기록','note':'실제 활동이 아닌 검사 데이터','dateBasis':'video_published'}],'sources':{key:{'title':'검사 원본','url':'https://www.youtube.com/watch?v=testvid0001','basis':'official','checkedAt':gen}}}
   p.evaluate('(f)=>ProductionFeeds.applyHistory(f)',hist);check('monthly record indexed',p.evaluate('(id)=>histories.has(id)',hid))
   go('history/'+hid);check('new history detail renders',p.locator('h1').inner_text()=='월간 기록 검증 항목')
+  # Migrate the same record to the new weekly cutoff without mutating legacy sources.
+  kst_day=(now+timedelta(hours=9)).date()
+  hist['cadence']='weekly';hist['through']=(kst_day-timedelta(days=(kst_day.weekday()+1)%7+1)).isoformat()
+  hist['events'][0].update(date=hist['through'],title='주간 기록 검증 항목')
+  p.evaluate('(f)=>ProductionFeeds.applyHistory(f)',hist)
+  check('weekly history cutoff accepted in operating validator',p.evaluate('(x)=>histories.get(x.id).date===x.date',{'id':hid,'date':hist['through']}))
+  check('weekly migration has no duplicate IDs',p.evaluate('(id)=>D.history.filter(r=>r.id===id).length===1',hid))
+  go('history/'+hid);check('weekly record detail renders',p.locator('h1').inner_text()=='주간 기록 검증 항목')
+  bad_history=json.loads(json.dumps(hist));bad_history['through']='2099-01-01'
+  check('invalid weekly cutoff rejected atomically',p.evaluate('(f)=>{const old=D.history;try{ProductionFeeds.applyHistory(f);return false}catch{return D.history===old}}',bad_history))
   old=json.loads(json.dumps(feed));old['generatedAt']=(now-timedelta(days=1)).isoformat()
   check('older server response rejected',p.evaluate('(f)=>{try{ProductionFeeds.applySchedule(f);return false}catch{return true}}',old))
   # Source observations and missing values must not become a made-up current date.

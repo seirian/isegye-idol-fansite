@@ -99,8 +99,8 @@ class History(unittest.TestCase):
         self.assertEqual(r.files[p.path('.lock')],b'other')
         for n in ('../../.auth-private/accounts.json','/web/.htaccess','index.html'):
             with self.assertRaises(d.Stop):p.path(n)
-    def test_monthly_only_workflow_and_gate(self):
-        s=(ROOT/'.github/workflows/history-monthly.yml').read_text();self.assertIn("cron: '43 0 1 * *'",s)
+    def test_weekly_workflow_and_gate(self):
+        s=(ROOT/'.github/workflows/history-monthly.yml').read_text();self.assertIn("cron: '0 15 * * 6'",s)
         self.assertNotIn('workflow_run:',s);self.assertNotIn('  push:',s);self.assertIn('ISEGYE_HISTORY_PAUSED',s)
         self.assertIn('group: isegye-inour-production',s);self.assertIn("github.ref == 'refs/heads/main'",s)
         s=(ROOT/'auth/Gateway.php').read_text();self.assertLess(s.index("if (!$access['allowed'])"),s.index("if ($path === '/api/history')"))

@@ -1,20 +1,17 @@
 name: Schedule - hourly permitted-source refresh
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '5 * * * *' # every hour at :05 Asia/Seoul
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Production - isolated inour SFTP deployment']
-    types: [completed]
-    branches: [main]
 permissions:
   contents: read
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
+  queue: max
 jobs:
   refresh:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
     environment: production
     # Playwright 1.56 Chromium does not support the ubuntu-26.04 latest runner.
     runs-on: ubuntu-24.04

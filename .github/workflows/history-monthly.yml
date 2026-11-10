@@ -1,27 +1,30 @@
-name: History - monthly verified activity refresh
+name: History - weekly verified activity refresh
 on:
   schedule:
-    - cron: '43 0 1 * *' # 1st day of each month, 09:43 Asia/Seoul
+    - cron: '0 15 * * 6' # Sunday 00:00 Asia/Seoul = Saturday 15:00 UTC
   workflow_dispatch:
 permissions: {contents: read}
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
+  queue: max
 jobs:
   refresh:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 18
+    env:
+      ISEGYE_HISTORY_CADENCE: weekly
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {ref: main, persist-credentials: false}
-      - name: Respect global and monthly-history pause controls
+      - name: Respect global and weekly-history pause controls
         env:
           PAUSE_ALL: ${{ vars.PRODUCTION_PAUSED }}
           PAUSE_HISTORY: ${{ vars.ISEGYE_HISTORY_PAUSED }}
         run: test "$PAUSE_ALL" != true && test "$PAUSE_HISTORY" != true
-      - name: Validate monthly cutoff, deduplication and publication boundary
+      - name: Validate weekly cutoff, deduplication and publication boundary
         run: |
           python -m unittest discover -s tests -p 'test_monthly_history*.py' -v
           node --test tests/monthly-history.test.js
@@ -54,7 +57,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: monthly-history-${{ github.run_id }}-${{ github.run_attempt }}
+          name: weekly-history-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             history-discovery.json
             history-publication.json

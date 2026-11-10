@@ -1,7 +1,8 @@
+import {execFileSync} from 'node:child_process';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
 const base=JSON.parse(fs.readFileSync(new URL('../visuals/history.json',import.meta.url),'utf8'));
 const core=fs.readFileSync(new URL('../visuals/core.js',import.meta.url),'utf8').replace(/^export /gm,'');
-const code=fs.readFileSync(new URL('../visuals/monthly-history.js',import.meta.url),'utf8');
+const code=execFileSync(process.env.PYTHON||'python',[new URL('../scripts/history_cadence.py',import.meta.url).pathname,'validator'],{encoding:'utf8'});
 const checkedAt=new Date().toISOString(),key='mh-'+'a'.repeat(24),id='monthly-'+'a'.repeat(24);
 const source={title:'공식 검증 자료',url:'https://berriz.in/ko/isegyeidol/notice/999001/',basis:'official',checkedAt};
 const row={id,title:'월간 검증 전용 앨범 소식',date:'2026-10-12',type:'release',members:['ine'],sources:[key],summary:'공식 게시일 기록',note:'실제 발매일을 추정하지 않습니다.',dateBasis:'notice_published',announced:true};
@@ -13,3 +14,7 @@ test('only exact official source URLs accepted',()=>{const c=setup();for(const u
 test('cutoff follows Korean month not UTC day and supports leap years',()=>{const c=setup();assert.equal(c.historyMonthEnd('2026-11-30T15:00:00Z'),'2026-11-30');assert.equal(c.historyMonthEnd('2026-11-30T14:59:00Z'),'2026-10-31');assert.equal(c.historyMonthEnd('2028-03-01T00:43:00Z'),'2028-02-29');});
 test('history filters accept future years rather than stopping at 2026',()=>{const c=setup();assert.equal(vm.runInContext('historyQuery(new URLSearchParams("year=2027")).year',c),'2027');assert.equal(vm.runInContext('historyQuery(new URLSearchParams("year=9999")).year',c),'all');});
 test('source observation and notice date remain distinct',()=>{const c=setup();c.applyMonthlyHistory(doc(c));assert.equal(c.HISTORY.sources[key].checkedAt,checkedAt);assert.equal(c.HISTORY.events.at(-1).date,'2026-10-12');assert.equal(c.HISTORY.events.at(-1).dateBasis,'notice_published');});
+
+test('weekly cutoff uses Sunday midnight KST and stays stable through the week',()=>{const c=setup();for(const [value,expected] of [['2026-11-14T14:59:59Z','2026-11-07'],['2026-11-14T15:00:00Z','2026-11-14'],['2026-11-18T12:00:00+09:00','2026-11-14'],['2027-01-03T00:00:00+09:00','2027-01-02'],['2028-03-05T00:00:00+09:00','2028-03-04']])assert.equal(c.historyWeekEnd(value),expected);});
+test('weekly records migrate without duplicates and malformed cadence cannot mutate history',()=>{const c=setup();c.applyMonthlyHistory(doc(c));const weekly={...doc(c),cadence:'weekly',through:c.historyWeekEnd(checkedAt)};assert.equal(c.applyMonthlyHistory(weekly),1);assert.equal(c.HISTORY.events.length,56);assert.equal(c.HISTORY.monthly.cadence,'weekly');assert.equal(c.HISTORY.sources[key].checkedAt,checkedAt);const before=JSON.stringify(c.HISTORY);for(const cadence of ['daily',null,false])assert.throws(()=>c.applyMonthlyHistory({...weekly,cadence}));assert.throws(()=>c.applyMonthlyHistory({...weekly,through:'2099-01-01'}));assert.equal(JSON.stringify(c.HISTORY),before);});
+test('weekly client accepts latest completed Saturday but rejects the current Sunday',()=>{const c=setup();const through=c.historyWeekEnd(checkedAt);const weekly={...doc(c),cadence:'weekly',through,events:[{...row,date:through}]};assert.equal(c.applyMonthlyHistory(weekly),1);const next=new Date(Date.parse(through)+86400000).toISOString().slice(0,10);assert.throws(()=>c.applyMonthlyHistory({...weekly,events:[{...row,date:next}]}));});

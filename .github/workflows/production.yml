@@ -8,6 +8,7 @@ permissions:
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
+  queue: max
 jobs:
   deploy:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
