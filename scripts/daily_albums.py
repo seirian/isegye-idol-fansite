@@ -16,7 +16,7 @@ from collect_album_records import collect as records_collect
 
 ROOT = Path(__file__).resolve().parents[1]
 KINDS = {'melon_top100', 'melon_hot100'}
-MAX_BYTES = 2_000_000
+MAX_BYTES = 8_000_000  # 30 days of hourly chart + video observations; transport remains bounded.
 HOT100_POLICY = 'https://help.melon.com/web/faq/content.htm?faqId=2642'
 HOT100_SOURCE = 'https://www.melon.com/chart/hot100/index.htm?chartType=D100'
 
@@ -160,7 +160,9 @@ def collect(previous):
     data = domestic_collect(data, previous, chart_kinds=KINDS)
     data = records_collect(data, previous)
     data = preserve(previous, data)
-    data['scope'] = 'production album observations; data-only daily refresh'
+    data['scope'] = 'production album observations; hourly refresh outside KST 01:00-06:59'
+    data.pop('publication', None)
+    data.pop('hourlyCoverage', None)
     data['feed'] = 'daily-albums'
     chart = data.get('domesticCharts', {}).get('melon_hot100', {})
     if hot100_night_pause(chart, clock(data['generatedAt'])):
@@ -173,12 +175,16 @@ def collect(previous):
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--check', action='store_true'); args = parser.parse_args()
     path = ROOT/'albums/snapshot.json'
+    from album_hourly import allowed
+    if not args.check and not allowed():
+        print(json.dumps({'status':'paused', 'reason':'KST 01:00-06:59'}))
+        return 0
     if args.check:
         data = validate(json.loads(path.read_text()), exact=True, fresh=True)
         report = health(data)
     else:
         data = collect(json.loads(path.read_text()))
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
+        path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':'))+'\n')
         report = data['collectionHealth']
     (ROOT/'albums-health.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(report, ensure_ascii=False))
