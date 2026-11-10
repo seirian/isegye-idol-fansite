@@ -141,7 +141,7 @@ def collect(attempts=3):
             data = validate(json.loads((ROOT/'albums/snapshot.json').read_text()), exact=True, fresh=True)
             current = coverage(data)
             data['hourlyCoverage'] = current
-            (ROOT/'albums/snapshot.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
+            (ROOT/'albums/snapshot.json').write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':'))+'\n')
             good = health(data)['state'] == 'complete' and current['currentComplete']
             history.append({'attempt': attempt, 'at': now().isoformat(), 'complete': good})
             write_report('albums-coverage.json', current)

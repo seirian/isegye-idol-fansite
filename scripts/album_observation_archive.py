@@ -154,7 +154,7 @@ def main():
                     report['errors'].append({'artifactId': item['id'], 'error': type(exc).__name__})
             if report['addedPoints']:
                 validate(current)
-                (ROOT/'albums/snapshot.json').write_text(json.dumps(current, ensure_ascii=False, indent=2)+'\n')
+                (ROOT/'albums/snapshot.json').write_text(json.dumps(current, ensure_ascii=False, separators=(',', ':'))+'\n')
             report['status'] = 'recovered' if report['addedPoints'] else 'no_new_observations'
         except Exception as exc:
             report['status'] = 'unavailable'

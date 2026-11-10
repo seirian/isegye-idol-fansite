@@ -28,7 +28,7 @@ final class AlbumsFeed
         try {
             $folder = $root.'/.albums-feed';
             if (self::read($folder.'/.owner', 64) !== "isegye-daily-albums:v1\n") throw new \RuntimeException('Wrong owner');
-            $raw = self::read($folder.'/current.json', 2000000);
+            $raw = self::read($folder.'/current.json', 8000000);
             $data = json_decode($raw, true, 32, JSON_THROW_ON_ERROR);
             if (($data['schemaVersion'] ?? null) !== 1 || ($data['feed'] ?? '') !== 'daily-albums'
                 || !is_array($data['tracks'] ?? null) || !is_array($data['providers'] ?? null)

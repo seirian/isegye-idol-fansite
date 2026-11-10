@@ -46,6 +46,7 @@ def adapt(app):
             code=code[:start]+"function aiBanner() { return ''; }\n"+code[end:]
             code=once(code,"if(!location.pathname.startsWith('/review-albums/'))return;","if(location.protocol==='file:')return;")
             code=once(code,"fetch('/review-albums/api/insights'","fetch('/api/albums'")
+            code=once(code, 'text.length>2000000', 'text.length>8000000')
             code=code.replace('검토 스냅샷','마지막 확인 데이터').replace('API 응답 실패 · 내장 검토본 표시','갱신 확인 실패 · 마지막 확인 데이터 표시')
             code=once(code,"if(next.generatedAt!==albumInsights.generatedAt)throw new Error('Snapshot version mismatch');","if(!albumAcceptRuntime(next))throw new Error('Invalid runtime album snapshot');")
             code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")

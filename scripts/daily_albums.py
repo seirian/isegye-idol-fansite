@@ -16,7 +16,7 @@ from collect_album_records import collect as records_collect
 
 ROOT = Path(__file__).resolve().parents[1]
 KINDS = {'melon_top100', 'melon_hot100'}
-MAX_BYTES = 2_000_000
+MAX_BYTES = 8_000_000  # 30 days of hourly chart + video observations; transport remains bounded.
 HOT100_POLICY = 'https://help.melon.com/web/faq/content.htm?faqId=2642'
 HOT100_SOURCE = 'https://www.melon.com/chart/hot100/index.htm?chartType=D100'
 
@@ -184,7 +184,7 @@ def main():
         report = health(data)
     else:
         data = collect(json.loads(path.read_text()))
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
+        path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':'))+'\n')
         report = data['collectionHealth']
     (ROOT/'albums-health.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(report, ensure_ascii=False))
