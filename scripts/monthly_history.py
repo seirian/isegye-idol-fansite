@@ -1,4 +1,4 @@
-"""Monthly history from verified public music and official-announcement metadata.
+"""Periodic history from verified public music and official-announcement metadata.
 
 Never infer a concert date or an album release from an upload/announcement date.
 The curated timeline is immutable. Existing successful upstream snapshots bridge
@@ -11,6 +11,7 @@ from urllib.parse import urlsplit, parse_qs
 import copy
 import hashlib
 import json
+import os
 import re
 import unicodedata
 import daily_music as music
@@ -36,9 +37,16 @@ def stamp(value):
         raise ValueError('history timestamp requires timezone')
     return dt
 
-def bounds(now):
+def bounds(now, cadence='monthly'):
+    if now.tzinfo is None:
+        raise ValueError('history timestamp requires timezone')
     local = now.astimezone(KST).date()
-    return START, local.replace(day=1) - timedelta(days=1)
+    if cadence == 'weekly':
+        # Last completed Sunday-Saturday week; stable even if a Sunday run is delayed.
+        return START, local - timedelta(days=(local.weekday() + 1) % 7 + 1)
+    if cadence == 'monthly':
+        return START, local.replace(day=1) - timedelta(days=1)
+    raise ValueError('unsupported history cadence')
 
 def day(value):
     if re.fullmatch(r'20\d{2}-\d{2}-\d{2}', value or ''):
@@ -67,9 +75,9 @@ def validate(doc):
     if not isinstance(doc, dict) or doc.get('schemaVersion') != 1 or doc.get('feed') != 'monthly-history':
         raise ValueError('invalid history snapshot')
     when = stamp(doc['generatedAt'])
-    start, through = bounds(when)
+    start, through = bounds(when, doc.get('cadence', 'monthly'))
     if doc.get('through') != through.isoformat() or doc.get('windowStart') != start.isoformat():
-        raise ValueError('history month boundary mismatch')
+        raise ValueError('history period boundary mismatch')
     if len(json.dumps(doc).encode()) > MAX_BYTES:
         raise ValueError('history snapshot too large')
     sources, rows = doc['sources'], doc['events']
@@ -87,7 +95,7 @@ def validate(doc):
         if not re.fullmatch(r'monthly-[a-f0-9]{24}', r['id']) or r['id'] in ids or r['type'] not in TYPES:
             raise ValueError('invalid history ID or type')
         if not start <= date.fromisoformat(r['date']) <= through:
-            raise ValueError('history date outside completed months')
+            raise ValueError('history date outside completed period')
         if not all(safe_text(r[k], 240 if k == 'title' else 400) for k in ('title', 'summary', 'note')):
             raise ValueError('invalid history text')
         if not isinstance(r['members'], list) or not r['members'] or not set(r['members']) <= music.NAMES.keys() or len(set(r['members'])) != len(r['members']):
@@ -126,10 +134,12 @@ def notice_type(title):
             return typ
     return None
 
-def compose(schedule_doc, music_rows, now=None, coverage=None):
+def compose(schedule_doc, music_rows, now=None, coverage=None, cadence='monthly'):
     now = now or datetime.now(timezone.utc)
-    start, through = bounds(now)
+    start, through = bounds(now, cadence)
     doc = {'schemaVersion': 1, 'feed': 'monthly-history', 'generatedAt': now.isoformat(), 'windowStart': start.isoformat(), 'through': through.isoformat(), 'sources': {}, 'events': [], 'coverage': coverage or {}}
+    if cadence == 'weekly':
+        doc['cadence'] = 'weekly'
     def add(url, source_title, checked, event):
         if not start.isoformat() <= event['date'] <= through.isoformat():
             return
@@ -197,7 +207,9 @@ def merge(previous, current):
 
 def inputs(now=None):
     now = now or datetime.now(timezone.utc)
-    return {'generatedAt': now.isoformat(), 'schedule': schedule.collect(now=now.isoformat()), 'music': music.discover(now=now)}
+    cadence = os.getenv('ISEGYE_HISTORY_CADENCE', 'monthly')
+    bounds(now, cadence) # Reject bad mode before any source requests.
+    return {'generatedAt': now.isoformat(), 'cadence': cadence, 'schedule': schedule.collect(now=now.isoformat()), 'music': music.discover(now=now)}
 
 def combine_inputs(fresh, stored_schedule=None, stored_music=None):
     when = stamp(fresh['generatedAt'])
@@ -213,7 +225,7 @@ def combine_inputs(fresh, stored_schedule=None, stored_music=None):
     # Curated source snapshots alone do not count as successful fresh collection.
     if not any(v in ('ok', 'partial') for v in states.values()):
         raise ValueError('all live sources unavailable; previous history retained')
-    return compose(sched, rows, when, {'sourceStates': states, 'partial': any(v not in ('ok', 'snapshot') for v in states.values()), 'scope': 'official announcements and non-cover official music; bounded public lists plus successful stored snapshots; no assumed completed events'})
+    return compose(sched, rows, when, {'sourceStates': states, 'partial': any(v not in ('ok', 'snapshot') for v in states.values()), 'scope': 'official announcements and non-cover official music; bounded public lists plus successful stored snapshots; no assumed completed events'}, cadence=fresh.get('cadence', 'monthly'))
 
 if __name__ == '__main__':
     collected = inputs()

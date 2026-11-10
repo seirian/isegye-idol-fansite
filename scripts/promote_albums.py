@@ -50,7 +50,7 @@ def adapt(app):
             code=once(code,"if(next.generatedAt!==albumInsights.generatedAt)throw new Error('Snapshot version mismatch');","if(!albumAcceptRuntime(next))throw new Error('Invalid runtime album snapshot');")
             code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")
         if name=='flow-view.js':
-            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매일 07:13 KST 및 음악 배치 성공 후 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다. HOT100은 01~07시 새 차트 미제공 구간에 원문의 마지막 발표 시각을 유지합니다.')
+            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매시간 정각(KST)에 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다. HOT100은 01~07시 새 차트 미제공 구간에 원문의 마지막 발표 시각을 유지합니다.')
         pieces.append(code)
     pieces.append((ROOT/'albums/runtime.js').read_text())
     # Objects stay shared with the existing song/album maps; source titles are untouched.
@@ -90,7 +90,7 @@ def build(directory=None):
     (out/'index.html').write_text(html)
     meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/api/albums','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':True}
     from album_releases import load_catalog
-    meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'매일 07:13 KST; 음악 배치 성공 후 추가 실행'}
+    meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'매시간 00분 KST'}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums'))
     assert all(composed[k]==before[k] for k in before if k not in ('songs','albums'))

@@ -1,19 +1,16 @@
-name: Albums - daily verified metadata and chart refresh
+name: Albums - hourly verified metadata and chart refresh
 on:
   schedule:
-    - cron: '13 22 * * *' # next calendar day, 07:13 Asia/Seoul
+    - cron: '0 * * * *' # every hour at :00 Asia/Seoul
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Music - daily verified catalog refresh']
-    types: [completed]
-    branches: [main]
 permissions: {contents: read}
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
+  queue: max
 jobs:
   refresh:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 25
