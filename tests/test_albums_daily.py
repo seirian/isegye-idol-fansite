@@ -152,7 +152,7 @@ class AlbumsDaily(unittest.TestCase):
         text=(ROOT/'.github/workflows/albums-daily.yml').read_text()
         block=text.split('      - name: Collect registered albums')[1].split('      - name:')[0]
         self.assertNotIn('SFTP_PASSWORD',block)
-        self.assertIn("cron: '0 * * * *'",text)
+        self.assertIn("cron: '0 0-15,22-23 * * *'",text)
         self.assertIn('runs-on: ubuntu-24.04',text)
         self.assertNotIn('continue-on-error',text)
 

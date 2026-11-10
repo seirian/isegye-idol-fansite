@@ -49,8 +49,10 @@ def adapt(app):
             code=code.replace('검토 스냅샷','마지막 확인 데이터').replace('API 응답 실패 · 내장 검토본 표시','갱신 확인 실패 · 마지막 확인 데이터 표시')
             code=once(code,"if(next.generatedAt!==albumInsights.generatedAt)throw new Error('Snapshot version mismatch');","if(!albumAcceptRuntime(next))throw new Error('Invalid runtime album snapshot');")
             code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")
+            code=once(code, "catch {albumApiState='갱신 확인 실패 · 마지막 확인 데이터 표시';}", "catch {albumApiState='갱신 확인 실패 · 마지막 확인 데이터 표시';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();}")
         if name=='flow-view.js':
-            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 정보는 매시간 정각(KST)에 갱신합니다. 수집 실패 시 마지막 확인 데이터를 유지합니다. HOT100은 01~07시 새 차트 미제공 구간에 원문의 마지막 발표 시각을 유지합니다.')
+            code=once(code, '${graphic}<div class="ai-flow-summary">', '${graphic}${demo?"":albumFlowFreshness(kind)}<div class="ai-flow-summary">')
+            code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 배치는 00시 및 07~23시 정각(KST)에 실행하며 01:00~06:59에는 중지합니다. 20분·40분에는 누락된 현재 시간만 보충합니다. 게시 실패 시 이전 데이터를 유지합니다.')
         pieces.append(code)
     pieces.append((ROOT/'albums/runtime.js').read_text())
     # Objects stay shared with the existing song/album maps; source titles are untouched.
@@ -90,7 +92,7 @@ def build(directory=None):
     (out/'index.html').write_text(html)
     meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/api/albums','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':True}
     from album_releases import load_catalog
-    meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'매시간 00분 KST'}
+    meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'00시 및 07~23시 정각 KST (01~06시 중지)', 'watchdog':'20분·40분 누락 시간만 보충'}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums'))
     assert all(composed[k]==before[k] for k in before if k not in ('songs','albums'))

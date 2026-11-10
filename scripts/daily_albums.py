@@ -160,7 +160,9 @@ def collect(previous):
     data = domestic_collect(data, previous, chart_kinds=KINDS)
     data = records_collect(data, previous)
     data = preserve(previous, data)
-    data['scope'] = 'production album observations; data-only daily refresh'
+    data['scope'] = 'production album observations; hourly refresh outside KST 01:00-06:59'
+    data.pop('publication', None)
+    data.pop('hourlyCoverage', None)
     data['feed'] = 'daily-albums'
     chart = data.get('domesticCharts', {}).get('melon_hot100', {})
     if hot100_night_pause(chart, clock(data['generatedAt'])):
@@ -173,6 +175,10 @@ def collect(previous):
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--check', action='store_true'); args = parser.parse_args()
     path = ROOT/'albums/snapshot.json'
+    from album_hourly import allowed
+    if not args.check and not allowed():
+        print(json.dumps({'status':'paused', 'reason':'KST 01:00-06:59'}))
+        return 0
     if args.check:
         data = validate(json.loads(path.read_text()), exact=True, fresh=True)
         report = health(data)

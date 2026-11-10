@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
 EXPECTED = {
     'music-daily.yml': ('0 21 * * *', 7, lambda d: (d.hour, d.minute) == (6, 0)),
-    'albums-daily.yml': ('0 * * * *', 168, lambda d: d.minute == 0),
+    'albums-daily.yml': ('0 0-15,22-23 * * *', 126, lambda d: d.minute == 0 and not 1 <= d.hour < 7),
     'schedule-refresh.yml': ('5 * * * *', 168, lambda d: d.minute == 5),
     'history-monthly.yml': ('0 15 * * 6', 1, lambda d: d.weekday() == 6 and (d.hour, d.minute) == (0, 0)),
 }
@@ -16,7 +16,9 @@ EXPECTED = {
 def matches(cron, value):
     fields = cron.split()
     values = (value.minute, value.hour, value.day, value.month, (value.weekday() + 1) % 7)
-    return all(field == '*' or int(field) == item for field, item in zip(fields, values))
+    def field_matches(field, item):
+        return field == '*' or any(int(part) == item if '-' not in part else int(part.split('-')[0]) <= item <= int(part.split('-')[1]) for part in field.split(','))
+    return all(field_matches(field, item) for field, item in zip(fields, values))
 
 class BatchSchedules(unittest.TestCase):
     def test_exact_utc_crons_and_seven_days_of_kst_slots(self):
@@ -26,7 +28,11 @@ class BatchSchedules(unittest.TestCase):
             with self.subTest(workflow=filename):
                 text = (ROOT / '.github/workflows' / filename).read_text()
                 crons = re.findall(r"^    - cron: '([^']+)'", text, re.M)
-                self.assertEqual(crons, [expected])
+                self.assertEqual(crons, [expected, '20,40 0-15,22-23 * * *'] if filename == 'albums-daily.yml' else [expected])
+                if filename == 'albums-daily.yml':
+                    extra = [start+timedelta(minutes=i) for i in range(7*24*60) if matches(crons[1], start+timedelta(minutes=i))]
+                    self.assertEqual(len(extra), 252)
+                    self.assertTrue(all(not 1 <= t.astimezone(KST).hour < 7 for t in extra))
                 slots = [start + timedelta(minutes=i) for i in range(7 * 24 * 60) if matches(crons[0], start + timedelta(minutes=i))]
                 self.assertEqual(len(slots), count)
                 self.assertTrue(all(predicate(t.astimezone(KST)) for t in slots))
@@ -36,7 +42,7 @@ class BatchSchedules(unittest.TestCase):
             with self.subTest(workflow=filename):
                 text = (ROOT / '.github/workflows' / filename).read_text()
                 triggers = text.split('on:\n', 1)[1].split('permissions:', 1)[0]
-                self.assertEqual(re.findall(r'^  ([a-z_]+):', triggers, re.M), ['schedule', 'workflow_dispatch'])
+                self.assertEqual(re.findall(r'^  ([a-z_]+):', triggers, re.M), ['schedule', 'workflow_dispatch', 'push'] if filename == 'albums-daily.yml' else ['schedule', 'workflow_dispatch'])
                 self.assertIn("github.ref == 'refs/heads/main'", text)
                 self.assertIn("github.repository == 'seirian/isegye-idol-fansite'", text)
                 self.assertIn('PRODUCTION_PAUSED', text)

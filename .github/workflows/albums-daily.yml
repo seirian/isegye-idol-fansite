@@ -1,9 +1,16 @@
 name: Albums - hourly verified metadata and chart refresh
 on:
   schedule:
-    - cron: '0 * * * *' # every hour at :00 Asia/Seoul
+    - cron: '0 0-15,22-23 * * *' # KST 00:00, 07:00-23:00; never 01:00-06:59
+    - cron: '20,40 0-15,22-23 * * *' # Watchdog: no collection when this hour is already published
   workflow_dispatch:
-permissions: {contents: read}
+  push:
+    branches: [main]
+    paths: [.github/workflows/albums-daily.yml]
+permissions:
+  contents: read
+  actions: read
+  issues: write
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
@@ -17,34 +24,61 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {ref: main, persist-credentials: false}
+      - name: Gate actual KST time including delayed and manual runs
+        id: gate
+        run: python scripts/album_hourly.py gate
       - name: Respect global and album pause controls
+        if: steps.gate.outputs.allowed == 'true'
         env:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
         run: test "$PRODUCTION_PAUSED" != true && test "$ISEGYE_ALBUMS_PAUSED" != true
       - name: Install isolated pinned public readers and SFTP transport
+        if: steps.gate.outputs.allowed == 'true'
         run: |
           python -m venv /tmp/albums-daily
           /tmp/albums-daily/bin/pip install beautifulsoup4==4.14.3 pillow==11.3.0 paramiko==5.0.0
       - name: Test catalog identities, preservation and publication boundaries
+        if: steps.gate.outputs.allowed == 'true'
         run: |
           /tmp/albums-daily/bin/python -m unittest discover -s tests -p 'test_albums_daily*.py' -v
+          /tmp/albums-daily/bin/python -m unittest discover -s tests -p 'test_album_hourly*.py' -v
           node --test tests/albums-runtime.test.js
       - name: Restore last verified observations and images without public requests
+        if: steps.gate.outputs.allowed == 'true'
         run: /tmp/albums-daily/bin/python scripts/album_runtime.py restore
         env:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Recover verified observations from prior same-repository artifacts
+        if: steps.gate.outputs.allowed == 'true'
+        run: /tmp/albums-daily/bin/python scripts/album_observation_archive.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check source-clock coverage before any new public collection
+        if: steps.gate.outputs.allowed == 'true'
+        id: due
+        run: /tmp/albums-daily/bin/python scripts/album_hourly.py decide
       - name: Collect registered albums and current Melon chart observations
-        run: |
-          /tmp/albums-daily/bin/python scripts/check_album_release_videos.py
-          /tmp/albums-daily/bin/python scripts/daily_albums.py
+        if: steps.gate.outputs.allowed == 'true' && steps.due.outputs.needed == 'true'
+        run: /tmp/albums-daily/bin/python scripts/album_hourly.py collect
         env:
           ISEGYE_YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+      - name: Archive collected observations before publication even on a failed collection
+        if: always() && steps.gate.outputs.allowed == 'true' && steps.due.outputs.needed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: album-observation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            albums/snapshot.json
+            albums-coverage.json
+          retention-days: 30
       - name: Require complete mandatory sources before changing the live feed
+        if: steps.gate.outputs.allowed == 'true' && steps.due.outputs.needed == 'true'
         run: /tmp/albums-daily/bin/python scripts/daily_albums.py --check
       - name: Atomically publish album-only data and verify every uploaded image
+        if: steps.gate.outputs.allowed == 'true' && steps.due.outputs.needed == 'true'
         run: /tmp/albums-daily/bin/python scripts/album_runtime.py publish
         env:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
@@ -59,18 +93,29 @@ jobs:
           def read(name):
               p=Path(name)
               return json.loads(p.read_text()) if p.exists() else {}
-          p=read('albums-publication.json');h=read('albums-health.json')
-          text=f"Albums: {p.get('status','not published')}; tracks {p.get('totalTracks','—')}; required health {h.get('state','not checked')}; readback {p.get('verifiedReadback',False)}."
+          p=read('albums-publication.json');h=read('albums-health.json');g=read('albums-gate.json');c=read('albums-coverage.json')
+          status=p.get('status', 'paused' if not g.get('allowed') else 'already_current' if c.get('currentComplete') else 'not_published')
+          text=f"Albums: {status}; tracks {p.get('totalTracks','—')}; required health {h.get('state','not checked')}; readback {p.get('verifiedReadback',False)}."
           print(text)
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:out.write(text+'\n')
           for warning in h.get('optionalWarnings',[]):print('::warning::Optional album source: '+warning)
           PY
+      - name: Report current-hour failure without duplicate incident issues
+        if: always() && steps.gate.outputs.allowed == 'true'
+        run: python scripts/album_batch_alert.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALBUM_JOB_STATUS: ${{ job.status }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: daily-albums-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            albums-gate.json
             albums-restore.json
+            albums-recovery.json
+            albums-coverage.json
+            albums-collection.json
             albums-health.json
             albums-publication.json
             albums/snapshot.json
