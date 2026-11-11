@@ -71,6 +71,8 @@ def build(directory=None):
     legacy_path=out/'src/production-ui.js';legacy=legacy_path.read_text()
     catalog=first.extract(legacy,'CATALOG');catalog['music']=extend_music(catalog['music'])
     composed=compose_review(before,catalog['music'])
+    import external_videos
+    composed=external_videos.compose(composed)
     (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json(composed)+';\n')
     legacy=re.sub(r'^const CATALOG=[^\n]+;',lambda _: 'const CATALOG='+first.script_json(catalog)+';',legacy,count=1,flags=re.M)
     legacy_path.write_text(legacy)
@@ -87,16 +89,19 @@ def build(directory=None):
     (out/'src/albums-insights.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     code='const ALBUMS_SEED='+first.script_json(data)+';\n'+''.join('const '+name+'='+first.script_json(values)+';\n' for name,values in assets.items())
     (out/'src/albums-data.js').write_text(code)
-    (out/'src/app.js').write_text(adapt((out/'src/app.js').read_text()))
+    (out/'src/app.js').write_text(external_videos.adapt_app(adapt((out/'src/app.js').read_text())))
     with (out/'src/styles.css').open('a') as f:f.write('\n'+'\n'.join((ROOT/'albums'/name).read_text() for name in STYLES))
     html=(out/'index.html').read_text();html=once(html,'<script src="src/app.js"></script>','<script src="src/albums-data.js"></script><script src="src/app.js"></script>')
     (out/'index.html').write_text(html)
     meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/api/albums','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':True}
     from album_releases import load_catalog
     meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'00시 및 07~23시 정각 KST (01~06시 중지)', 'watchdog':'20분·40분 누락 시간만 보충'}
+    meta['selectedExternalVideos']={'videoIds':list(external_videos.APPROVED),'channelId':external_videos.CHANNEL_ID,'channelWideCollection':False,'officialMvUnchanged':True}
+    meta['counts']['videos']+=len(composed['videos'])-len(before['videos'])
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
-    assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums'))
-    assert all(composed[k]==before[k] for k in before if k not in ('songs','albums'))
+    assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums','videos','channels'))
+    assert all(composed[k]==before[k] for k in before if k not in ('songs','albums','videos','channels','scope'))
+    assert all(composed['scope'][k]==v for k,v in before['scope'].items())
     assert all(hashlib.sha256((out/p).read_bytes()).hexdigest()==digest for p,digest in preserved.items())
     for name in ('app.js','albums-data.js','data.js','production-ui.js'):subprocess.run(['node','--check',str(out/'src'/name)],check=True)
     if meta['mode']=='production':

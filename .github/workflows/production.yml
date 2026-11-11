@@ -83,6 +83,7 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python scripts/promote_albums.py
           /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
+          /tmp/archive-browser-tests/bin/python tests/external_videos_browser.py
           python scripts/build_albums_host.py
       - name: Verify album feed and image authorization before any upload
         run: /tmp/archive-browser-tests/bin/python tests/albums_feed_browser.py
