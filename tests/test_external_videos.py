@@ -16,6 +16,9 @@ class ExternalVideos(unittest.TestCase):
     def test_exact_requested_public_metadata(self):
         doc=e.load();self.assertEqual(set(e.APPROVED),{r['id'] for r in doc['videos']})
         self.assertEqual([r['durationSeconds'] for r in doc['videos']],[31,192])
+    def test_superseded_upload_refused(self):
+        doc=e.load();doc['videos'][1]['id']='z8AJgnTC52k'
+        with self.assertRaises(ValueError):e.validate(doc)
     def test_kst_publication_not_album_release(self):
         rows=e.compose(baseline())['videos'][1:]
         self.assertEqual([v['date'] for v in rows],['2026-11-10','2026-11-11'])
@@ -68,7 +71,7 @@ class ExternalVideos(unittest.TestCase):
         data=baseline();data['songs']=[]
         with self.assertRaises(ValueError):e.compose(data)
     def test_conflicting_id_fails_closed(self):
-        data=baseline();data['videos'].append({'id':'z8AJgnTC52k'})
+        data=baseline();data['videos'].append({'id':'Mj7q8HU8ZXg'})
         with self.assertRaises(ValueError):e.compose(data)
     def test_canonical_urls_no_tracking(self):
         for v in e.compose(baseline())['videos'][1:]:

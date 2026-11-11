@@ -29,22 +29,23 @@ try:
         go('content?tab=videos&category=external')
         check('two selected external videos',page.locator('[data-item-key^="video:"]').count()==2)
         check('source-labelled cards',page.locator('#main').inner_text().count('외부 채널 · STUDIO CHOOM')==2)
-        check('newest full video first',page.locator('[data-item-key^="video:"]').first.get_attribute('data-item-key')=='video:z8AJgnTC52k')
+        check('newest full video first',page.locator('[data-item-key^="video:"]').first.get_attribute('data-item-key')=='video:Mj7q8HU8ZXg')
+        check('superseded upload absent',page.evaluate("!D.videos.some(v=>v.id==='z8AJgnTC52k')"))
         check('channel filter option',page.locator('option[value="studio-choom-selected"]').count()==1)
         go('content?tab=videos&channel=studio-choom-selected&q=레블스')
         check('channel and alias search',page.locator('[data-item-key^="video:"]').count()==2)
         go('content?tab=videos&category=group&q=STUDIO%20CHOOM')
         check('not mislabelled group-owned',page.locator('[data-item-key^="video:"]').count()==0)
         go('music?tab=videos&q=REBELS')
-        check('full performance in music videos',page.locator('[data-item-key="video:z8AJgnTC52k"]').count()==1)
+        check('full performance in music videos',page.locator('[data-item-key="video:Mj7q8HU8ZXg"]').count()==1)
         check('external teaser not a full music video',page.locator('[data-item-key="video:_E9ZHH9R7o4"]').count()==0)
         go('song/rebels')
         related=page.locator('section[aria-label="관련 퍼포먼스 영상"]')
         expect(related).to_be_visible()
-        check('both attached to existing song',related.locator('a[href="#/video/z8AJgnTC52k"]').count()>0 and related.locator('a[href="#/video/_E9ZHH9R7o4"]').count()>0)
+        check('both attached to existing song',related.locator('a[href="#/video/Mj7q8HU8ZXg"]').count()>0 and related.locator('a[href="#/video/_E9ZHH9R7o4"]').count()>0)
         check('official MV stays primary',page.locator('.ai-platform-link[href="https://www.youtube.com/watch?v=y-klhPVFblg"]').count()==1)
-        check('no extra songs or album tracks',page.evaluate("D.songs.filter(s=>s.id==='rebels').length===1 && !D.songs.some(s=>['_E9ZHH9R7o4','z8AJgnTC52k'].includes(s.videoId)) && D.albums.find(a=>a.title==='Across Dimensions').songIds.length===5"))
-        for vid,duration in [('_E9ZHH9R7o4','0:31'),('z8AJgnTC52k','3:12')]:
+        check('no extra songs or album tracks',page.evaluate("D.songs.filter(s=>s.id==='rebels').length===1 && !D.songs.some(s=>['_E9ZHH9R7o4','Mj7q8HU8ZXg'].includes(s.videoId)) && D.albums.find(a=>a.title==='Across Dimensions').songIds.length===5"))
+        for vid,duration in [('_E9ZHH9R7o4','0:31'),('Mj7q8HU8ZXg','3:12')]:
             go('video/'+vid)
             check(vid+' direct original',page.locator('a.button.primary').get_attribute('href')=='https://www.youtube.com/watch?v='+vid)
             check(vid+' duration',duration in page.locator('.detail-meta').inner_text())
@@ -53,11 +54,11 @@ try:
             check(vid+' paired video link',page.locator('section[aria-label="관련 퍼포먼스 영상"] a[href^="#/video/"]').count()>0)
         feed={'schemaVersion':1,'feed':'daily-music','generatedAt':datetime.now(timezone.utc).isoformat(),'rows':[]}
         page.evaluate('(f)=>ProductionFeeds.applyMusic(f)',feed)
-        check('daily refresh preserves both',page.evaluate("D.videos.filter(v=>['_E9ZHH9R7o4','z8AJgnTC52k'].includes(v.id)).length===2"))
+        check('daily refresh preserves both',page.evaluate("D.videos.filter(v=>['_E9ZHH9R7o4','Mj7q8HU8ZXg'].includes(v.id)).length===2"))
         check('daily refresh preserves original MV',page.evaluate("songs.get('rebels').videoId==='y-klhPVFblg'"))
         for width in (320,390,1440):
             page.set_viewport_size({'width':width,'height':1000})
-            for route in ('content?tab=videos&category=external','video/z8AJgnTC52k','song/rebels'):
+            for route in ('content?tab=videos&category=external','video/Mj7q8HU8ZXg','song/rebels'):
                 go(route)
                 check(str(width)+' no overflow '+route,page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
             if width in (390,1440):

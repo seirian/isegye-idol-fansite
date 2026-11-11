@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "selection": "owner_requested_video_ids",
   "source": "YouTube Data API v3 videos.list",
-  "evidenceRun": 43031867489,
-  "checkedAt": "2026-11-11T13:44:38.858902+00:00",
+  "evidenceRun": 43033346225,
+  "checkedAt": "2026-11-11T13:54:15.335564+00:00",
   "channel": {
     "key": "studio-choom-selected",
     "name": "STUDIO CHOOM [스튜디오 춤]",
@@ -24,9 +24,9 @@
       "embeddable": true
     },
     {
-      "id": "z8AJgnTC52k",
+      "id": "Mj7q8HU8ZXg",
       "title": "ISEGYE IDOL(이세계아이돌) 'REBELS' (4K) | MOVE TO PERFORMANCE",
-      "publishedAt": "2026-11-11T13:00:27Z",
+      "publishedAt": "2026-11-11T13:47:14Z",
       "durationSeconds": 192,
       "type": "external_performance",
       "relatedSong": "rebels",

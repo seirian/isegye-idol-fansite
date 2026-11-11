@@ -11,7 +11,7 @@ CHANNEL_KEY = 'studio-choom-selected'
 MEMBERS = ['ine', 'jingburger', 'lilpa', 'jururu', 'gosegu', 'viichan']
 APPROVED = {
     '_E9ZHH9R7o4': ('external_teaser', '2026-11-10T13:00:38Z', 31),
-    'z8AJgnTC52k': ('external_performance', '2026-11-11T13:00:27Z', 192),
+    'Mj7q8HU8ZXg': ('external_performance', '2026-11-11T13:47:14Z', 192),
 }
 TITLE = "ISEGYE IDOL(이세계아이돌) 'REBELS' (4K) | MOVE TO PERFORMANCE"
 
