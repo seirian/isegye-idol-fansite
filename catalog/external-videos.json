@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "selection": "owner_requested_video_ids",
+  "source": "YouTube Data API v3 videos.list",
+  "evidenceRun": 43031867489,
+  "checkedAt": "2026-11-11T13:44:38.858902+00:00",
+  "channel": {
+    "key": "studio-choom-selected",
+    "name": "STUDIO CHOOM [스튜디오 춤]",
+    "channelId": "UCEIi7zFR_wE23jFncVtd6-A",
+    "url": "https://www.youtube.com/channel/UCEIi7zFR_wE23jFncVtd6-A"
+  },
+  "videos": [
+    {
+      "id": "_E9ZHH9R7o4",
+      "title": "(Teaser) ISEGYE IDOL(이세계아이돌) 'REBELS' (4K) | MOVE TO PERFORMANCE",
+      "publishedAt": "2026-11-10T13:00:38Z",
+      "durationSeconds": 31,
+      "type": "external_teaser",
+      "relatedSong": "rebels",
+      "qualityLabel": "4K",
+      "qualityBasis": "source_title",
+      "privacyStatus": "public",
+      "embeddable": true
+    },
+    {
+      "id": "z8AJgnTC52k",
+      "title": "ISEGYE IDOL(이세계아이돌) 'REBELS' (4K) | MOVE TO PERFORMANCE",
+      "publishedAt": "2026-11-11T13:00:27Z",
+      "durationSeconds": 192,
+      "type": "external_performance",
+      "relatedSong": "rebels",
+      "qualityLabel": "4K",
+      "qualityBasis": "source_title",
+      "privacyStatus": "public",
+      "embeddable": true
+    }
+  ]
+}
