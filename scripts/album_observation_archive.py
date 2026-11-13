@@ -60,6 +60,12 @@ def read_snapshot(raw, digest):
         raise ValueError('Artifact digest mismatch')
     with zipfile.ZipFile(BytesIO(raw)) as archive:
         rows = [i for i in archive.infolist() if i.filename == 'albums/snapshot.json']
+        if not rows:
+            gates = [i for i in archive.infolist() if i.filename == 'albums-gate.json']
+            if len(gates) == 1 and gates[0].file_size <= 4096:
+                gate = json.loads(archive.read(gates[0]))
+                if gate.get('status') == 'paused' and gate.get('allowed') is False:
+                    return None
         if len(rows) != 1 or rows[0].file_size > MAX_BYTES:
             raise ValueError('Missing, duplicate or oversized snapshot')
         data = validate(json.loads(archive.read(rows[0])))
@@ -113,7 +119,7 @@ def recover_points(current, archived, at=None):
     return added, conflicts
 
 def main():
-    report = {'status':'no_archives', 'addedPoints':0, 'conflicts':0, 'artifacts':[], 'errors':[]}
+    report = {'status':'no_archives', 'addedPoints':0, 'conflicts':0, 'artifacts':[], 'skippedArtifacts':[], 'errors':[]}
     token = os.environ.pop('GH_TOKEN', '')
     if not allowed():
         report['status'] = 'paused'
@@ -146,6 +152,9 @@ def main():
                         raise ValueError('Untrusted artifact provenance')
                     raw = request(API+'/actions/artifacts/'+str(int(item['id']))+'/zip', token, binary=True)
                     candidate = read_snapshot(raw, item['digest'])
+                    if candidate is None:
+                        report['skippedArtifacts'].append({'id': item['id'], 'reason': 'scheduled_night_pause'})
+                        continue
                     count, conflicts = recover_points(current, candidate)
                     report['artifacts'].append({'id': item['id'], 'runId': run_id, 'digest': item['digest'], 'addedPoints': count})
                     report['addedPoints'] += count

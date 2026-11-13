@@ -11,6 +11,7 @@ import json
 import re
 import urllib.request
 from urllib.parse import urlparse
+from gallery_cache import load as cached_image
 
 ROOT = Path(__file__).resolve().parents[1]
 LIMIT = 12 * 1024 * 1024
@@ -80,7 +81,7 @@ def compose(app, css, out, meta, fetcher=None):
     gallery = [{'id': 'original', 'src': './assets/isegye-group-hero.webp?v=3ce98e06f795',
                 'alt': '이세계아이돌 여섯 멤버의 단체 일러스트', 'source': ''}]
     for row in rows:
-        data = prepare((fetcher or download)(row), row)
+        data = prepare(fetcher(row), row) if fetcher else cached_image(row)
         path = folder / (row['id'] + '.webp')
         if path.is_symlink():
             raise ValueError('Refusing gallery file symlink')
