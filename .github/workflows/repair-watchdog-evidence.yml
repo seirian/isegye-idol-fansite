@@ -1,0 +1,46 @@
+name: Repair - validate missing outcome recovery
+on:
+  push:
+    branches: [fix/batch-reliability-20261113]
+    paths: [.github/workflows/repair-watchdog-evidence.yml]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/fix/batch-reliability-20261113'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Distinguish absent evidence from tampered evidence
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/batch_watchdog.py');s=p.read_text()
+          anchor='\ndef clock(value):'
+          assert s.count(anchor)==1
+          s=s.replace(anchor,'\nclass EvidenceUnavailable(ValueError):\n    """Absent or expired evidence is not success, but permits bounded recollection."""\n\n'+anchor.lstrip('\n'))
+          old="    if len(matches) != 1:\n        raise ValueError('Missing current-attempt evidence')"
+          new="    if not matches:\n        raise EvidenceUnavailable('Missing current-attempt evidence')\n    if len(matches) != 1:\n        raise ValueError('Duplicate current-attempt evidence')"
+          assert s.count(old)==1;s=s.replace(old,new)
+          old='                        files = artifact_files(success,prefix,filename)\n                        good = evidence_ok(kind, files, due, at)'
+          new="                        try:\n                            files = artifact_files(success,prefix,filename)\n                        except EvidenceUnavailable:\n                            files = {}\n                            row['evidenceState'] = 'unavailable'\n                        good = evidence_ok(kind, files, due, at)"
+          assert s.count(old)==1;p.write_text(s.replace(old,new))
+          p=Path('tests/test_batch_watchdog.py');s=p.read_text()
+          anchor='    def test_api_endpoint_allowlist(self):'
+          addition="    def test_absent_or_expired_evidence_allows_recollection_not_success(self):\n        run={'id':1,'run_attempt':1}\n        for artifacts in ([],[{'name':'weekly-history-1-1','expired':True}]):\n            with self.assertRaises(w.EvidenceUnavailable):\n                w.artifact_files(run,'weekly-history','history-monthly.yml',lambda *a,**kw:{'artifacts':artifacts})\n        self.assertEqual(w.recovery_action([],self.at,self.due,False),'dispatch')\n    def test_legacy_monthly_artifact_is_unavailable_not_corrupt(self):\n        with self.assertRaises(w.EvidenceUnavailable):\n            w.artifact_files({'id':1,'run_attempt':1},'weekly-history','history-monthly.yml',\n                             lambda *a,**kw:{'artifacts':[{'name':'monthly-history-1-1','expired':False}]})\n"
+          assert s.count(anchor)==1;p.write_text(s.replace(anchor,addition+anchor))
+          PY
+          git rm .github/workflows/repair-watchdog-evidence.yml
+          git add scripts/batch_watchdog.py tests/test_batch_watchdog.py
+          test "$(git write-tree)" = a5aabd4cc4f7188ce5901a6a8d6938e4c718abfa
+          python -m unittest discover -s tests -p 'test_batch_watchdog.py' -v
+      - name: Commit verified feature branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Recover absent or expired outcomes without accepting corrupted evidence'
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" push https://github.com/seirian/isegye-idol-fansite.git HEAD:refs/heads/fix/batch-reliability-20261113
+          git rev-parse HEAD
