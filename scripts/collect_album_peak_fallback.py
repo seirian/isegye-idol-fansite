@@ -11,6 +11,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 TYPE = 'isegyechart_observed_peaks'
+SELECTOR = 'https://isegyechart.com/api/song-selector-list'
 LABELS = {
     'TOP100': ('top100', 100), 'HOT100 (100일)': ('hot100', 100),
     '실시간차트': ('realtime', 100), 'HOT100 (30일)': ('hot100_30', 100),
@@ -39,6 +40,39 @@ def unastro(value):
     if isinstance(value, list): return [unastro(v) for v in value]
     if isinstance(value, dict): return {k: unastro(v) for k, v in value.items() if k != 'lyrics'}
     return value
+
+def discover_ids(raw, tracks):
+    """One bounded public index request; candidate pages still require exact Melon IDs."""
+    from collect_album_domestic import norm
+    rows = json.loads(raw)
+    if not isinstance(rows, list) or len(rows) > 2000:
+        raise ValueError('Invalid public selector index')
+    index = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError('Invalid selector entry')
+        ident = row.get('id')
+        if type(ident) is not int or not 0 < ident < 1000000:
+            continue
+        key = (norm(row.get('name') or ''), norm(row.get('albumName') or ''),
+               norm(row.get('artistName') or ''))
+        index.setdefault(key, set()).add(ident)
+    found = {}
+    for sid, item in tracks.items():
+        melon = item.get('melon', {})
+        if melon.get('state') != 'ok':
+            continue
+        artist = norm(melon.get('artist') or '')
+        group = {'이세계아이돌', '이세계아이돌isegyeidol', 'isegyeidol'}
+        artists = group if artist in group else {artist}
+        candidates = set()
+        for name in {norm(melon.get('title') or '')}:
+            for candidate_artist in artists:
+                candidates.update(index.get((name, norm(melon.get('album') or ''), candidate_artist), set()))
+        if len(candidates) == 1:
+            found[sid] = next(iter(candidates))
+    return found
+
 
 def parse_reference(html, melon, record_id, checked_at):
     # Build-time validation uses only the standard library; parsing needs these.
@@ -119,21 +153,45 @@ def collect_reference_peaks(result, previous, fetch):
     stamp = datetime.now(timezone.utc).isoformat()
     mappings = json.loads((ROOT/'albums/record-sources.json').read_text())['tracks']
     report = {}
+    # Discover every newly registered album track, not just the legacy allowlisted songs.
+    # Selector names only shortlist candidates: each page must match the actual Melon
+    # song ID, album ID, title and artist before any rank can be accepted.
+    missing = {sid: item for sid, item in result['tracks'].items()
+               if sid not in mappings and item.get('melon', {}).get('state') == 'ok'}
+    discovered = {}
+    discovery_error = None
+    if missing:
+        try:
+            discovered = discover_ids(fetch(SELECTOR), missing)
+        except Exception as exc:
+            discovery_error = type(exc).__name__
     for sid, item in result['tracks'].items():
         item.pop('melonPeakFallback', None)
-        melon = item.get('melon', {}); entry = mappings.get(sid)
-        if not entry or melon.get('state') != 'ok' or melon.get('trackId') != entry['melonId']: continue
-        url = source_url(entry['recordId'])
+        melon = item.get('melon', {})
+        entry = mappings.get(sid)
+        if melon.get('state') != 'ok':
+            continue
+        record_id = (entry['recordId'] if entry and melon.get('trackId') == entry['melonId']
+                     else discovered.get(sid) if not entry else None)
+        old = previous.get('tracks', {}).get(sid, {}).get('melonPeakFallback')
+        if record_id is None:
+            retained = reusable(old, melon)
+            if retained:
+                item['melonPeakFallback'] = {**old, 'fetchState': 'error', 'lastAttemptAt': stamp}
+            report[sid] = {'state': 'unverified', 'reason': discovery_error or 'no_unique_selector_match',
+                           'retainedVerified': retained}
+            continue
+        url = source_url(record_id)
         try:
             raw = fetch(url)
-            value = parse_reference(raw.decode('utf-8'), melon, entry['recordId'], stamp)
+            value = parse_reference(raw.decode('utf-8'), melon, record_id, stamp)
             value['responseSha256'] = hashlib.sha256(raw).hexdigest()
             item['melonPeakFallback'] = value
             report[sid] = value
         except Exception as exc:
-            old = previous.get('tracks', {}).get(sid, {}).get('melonPeakFallback')
-            retained = reusable(old, melon, entry['recordId'])
+            retained = reusable(old, melon, record_id)
             if retained:
                 item['melonPeakFallback'] = {**old, 'fetchState': 'error', 'lastAttemptAt': stamp}
-            report[sid] = {'state': 'error', 'source': url, 'error': type(exc).__name__, 'retainedVerified': retained}
+            report[sid] = {'state': 'error', 'source': url, 'error': type(exc).__name__,
+                           'retainedVerified': retained}
     return report
