@@ -1,0 +1,61 @@
+name: Repair - prepare approved gallery cache
+on:
+  push:
+    branches: [fix/batch-reliability-20261113]
+    paths: [.github/workflows/repair-gallery-cache.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Recover only approved image bytes and create unattached Git blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, io, json, os, subprocess, zipfile
+          from pathlib import Path
+          repo='seirian/isegye-idol-fansite'
+          assert os.environ['GITHUB_REPOSITORY']==repo
+          assert os.environ['GITHUB_REF']=='refs/heads/fix/batch-reliability-20261113'
+          def gh(*args):
+              return subprocess.run(['gh','api',*args],check=True,capture_output=True,timeout=90).stdout
+          meta=json.loads(gh(f'repos/{repo}/actions/artifacts/13812453298'))
+          assert meta['workflow_run']['id']==42922168252
+          assert meta['workflow_run']['head_sha']=='f6147b469366f5791bd84109f001776729b962a9'
+          raw=gh(f'repos/{repo}/actions/artifacts/13812453298/zip')
+          assert len(raw)<8000000
+          digest='6f35fe840af0729353a8c6cd5b8af5096f21befaebc2d6652836deb27fa315bc'
+          assert hashlib.sha256(raw).hexdigest()==digest
+          assert meta['digest']=='sha256:'+digest
+          expected={'mafia':'be60ca3c89c15a5a3d72d4a113b7ffeddb9bc4e436102625b1818e4e8baa3dda','christmas':'b8b7ad64c95da60b5007c6ee38e3cc14bb90a77c3047c05cfb41478e00782738','pastel':'b8a75dd025dc886a89d9a91abd29c40de81057a01a696a31775ff31900b55335','hanteo':'71a331651a1c393994f83a6a2bcb5e7c7ed59f2497caa359393ab72fd7c35e49','rewind':'3a75d6e437c95d955a209d35df2746ea14b1203ddf3359e846334dc9ace190b5'}
+          result=[]
+          with zipfile.ZipFile(io.BytesIO(raw)) as z:
+              info=json.loads(z.read('build-info.json'))
+              assert info['homePresentation']['additionalSourceImages']==json.loads(Path('home-review/gallery.json').read_text())
+              for key,want in expected.items():
+                  name='assets/group-gallery/'+key+'.webp'
+                  entries=[i for i in z.infolist() if i.filename==name]
+                  assert len(entries)==1 and entries[0].file_size<1000000
+                  data=z.read(entries[0])
+                  assert hashlib.sha256(data).hexdigest()==want
+                  payload=Path('/tmp/gallery-blob.json')
+                  payload.write_text(json.dumps({'encoding':'base64','content':base64.b64encode(data).decode()}))
+                  blob=json.loads(gh('--method','POST',f'repos/{repo}/git/blobs','--input',str(payload)))
+                  calculated=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+                  assert blob['sha']==calculated
+                  result.append({'path':'home-review/gallery-cache/'+key+'.webp','sha':blob['sha'],'sha256':want})
+                  payload.unlink()
+          Path('gallery-blobs.json').write_text(json.dumps(result,indent=2))
+          print(json.dumps(result))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: gallery-blob-report
+          path: gallery-blobs.json
+          retention-days: 7
