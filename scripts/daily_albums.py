@@ -146,6 +146,15 @@ def health(data):
         if paused:
             pauses.append({'source': kind, 'state': 'scheduled_night_pause',
                 'lastPublishedAt': chart['updatedAt'], 'policySource': HOT100_POLICY})
+    # Peak source coverage is optional for publication but must not disappear silently.
+    # A missing historical rank is not necessarily a collection failure; an entirely
+    # unverified secondary record for a registered Melon track requires investigation.
+    from collect_album_peak_fallback import reusable as peak_source_ok
+    for song in load_catalog(ROOT)['songs']:
+        item = data['tracks'].get(song['id'], {})
+        melon = item.get('melon', {})
+        if melon.get('state') == 'ok' and not peak_source_ok(item.get('melonPeakFallback'), melon):
+            warnings.append('peak-source:'+song['id']+':unverified')
     for name in ('itunes', 'youtube', 'genie', 'bugs'):
         state = data.get('providers', {}).get(name, {}).get('state', 'missing')
         if state != 'ok': warnings.append(name+':'+state)
