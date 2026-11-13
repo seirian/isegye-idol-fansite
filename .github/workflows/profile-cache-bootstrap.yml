@@ -1,11 +1,10 @@
-name: Repair - stage approved profile cache once
+name: Repair - finalize approved profile cache once
 on:
   push:
     branches: [fix/approved-profile-cache-20261113]
     paths: [.github/workflows/profile-cache-bootstrap.yml]
 permissions:
   contents: write
-  actions: read
 jobs:
   stage:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/fix/approved-profile-cache-20261113'
@@ -14,39 +13,45 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
-      - name: Import only twelve hash-pinned previously approved derivatives
+      - name: Apply checked source transformations and exact cache pins
+        run: |
+          python -m venv /tmp/profile-tools
+          /tmp/profile-tools/bin/pip install pillow==11.3.0
+          /tmp/profile-tools/bin/python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,io
+          from PIL import Image
+          R=Path('.')
+          p=R/'scripts/prepare_genie_portraits.py';s=p.read_text();old="        data = prepare(download(r), r)\n        with target.open('xb') as handle:\n            handle.write(data)\n        print(r['id'] + ': verified 600x600 Genie portrait')";assert s.count(old)==1;s=s.replace(old,"        raise ValueError('Approved portrait cache missing; restore reviewed bytes: ' + r['id'])");p.write_text(s)
+          p=R/'scripts/home_soop_profiles.py';s=p.read_text();old='        data = prepare((fetcher or download)(row), row)';assert s.count(old)==1;s=s.replace(old,"        if fetcher is not None:\n            data = prepare(fetcher(row), row)\n        else:\n            from profile_cache import load_soop\n            data = load_soop(row)");p.write_text(s)
+          p=R/'.gitignore';s=p.read_text();old='# Rebuilt from checksum-pinned public Genie originals.\n/review/portraits/*.webp';assert s.count(old)==1;p.write_text(s.replace(old,'# Exact approved Genie derivatives are versioned for deterministic builds.'))
+          source=json.loads((R/'home-review/soop-profiles.json').read_text())
+          expected={'ine':'bf222864373151d566fe17f62eab279f8c479d04a196cddf7951539925228e5f','jingburger':'9425c5deb11daa29099cac9a90efce5c99d7f0086e677df6792cbffb72e4389e','lilpa':'b53673a74f8d33b0b56a6ec3d8cf1e9ae99f63ec24ab9449eb6baa536a01342a','jururu':'32bb9dcf540ae6ff5c66da8687460427454f3eb97ed38dc834bbc5c6ac61d34e','gosegu':'df5d0ba561df368da9a6c523ebd9f811782893f0668e19ac29694f94cd82c1e2','viichan':'f99680599498f3e6ec0a38da6851095f2fe2a59974b3a877e1a2119486d1e7ee'}
+          manifest={'schemaVersion':1,'scope':'exact previously approved home-only profile derivatives','provenance':{'runId':43371356598,'artifactId':14013037326,'artifactSha256':'a8716a00ac0ebec079f0a05bfc4954f072923a4670689281214552622770351b','matchedEarlierArtifactId':13812453298},'images':{}}
+          for r in source['members']:
+              b=(R/'home-review/soop-cache'/(r['id']+'.webp')).read_bytes();assert hashlib.sha256(b).hexdigest()==expected[r['id']]
+              im=Image.open(io.BytesIO(b));assert im.format=='WEBP';im.verify()
+              manifest['images'][r['id']]={'source':r,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'width':im.width,'height':im.height}
+          (R/'home-review/soop-cache.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+          p=R/'review/home-release.json';m=json.loads(p.read_text());paths=['scripts/profile_cache.py','scripts/home_soop_profiles.py','scripts/prepare_genie_portraits.py','home-review/soop-cache.json']+[p+i+'.webp' for p in ('review/portraits/','home-review/soop-cache/') for i in ['ine','jingburger','lilpa','jururu','gosegu','viichan']]
+          for path in paths:m['sourceHashes'][path]=hashlib.sha256((R/path).read_bytes()).hexdigest()
+          m['presentationUpdates'].append({'requestedAt':'2026-11-13','scope':'Complete static-image reliability repair: pin the exact six approved Genie and six home-only SOOP derivatives. Original source identity, check dates and image bytes are unchanged; missing or corrupt caches fail closed without live image requests.'})
+          p.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n')
+          PY
+          /tmp/profile-tools/bin/python -m unittest discover -s tests -p 'test_profile_cache.py' -v
+          /tmp/profile-tools/bin/python -m unittest discover -s tests -p 'test_genie_portraits.py' -v
+          /tmp/profile-tools/bin/python -m unittest discover -s tests -p 'test_home_soop_profiles.py' -v
+      - name: Remove temporary importer and commit only reviewed repair paths
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/seirian/isegye-idol-fansite/actions/artifacts/14013037326/zip > /tmp/approved-profile-site.zip
-          python - <<'PY'
-          import hashlib, json, zipfile
-          from pathlib import Path
-          raw=Path('/tmp/approved-profile-site.zip').read_bytes()
-          assert hashlib.sha256(raw).hexdigest()=='a8716a00ac0ebec079f0a05bfc4954f072923a4670689281214552622770351b'
-          portraits=json.loads(Path('review/portraits.json').read_text())['members']
-          soop={'ine':'bf222864373151d566fe17f62eab279f8c479d04a196cddf7951539925228e5f','jingburger':'9425c5deb11daa29099cac9a90efce5c99d7f0086e677df6792cbffb72e4389e','lilpa':'b53673a74f8d33b0b56a6ec3d8cf1e9ae99f63ec24ab9449eb6baa536a01342a','jururu':'32bb9dcf540ae6ff5c66da8687460427454f3eb97ed38dc834bbc5c6ac61d34e','gosegu':'df5d0ba561df368da9a6c523ebd9f811782893f0668e19ac29694f94cd82c1e2','viichan':'f99680599498f3e6ec0a38da6851095f2fe2a59974b3a877e1a2119486d1e7ee'}
-          assert len(portraits)==6 and {r['id'] for r in portraits}==set(soop)
-          with zipfile.ZipFile('/tmp/approved-profile-site.zip') as z:
-              assert len(z.namelist())==len(set(z.namelist()))
-              for r in portraits:
-                  for src,dest,expected in [('assets/portraits/','review/portraits/',r['sha256']),('assets/soop-profiles/','home-review/soop-cache/',soop[r['id']])]:
-                      name=r['id']+'.webp'; data=z.read(src+name)
-                      assert len(data)<100000 and hashlib.sha256(data).hexdigest()==expected
-                      p=Path(dest)/name; assert not p.is_symlink() and not p.parent.is_symlink()
-                      p.parent.mkdir(parents=True,exist_ok=True)
-                      if p.exists(): assert p.read_bytes()==data
-                      else: p.write_bytes(data)
-          print('Twelve exact previously approved profile files verified; no source/identity/date changes.')
-          PY
-          git add -f -- review/portraits/*.webp home-review/soop-cache/*.webp
-          if git diff --cached --quiet; then exit 0; fi
+          git rm -- .github/workflows/profile-cache-bootstrap.yml
+          git add -- .gitignore scripts/prepare_genie_portraits.py scripts/home_soop_profiles.py home-review/soop-cache.json review/home-release.json
           python - <<'PY'
           import subprocess
           names=set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())
-          members=['ine','jingburger','lilpa','jururu','gosegu','viichan']
-          assert names=={p+m+'.webp' for p in ['review/portraits/','home-review/soop-cache/'] for m in members}
+          assert names=={'.github/workflows/profile-cache-bootstrap.yml','.gitignore','scripts/prepare_genie_portraits.py','scripts/home_soop_profiles.py','home-review/soop-cache.json','review/home-release.json'}
           PY
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Preserve twelve approved profile derivatives byte for byte'
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Make approved profile builds deterministic and remove temporary importer'
           AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" push https://github.com/seirian/isegye-idol-fansite.git HEAD:fix/approved-profile-cache-20261113
