@@ -67,6 +67,11 @@ class AlbumsDaily(unittest.TestCase):
         doc=complete_data(); self.assertEqual(daily.health(doc)['state'],'complete')
         doc['providers']['bugs']['state']='error'
         report=daily.health(doc); self.assertEqual(report['state'],'complete'); self.assertIn('bugs:error',report['optionalWarnings'])
+    def test_missing_peak_source_is_visible_but_not_publication_blocking(self):
+        doc=complete_data()
+        report=daily.health(doc)
+        self.assertEqual(report['state'],'complete')
+        self.assertIn('peak-source:rebels:unverified',report['optionalWarnings'])
     def test_wrong_album_identity_and_missing_tracks_fail(self):
         doc=complete_data();doc['tracks']['rebels']['melon']['albumId']='1'
         self.assertIn('identity:rebels',daily.health(doc)['incompleteRequired'])
