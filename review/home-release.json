@@ -35,7 +35,7 @@
     "auth/legal.css": "b244a99a3e6097f0dc862d7671ce5a5708977a778042c55baa7f4a1c3705c436",
     "auth/View.php": "1b577bc93eb9ee72058fb15b36c94b9e075ee9a6f300fd4a1573f8b4a6ac750f",
     "scripts/compose_ui_cleanup.py": "12c2b4adcefa9478e6c89c5d1ae6e2059545ee503c703d12c191c0fc89b3874c",
-    "scripts/compose_home_presentation.py": "131f7025d13adf5adb5fb38a627903d675ef070c5f36ad4077d64b2a907a4ae8",
+    "scripts/compose_home_presentation.py": "e464749bb4c19e8e44f0cdf2203fcc4a067e52100608bb0a80700537c41658e4",
     "home-review/gallery.json": "bcdf6e7b63696a924e8999b8858af4dd70b9392488583fef3cbe5e2ca1f1f329",
     "home-review/presentation.js": "547448995d950e703a49c5845a0b8c6a49c375dd9eaddcc102de4f3b4593cf42",
     "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7",
@@ -43,7 +43,14 @@
     "scripts/refresh_reviewed_cafe.py": "f56247089a764667aac030b8f2bfbab02139fab0666dee45c551adf14f84bf67",
     "scripts/schedule_health.py": "4421d8fd9f39d3a960e963ad8318d9694596a9e129e0dd32ab701b2dc07a03f9",
     "scripts/schedule_feed.py": "2b75be5d0bb0871d37a2ffcb1726be545357cdf331d53f0e29b56b884e487c35",
-    "scripts/publish_schedule_feed.py": "39ca0061bae46ca171f80fa68d9c21c0f97e9473da54dff1a3a34de8222260c0"
+    "scripts/publish_schedule_feed.py": "39ca0061bae46ca171f80fa68d9c21c0f97e9473da54dff1a3a34de8222260c0",
+    "scripts/gallery_cache.py": "411894a0c81275a69d01806d2bd7633491280794a9d04be9c2f2002f612f255b",
+    "home-review/gallery-cache.json": "dd09da4e45dae7d2ad50b9b73a013acc15736739f5bb74ce3ce8b8ab1846000a",
+    "home-review/gallery-cache/christmas.webp": "b8b7ad64c95da60b5007c6ee38e3cc14bb90a77c3047c05cfb41478e00782738",
+    "home-review/gallery-cache/pastel.webp": "b8a75dd025dc886a89d9a91abd29c40de81057a01a696a31775ff31900b55335",
+    "home-review/gallery-cache/rewind.webp": "3a75d6e437c95d955a209d35df2746ea14b1203ddf3359e846334dc9ace190b5",
+    "home-review/gallery-cache/hanteo.webp": "71a331651a1c393994f83a6a2bcb5e7c7ed59f2497caa359393ab72fd7c35e49",
+    "home-review/gallery-cache/mafia.webp": "be60ca3c89c15a5a3d72d4a113b7ffeddb9bc4e436102625b1818e4e8baa3dda"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -115,6 +122,10 @@
     {
       "requestedAt": "2026-11-05",
       "scope": "Verified excerpt/factual highlights for publicly readable external official notices. Preserve restricted Cafe no-crawl, canonical origin links, original sources, and unchanged archived review visual sources. Public text limited to validated facts, not full mirroring."
+    },
+    {
+      "requestedAt": "2026-11-13",
+      "scope": "Batch/deployment reliability: use exact checksum-pinned previously verified gallery WebP bytes offline. No new image, crop, quality, source metadata, UI or access-policy changes."
     }
   ]
 }
