@@ -17,7 +17,7 @@
     "live/ui.js": "73e9f746f444bcd6f310130c5a23ecaac6afedb8645f5686fa6d948e5d981e17",
     "live/theme.css": "d7b6b5bb45e57fa3295e6c85abff47ddf93d78bd0ed53a45bad0989e864cc849",
     "home-review/soop-profiles.json": "3ca50bda1be2762c35e9cbcc9a57f168a28225e0d5cd6aeede31cf7fa1e88630",
-    "scripts/home_soop_profiles.py": "d0cc2c56b8ebc2efb45869e6ffce25785fbe2f13fa0847396fba58c285e387d7",
+    "scripts/home_soop_profiles.py": "18f13ea6211befdc4ba76b081f579b61d08a11c4eca9903fc6a6a4808ece2c73",
     "scripts/compose_schedule.py": "bab023af330d2e7e329a43e68f72c092d5042b3d6a8df559a913c967a9d4888d",
     "schedule/core.js": "23c24e4f9462020848d97274a4b79dba4e2b1f95f5f7c9c03382c0e2ea635bf2",
     "schedule/ui.js": "96adc3a408f89a7b389dcd9262a6752eee126719602c60a902099c9576b44a11",
@@ -50,7 +50,22 @@
     "home-review/gallery-cache/pastel.webp": "b8a75dd025dc886a89d9a91abd29c40de81057a01a696a31775ff31900b55335",
     "home-review/gallery-cache/rewind.webp": "3a75d6e437c95d955a209d35df2746ea14b1203ddf3359e846334dc9ace190b5",
     "home-review/gallery-cache/hanteo.webp": "71a331651a1c393994f83a6a2bcb5e7c7ed59f2497caa359393ab72fd7c35e49",
-    "home-review/gallery-cache/mafia.webp": "be60ca3c89c15a5a3d72d4a113b7ffeddb9bc4e436102625b1818e4e8baa3dda"
+    "home-review/gallery-cache/mafia.webp": "be60ca3c89c15a5a3d72d4a113b7ffeddb9bc4e436102625b1818e4e8baa3dda",
+    "scripts/profile_cache.py": "20f74032778227321b096741580033a0f91a6ef81e18cdfcb18ac9129dbafd51",
+    "scripts/prepare_genie_portraits.py": "abe2b1e5498c2b5f323b090056ff788ab6db4be71aa4959db880706fbb16fb69",
+    "home-review/soop-cache.json": "09eddfd732e89257e12ac79ddb18237df24f77f3c2b9ea8716d62907d848cce7",
+    "review/portraits/ine.webp": "3626d3f344039aeb6552702ca1f13875442ce03d0e1e3cd46e4b8f6fcf20686c",
+    "review/portraits/jingburger.webp": "eff37023fc8bd1ab0474adbdb84b82b407ff52e685d5e77a1b4a8ae42ac8606e",
+    "review/portraits/lilpa.webp": "f6c8f5efd7d89d3db9c091721942145c6adb4e86a567dac33b8b50e17bf9b8f3",
+    "review/portraits/jururu.webp": "23f043cb51a5528f970127b78ef45cf7f7b143904fecb962d13dd1df6ad1eab9",
+    "review/portraits/gosegu.webp": "4e286be98a85274fa0f68d8222d67c465d67a7ed6279ce300765f9f57d3ce89c",
+    "review/portraits/viichan.webp": "43c50c9c8a2d42ec58bfca19a54679a61394aaddf4642961a747bba74d45824e",
+    "home-review/soop-cache/ine.webp": "bf222864373151d566fe17f62eab279f8c479d04a196cddf7951539925228e5f",
+    "home-review/soop-cache/jingburger.webp": "9425c5deb11daa29099cac9a90efce5c99d7f0086e677df6792cbffb72e4389e",
+    "home-review/soop-cache/lilpa.webp": "b53673a74f8d33b0b56a6ec3d8cf1e9ae99f63ec24ab9449eb6baa536a01342a",
+    "home-review/soop-cache/jururu.webp": "32bb9dcf540ae6ff5c66da8687460427454f3eb97ed38dc834bbc5c6ac61d34e",
+    "home-review/soop-cache/gosegu.webp": "df5d0ba561df368da9a6c523ebd9f811782893f0668e19ac29694f94cd82c1e2",
+    "home-review/soop-cache/viichan.webp": "f99680599498f3e6ec0a38da6851095f2fe2a59974b3a877e1a2119486d1e7ee"
   },
   "rightsPermissionVerified": false,
   "scope": "Previously reviewed simple home only. No new crawler or collection infrastructure.",
@@ -126,6 +141,10 @@
     {
       "requestedAt": "2026-11-13",
       "scope": "Batch/deployment reliability: use exact checksum-pinned previously verified gallery WebP bytes offline. No new image, crop, quality, source metadata, UI or access-policy changes."
+    },
+    {
+      "requestedAt": "2026-11-13",
+      "scope": "Complete static-image reliability repair: pin the exact six approved Genie and six home-only SOOP derivatives. Original source identity, check dates and image bytes are unchanged; missing or corrupt caches fail closed without live image requests."
     }
   ]
 }

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "scope": "exact previously approved home-only profile derivatives",
+  "provenance": {
+    "runId": 43371356598,
+    "artifactId": 14013037326,
+    "artifactSha256": "a8716a00ac0ebec079f0a05bfc4954f072923a4670689281214552622770351b",
+    "matchedEarlierArtifactId": 13812453298
+  },
+  "images": {
+    "ine": {
+      "source": {
+        "id": "ine",
+        "name": "아이네",
+        "channel": "inehine",
+        "sourcePage": "https://www.sooplive.com/station/inehine",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/in/inehine/inehine.jpg",
+        "sourceSha256": "d10706e287dd04e87f3ce45d6e2f17224a3618818c40a70812b25150c0c1f033",
+        "width": 420,
+        "height": 420,
+        "checkedAt": "2026-10-27T12:11:40.047885+00:00",
+        "sourceFormat": "PNG"
+      },
+      "bytes": 6178,
+      "sha256": "bf222864373151d566fe17f62eab279f8c479d04a196cddf7951539925228e5f",
+      "width": 144,
+      "height": 144
+    },
+    "jingburger": {
+      "source": {
+        "id": "jingburger",
+        "name": "징버거",
+        "channel": "jingburger1",
+        "sourcePage": "https://www.sooplive.com/station/jingburger1",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/ji/jingburger1/jingburger1.jpg",
+        "sourceSha256": "8962eef7a9b2a3bb4d157cc471d5e519dc02f7d96487453a03380788e8319115",
+        "width": 420,
+        "height": 415,
+        "checkedAt": "2026-10-27T12:11:40.695973+00:00",
+        "sourceFormat": "PNG"
+      },
+      "bytes": 7376,
+      "sha256": "9425c5deb11daa29099cac9a90efce5c99d7f0086e677df6792cbffb72e4389e",
+      "width": 144,
+      "height": 142
+    },
+    "lilpa": {
+      "source": {
+        "id": "lilpa",
+        "name": "릴파",
+        "channel": "lilpa0309",
+        "sourcePage": "https://www.sooplive.com/station/lilpa0309",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/li/lilpa0309/lilpa0309.jpg",
+        "sourceSha256": "d1b8add73dfdb16593599da3f9a098997d83f25cd6412e93271fa058006c4024",
+        "width": 420,
+        "height": 420,
+        "checkedAt": "2026-10-27T12:11:41.241826+00:00",
+        "sourceFormat": "PNG"
+      },
+      "bytes": 7618,
+      "sha256": "b53673a74f8d33b0b56a6ec3d8cf1e9ae99f63ec24ab9449eb6baa536a01342a",
+      "width": 144,
+      "height": 144
+    },
+    "jururu": {
+      "source": {
+        "id": "jururu",
+        "name": "주르르",
+        "channel": "cotton1217",
+        "sourcePage": "https://www.sooplive.com/station/cotton1217",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/co/cotton1217/cotton1217.jpg",
+        "sourceSha256": "28bf8d4455a634a40f97a04e13719d1a0ca927e2d9a524167efe6e77aa7ca366",
+        "width": 420,
+        "height": 420,
+        "checkedAt": "2026-10-27T12:11:41.801804+00:00",
+        "sourceFormat": "PNG"
+      },
+      "bytes": 7272,
+      "sha256": "32bb9dcf540ae6ff5c66da8687460427454f3eb97ed38dc834bbc5c6ac61d34e",
+      "width": 144,
+      "height": 144
+    },
+    "gosegu": {
+      "source": {
+        "id": "gosegu",
+        "name": "고세구",
+        "channel": "gosegu2",
+        "sourcePage": "https://www.sooplive.com/station/gosegu2",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/go/gosegu2/gosegu2.jpg",
+        "sourceSha256": "50a86601be6f7e1ad0b4737b892f6f129776dbcda10c1c54b5c67f6dcf4712df",
+        "width": 420,
+        "height": 420,
+        "checkedAt": "2026-10-27T12:11:42.286463+00:00",
+        "sourceFormat": "JPEG"
+      },
+      "bytes": 8048,
+      "sha256": "df5d0ba561df368da9a6c523ebd9f811782893f0668e19ac29694f94cd82c1e2",
+      "width": 144,
+      "height": 144
+    },
+    "viichan": {
+      "source": {
+        "id": "viichan",
+        "name": "비챤",
+        "channel": "viichan6",
+        "sourcePage": "https://www.sooplive.com/station/viichan6",
+        "sourceImage": "https://profile.img.sooplive.co.kr/LOGO/vi/viichan6/viichan6.jpg",
+        "sourceSha256": "9f4fcca4fedc683ee959138e70f39b3574289d78adfeb734c7528c094d2c33ae",
+        "width": 420,
+        "height": 420,
+        "checkedAt": "2026-10-27T12:11:42.748719+00:00",
+        "sourceFormat": "PNG"
+      },
+      "bytes": 8102,
+      "sha256": "f99680599498f3e6ec0a38da6851095f2fe2a59974b3a877e1a2119486d1e7ee",
+      "width": 144,
+      "height": 144
+    }
+  }
+}

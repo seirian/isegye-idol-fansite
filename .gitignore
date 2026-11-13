@@ -10,8 +10,7 @@ test-results/
 __pycache__/
 site.tar.gz
 
-# Rebuilt from checksum-pinned public Genie originals.
-/review/portraits/*.webp
+# Exact approved Genie derivatives are versioned for deterministic builds.
 
 # Never version live account/config/session data or generated auth dependencies.
 /auth/vendor/
