@@ -1,0 +1,44 @@
+name: Batches - verified outcome recovery watchdog
+on:
+  schedule:
+    - cron: '12,32,52 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/batch-watchdog.yml
+      - scripts/batch_watchdog.py
+permissions:
+  contents: read
+  actions: write
+  issues: write
+concurrency:
+  group: isegye-batch-watchdog
+  cancel-in-progress: false
+jobs:
+  watchdog:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Test schedule boundaries and verified-outcome decisions
+        run: python -m unittest discover -s tests -p 'test_batch_watchdog.py' -v
+      - name: Recover only overdue work on main with bounded dispatches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+        run: python scripts/batch_watchdog.py --apply
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-watchdog-${{ github.run_id }}-${{ github.run_attempt }}
+          path: batch-watchdog.json
+          retention-days: 30
