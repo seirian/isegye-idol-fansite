@@ -69,6 +69,10 @@ class Watchdog(unittest.TestCase):
         self.assertEqual(w.recovery_action([],self.at,self.due,True),'healthy')
     def test_grace(self):
         self.assertEqual(w.recovery_action([],self.due+timedelta(minutes=3),self.due,False),'grace')
+    def test_twelve_minute_watchdog_recovers_five_minute_schedule(self):
+        at=self.at.replace(minute=12)
+        due=w.due_slot('schedule',at)
+        self.assertEqual(w.recovery_action([],at,due,False),'dispatch')
     def test_cooldown_uses_latest_attempt_time(self):
         run={'created_at':'2026-11-01T00:00:00Z','run_started_at':(self.at-timedelta(minutes=5)).isoformat(),'status':'completed'}
         self.assertEqual(w.recovery_action([run],self.at,self.due,False),'cooldown')

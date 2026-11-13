@@ -146,7 +146,7 @@ def artifact_files(run, prefix, filename, getter=api):
 def started(run):
     return clock(run.get('run_started_at') or run['created_at'])
 
-def recovery_action(runs, at, due, healthy, grace=timedelta(minutes=10)):
+def recovery_action(runs, at, due, healthy, grace=timedelta(minutes=5)):
     if healthy:
         return 'healthy'
     if any(r.get('status') in ACTIVE for r in runs):
