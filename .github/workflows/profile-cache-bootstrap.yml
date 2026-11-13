@@ -1,0 +1,52 @@
+name: Repair - stage approved profile cache once
+on:
+  push:
+    branches: [fix/approved-profile-cache-20261113]
+    paths: [.github/workflows/profile-cache-bootstrap.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  stage:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/fix/approved-profile-cache-20261113'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Import only twelve hash-pinned previously approved derivatives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/seirian/isegye-idol-fansite/actions/artifacts/14013037326/zip > /tmp/approved-profile-site.zip
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+          raw=Path('/tmp/approved-profile-site.zip').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()=='a8716a00ac0ebec079f0a05bfc4954f072923a4670689281214552622770351b'
+          portraits=json.loads(Path('review/portraits.json').read_text())['members']
+          soop={'ine':'bf222864373151d566fe17f62eab279f8c479d04a196cddf7951539925228e5f','jingburger':'9425c5deb11daa29099cac9a90efce5c99d7f0086e677df6792cbffb72e4389e','lilpa':'b53673a74f8d33b0b56a6ec3d8cf1e9ae99f63ec24ab9449eb6baa536a01342a','jururu':'32bb9dcf540ae6ff5c66da8687460427454f3eb97ed38dc834bbc5c6ac61d34e','gosegu':'df5d0ba561df368da9a6c523ebd9f811782893f0668e19ac29694f94cd82c1e2','viichan':'f99680599498f3e6ec0a38da6851095f2fe2a59974b3a877e1a2119486d1e7ee'}
+          assert len(portraits)==6 and {r['id'] for r in portraits}==set(soop)
+          with zipfile.ZipFile('/tmp/approved-profile-site.zip') as z:
+              assert len(z.namelist())==len(set(z.namelist()))
+              for r in portraits:
+                  for src,dest,expected in [('assets/portraits/','review/portraits/',r['sha256']),('assets/soop-profiles/','home-review/soop-cache/',soop[r['id']])]:
+                      name=r['id']+'.webp'; data=z.read(src+name)
+                      assert len(data)<100000 and hashlib.sha256(data).hexdigest()==expected
+                      p=Path(dest)/name; assert not p.is_symlink() and not p.parent.is_symlink()
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      if p.exists(): assert p.read_bytes()==data
+                      else: p.write_bytes(data)
+          print('Twelve exact previously approved profile files verified; no source/identity/date changes.')
+          PY
+          git add -f -- review/portraits/*.webp home-review/soop-cache/*.webp
+          if git diff --cached --quiet; then exit 0; fi
+          python - <<'PY'
+          import subprocess
+          names=set(subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines())
+          members=['ine','jingburger','lilpa','jururu','gosegu','viichan']
+          assert names=={p+m+'.webp' for p in ['review/portraits/','home-review/soop-cache/'] for m in members}
+          PY
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Preserve twelve approved profile derivatives byte for byte'
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" push https://github.com/seirian/isegye-idol-fansite.git HEAD:fix/approved-profile-cache-20261113
