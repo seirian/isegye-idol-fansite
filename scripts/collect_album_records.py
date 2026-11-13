@@ -18,6 +18,7 @@ HOSTS={'m2.melon.com','cdnimg.melon.co.kr'}
 def allowed(url):
     u=urlparse(url)
     from collect_album_peak_fallback import allowed_source
+    if url == 'https://isegyechart.com/api/song-selector-list': return url
     if allowed_source(url): return url
     if u.scheme!='https' or u.hostname not in HOSTS or u.port not in (None,443) or u.username or u.password: raise ValueError('Unapproved record URL')
     return url
