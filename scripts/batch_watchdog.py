@@ -34,6 +34,9 @@ ACTIVE = {'queued', 'pending', 'in_progress', 'waiting', 'requested'}
 REQUIRED_SCHEDULE = {'cafe-members','cafe-agency','fan-roundup',
                      'parable-web','berriz-notice','berriz-calendar'}
 
+class EvidenceUnavailable(ValueError):
+    """Absent or expired evidence is not success, but permits bounded recollection."""
+
 def clock(value):
     result = datetime.fromisoformat(value.replace('Z', '+00:00'))
     if result.tzinfo is None:
@@ -119,8 +122,10 @@ def artifact_files(run, prefix, filename, getter=api):
     listing = getter(f"actions/runs/{int(run['id'])}/artifacts?per_page=100")
     name = prefix+'-'+str(run['id'])+'-'+str(run['run_attempt'])
     matches = [a for a in listing.get('artifacts',[]) if a.get('name') == name and not a.get('expired')]
+    if not matches:
+        raise EvidenceUnavailable('Missing current-attempt evidence')
     if len(matches) != 1:
-        raise ValueError('Missing current-attempt evidence')
+        raise ValueError('Duplicate current-attempt evidence')
     entry = matches[0]
     provenance = entry.get('workflow_run', {})
     if (run.get('head_branch') != 'main' or run.get('path') != '.github/workflows/'+filename
@@ -202,7 +207,11 @@ def main():
                     elif kind == 'catalog':
                         good = recent(success.get('run_started_at'),due,at)
                     else:
-                        files = artifact_files(success,prefix,filename)
+                        try:
+                            files = artifact_files(success,prefix,filename)
+                        except EvidenceUnavailable:
+                            files = {}
+                            row['evidenceState'] = 'unavailable'
                         good = evidence_ok(kind, files, due, at)
                         if kind == 'albums':
                             from album_hourly import coverage

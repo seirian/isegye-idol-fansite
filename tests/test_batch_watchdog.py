@@ -101,6 +101,16 @@ class Watchdog(unittest.TestCase):
         self.assertEqual(w.artifact_files(run,'daily-music','music-daily.yml',getter),{'music-publication.json':{}})
         item['digest']='sha256:'+'0'*64
         with self.assertRaises(ValueError):w.artifact_files(run,'daily-music','music-daily.yml',getter)
+    def test_absent_or_expired_evidence_allows_recollection_not_success(self):
+        run={'id':1,'run_attempt':1}
+        for artifacts in ([],[{'name':'weekly-history-1-1','expired':True}]):
+            with self.assertRaises(w.EvidenceUnavailable):
+                w.artifact_files(run,'weekly-history','history-monthly.yml',lambda *a,**kw:{'artifacts':artifacts})
+        self.assertEqual(w.recovery_action([],self.at,self.due,False),'dispatch')
+    def test_legacy_monthly_artifact_is_unavailable_not_corrupt(self):
+        with self.assertRaises(w.EvidenceUnavailable):
+            w.artifact_files({'id':1,'run_attempt':1},'weekly-history','history-monthly.yml',
+                             lambda *a,**kw:{'artifacts':[{'name':'monthly-history-1-1','expired':False}]})
     def test_api_endpoint_allowlist(self):
         with self.assertRaises(ValueError):w.api('https://other.invalid/secret')
 
