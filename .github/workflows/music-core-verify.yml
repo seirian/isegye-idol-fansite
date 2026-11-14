@@ -1,0 +1,47 @@
+name: Verify owner-requested Music Core video
+on:
+  push:
+    branches: [content/music-core-rebels]
+    paths: [.github/workflows/music-core-verify.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read requested public video metadata only
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.ISEGYE_YOUTUBE_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,urllib.request,urllib.parse,datetime,pathlib
+          vid='sy40EGkSfRA'
+          key=os.environ.get('YOUTUBE_API_KEY','').strip()
+          if not key: raise SystemExit('Existing YouTube key is not configured')
+          url='https://www.googleapis.com/youtube/v3/videos?'+urllib.parse.urlencode({'part':'snippet,contentDetails,status','id':vid,'key':key})
+          try:
+              with urllib.request.urlopen(url,timeout=30) as r: data=json.load(r)
+          except Exception as e:
+              raise SystemExit('Public metadata request failed: '+type(e).__name__) from None
+          items=data.get('items',[])
+          if len(items)!=1 or items[0].get('id')!=vid: raise SystemExit('Requested video unavailable')
+          x=items[0]; s=x['snippet']; status=x['status']; now=datetime.datetime.now(datetime.timezone.utc)
+          if status.get('privacyStatus')!='public': raise SystemExit('Requested video not public')
+          if datetime.datetime.fromisoformat(s['publishedAt'].replace('Z','+00:00'))>now: raise SystemExit('Video not yet published')
+          result={'checkedAt':now.isoformat(),'source':'YouTube Data API v3 videos.list','scope':'public metadata and availability; not full playback verification','videoId':vid,'title':s['title'],'channelId':s['channelId'],'channelTitle':s['channelTitle'],'publishedAt':s['publishedAt'],'duration':x['contentDetails']['duration'],'definition':x['contentDetails'].get('definition'),'regionRestriction':x['contentDetails'].get('regionRestriction'),'embeddable':status.get('embeddable'),'privacyStatus':status['privacyStatus'],'liveBroadcastContent':s.get('liveBroadcastContent'),'url':'https://www.youtube.com/watch?v='+vid,'description':s.get('description','')}
+          pathlib.Path('requested-video.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False))
+          PY
+      - name: Archive source without credentials
+        run: git archive HEAD -o requested-source.tar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: requested-music-core-verification
+          path: |
+            requested-video.json
+            requested-source.tar
+          retention-days: 14
