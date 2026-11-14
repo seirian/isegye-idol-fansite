@@ -73,6 +73,8 @@ def build(directory=None):
     composed=compose_review(before,catalog['music'])
     import external_videos
     composed=external_videos.compose(composed)
+    import music_core_videos
+    composed=music_core_videos.compose(composed)
     (out/'src/data.js').write_text('const REVIEW_DATA='+first.script_json(composed)+';\n')
     legacy=re.sub(r'^const CATALOG=[^\n]+;',lambda _: 'const CATALOG='+first.script_json(catalog)+';',legacy,count=1,flags=re.M)
     legacy_path.write_text(legacy)
@@ -96,7 +98,7 @@ def build(directory=None):
     meta['albumPromotion']={'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'snapshotAt':data['generatedAt'],'snapshotSha256':hashlib.sha256((out/'src/albums-insights.json').read_bytes()).hexdigest(),'readEndpoint':'/api/albums','fullVideoCatalogPreserved':True,'existingFeedsPreserved':True,'scheduledCollectionChanged':True}
     from album_releases import load_catalog
     meta['dailyAlbums']={'schemaVersion':1,'endpoint':'/api/albums','assetsEndpoint':'/api/albums/assets/','catalogTrackIds':sorted(s['id'] for s in load_catalog()['songs']),'schedule':'00시 및 07~23시 정각 KST (01~06시 중지)', 'watchdog':'20분·40분 누락 시간만 보충'}
-    meta['selectedExternalVideos']={'videoIds':list(external_videos.APPROVED),'channelId':external_videos.CHANNEL_ID,'channelWideCollection':False,'officialMvUnchanged':True}
+    meta['selectedExternalVideos']={'videoIds':list(external_videos.APPROVED)+[music_core_videos.VIDEO_ID],'channelId':external_videos.CHANNEL_ID,'channelIds':[external_videos.CHANNEL_ID,music_core_videos.CHANNEL_ID],'channelWideCollection':False,'officialMvUnchanged':True}
     meta['counts']['videos']+=len(composed['videos'])-len(before['videos'])
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     assert all(composed[k][:len(before[k])]==before[k] for k in ('songs','albums','videos','channels'))

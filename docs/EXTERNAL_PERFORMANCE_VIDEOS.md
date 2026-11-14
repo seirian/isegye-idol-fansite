@@ -14,3 +14,14 @@ Both appear in Contents, with an external-channel filter and explicit source lab
 The composition is applied after the hash-pinned reviewed album UI. Archived review sources remain unchanged. Normal CI and the main-only production workflow run the selected-video browser regression before upload.
 
 The owner replaced the first full-video URL `z8AJgnTC52k` with `Mj7q8HU8ZXg` before publication. Only the replacement is registered; its own publication timestamp is used. The teaser is unchanged.
+
+
+## MBC Show! MusicCore — owner-selected stage
+
+On 2026-11-14 the owner requested `sy40EGkSfRA`, from MBCkpop (`UCe52oeb7Xv_KaJsEzcKXJJg`). YouTube Data API v3 verification run 43573401740 confirmed the title `ISEGYE IDOL (이세계아이돌) - REBELS | Show! MusicCore | MBC261114방송`, public and embeddable status, duration 3:08, and publication 2026-11-14 15:37:04 KST. Checked 2026-11-14T07:56:19.498394+00:00. The title identifies the 2026-11-14 broadcast date separately from the video's publication timestamp. This is metadata verification, not full playback review.
+
+The API reports HD, not a verified 4K resolution. Do not inherit STUDIO CHOOM's 4K label. The source blocks viewing in Japan (JP); preserve this in metadata and the detail summary. No video/audio is downloaded or rehosted. Only a source-linked catalog entry is registered.
+
+`catalog/music-core-videos.json` and `scripts/music_core_videos.py` add exactly this one video, after the unchanged STUDIO CHOOM selection. The existing two uploads and original observation timestamps are preserved. Content > External, Music > Videos and the existing REBELS related-performance section include the new stage. Related sections derive publisher names from actual rows and sort full performances newest first, then teasers. MBCkpop has its own selected-video channel filter, not channel-wide collection.
+
+No song, album, official MV, album/MV statistic, collection schedule, auth, member store or pinned review source is changed. The existing pre-upload external-video browser suite covers all three selected videos and source restrictions.
