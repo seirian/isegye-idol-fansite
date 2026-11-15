@@ -3,6 +3,15 @@ on:
   schedule:
     - cron: '12,32,52 * * * *'
   workflow_dispatch:
+  # Completion is a second wake-up path, not a guarantee of clock delivery.
+  # Never include this watchdog or PR validation workflows here.
+  workflow_run:
+    workflows:
+      - Albums - hourly verified metadata and chart refresh
+      - Schedule - hourly permitted-source refresh
+      - Production - isolated inour SFTP deployment
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -17,7 +26,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   watchdog:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch')))
     runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 8
@@ -25,7 +41,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {ref: main, persist-credentials: false}
       - name: Test schedule boundaries and verified-outcome decisions
-        run: python -m unittest discover -s tests -p 'test_batch_watchdog.py' -v
+        run: python -m unittest discover -s tests -p 'test_batch_watchdog*.py' -v
       - name: Recover only overdue work on main with bounded dispatches
         env:
           GH_TOKEN: ${{ github.token }}
