@@ -44,12 +44,14 @@ def assess(snapshot, now=None):
 def main():
     path = Path('schedule-publication.json')
     report = json.loads(path.read_text()) if path.exists() else {}
-    published = report.get('status') == 'published'
+    published = report.get('status') == 'published' and (report.get('evidenceVersion', 1) < 2
+                  or report.get('verifiedReadback') is True)
+    current = report.get('status') == 'already_current' and report.get('verifiedReadback') is True
     health = report.get('collectionHealth') or {'state': 'partial', 'incompleteSources': list(REQUIRED)}
     result = {'publicationStatus': report.get('status', 'not_published'), 'collectionHealth': health,
-              'verified': published and health['state'] == 'complete'}
+              'verified': (published or current) and health['state'] == 'complete'}
     Path('schedule-health.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
-    message = ('게시: ' + ('성공' if published else '실패') + ' / 필수 출처 갱신: ' +
+    message = ('게시: ' + ('성공' if published else '기존 게시 재검증' if current else '실패') + ' / 필수 출처 갱신: ' +
                ('완료' if result['verified'] else '미완료') + '\n')
     print(message)
     for sid in health.get('incompleteSources', []):
