@@ -65,6 +65,7 @@ jobs:
           /tmp/release-tools/bin/python scripts/promote_albums.py
           /tmp/release-tools/bin/python tests/albums_production_browser.py
           /tmp/release-tools/bin/python tests/external_videos_browser.py
+          /tmp/release-tools/bin/python tests/music_beginning_browser.py
       - name: Verify album feed uses the unchanged access gate
         run: |
           python scripts/build_albums_host.py
