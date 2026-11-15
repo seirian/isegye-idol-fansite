@@ -41,9 +41,9 @@
     "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7",
     "scripts/cafe_runtime.py": "235575a97c108375d52af52d1698a371710e6db4ec811313c177991ae7f817c5",
     "scripts/refresh_reviewed_cafe.py": "f56247089a764667aac030b8f2bfbab02139fab0666dee45c551adf14f84bf67",
-    "scripts/schedule_health.py": "4421d8fd9f39d3a960e963ad8318d9694596a9e129e0dd32ab701b2dc07a03f9",
+    "scripts/schedule_health.py": "e8cbde31eff3107757207cf04f6ca148a2ae5e992f5c48fba3c29d1472c27005",
     "scripts/schedule_feed.py": "2b75be5d0bb0871d37a2ffcb1726be545357cdf331d53f0e29b56b884e487c35",
-    "scripts/publish_schedule_feed.py": "39ca0061bae46ca171f80fa68d9c21c0f97e9473da54dff1a3a34de8222260c0",
+    "scripts/publish_schedule_feed.py": "b3cb2fe9f669e6bc9dd0ae45cad325b6df6041458f2191d2467186d8f454834f",
     "scripts/gallery_cache.py": "411894a0c81275a69d01806d2bd7633491280794a9d04be9c2f2002f612f255b",
     "home-review/gallery-cache.json": "dd09da4e45dae7d2ad50b9b73a013acc15736739f5bb74ce3ce8b8ab1846000a",
     "home-review/gallery-cache/christmas.webp": "b8b7ad64c95da60b5007c6ee38e3cc14bb90a77c3047c05cfb41478e00782738",
@@ -145,6 +145,10 @@
     {
       "requestedAt": "2026-11-13",
       "scope": "Complete static-image reliability repair: pin the exact six approved Genie and six home-only SOOP derivatives. Original source identity, check dates and image bytes are unchanged; missing or corrupt caches fail closed without live image requests."
+    },
+    {
+      "requestedAt": "2026-11-15",
+      "scope": "User-requested recurring album/notice batch reliability repair. Update only schedule publisher/health source hashes for current-slot no-op and explicit verified readback. Preserve original collection slots, night pause, production locks, all access/authentication policy and all UI/image hashes."
     }
   ]
 }

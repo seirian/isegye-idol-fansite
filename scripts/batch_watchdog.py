@@ -83,9 +83,13 @@ def evidence_ok(kind, files, due, at):
         return persisted and cov['currentComplete']
     pub = files.get({'music':'music-publication.json','schedule':'schedule-publication.json',
                      'history':'history-publication.json'}[kind], {})
-    if pub.get('status') != 'published' or not recent(pub.get('generatedAt'), due, at):
+    states = ('published', 'already_current') if kind == 'schedule' else ('published',)
+    if pub.get('status') not in states or not recent(pub.get('generatedAt'), due, at):
         return False
     if kind == 'schedule':
+        if ((pub.get('status') == 'already_current' or pub.get('evidenceVersion', 1) >= 2)
+                and pub.get('verifiedReadback') is not True):
+            return False
         health = pub.get('collectionHealth', {})
         sources = health.get('sources', {})
         return (files.get('schedule-health.json', {}).get('verified') is True
@@ -166,6 +170,67 @@ def recovery_action(runs, at, due, healthy, grace=timedelta(minutes=5)):
                and timedelta(0) <= at-started(r) < timedelta(hours=1)]
     return 'retry_budget' if len(retries) >= 2 else 'dispatch'
 
+def trusted_completion(event, getter=None):
+    """Validate provenance before any privileged action; never run trigger code."""
+    getter = getter or api
+    trigger = event.get('workflow_run', {})
+    allowed_paths = {'.github/workflows/'+v[0] for v in SPECS.values()}
+    if (event.get('action') != 'completed'
+            or event.get('repository', {}).get('full_name') != REPO
+            or type(trigger.get('id')) is not int or trigger['id'] <= 0
+            or trigger.get('head_branch') != 'main'
+            or trigger.get('head_repository', {}).get('full_name') != REPO
+            or trigger.get('event') not in ('schedule', 'workflow_dispatch', 'push')):
+        raise ValueError('Untrusted completion event')
+    run = getter('actions/runs/'+str(trigger['id']))
+    if (run.get('repository', {}).get('full_name') != REPO
+            or run.get('head_repository', {}).get('full_name') != REPO
+            or run.get('head_branch') != 'main' or run.get('path') not in allowed_paths
+            or run.get('event') not in ('schedule', 'workflow_dispatch', 'push')
+            or run.get('id') != trigger['id']):
+        raise ValueError('Untrusted completion provenance')
+    # A newer attempt may already be running. Normal active gates handle it.
+    return {'runId': run['id'], 'workflow': run['path'], 'attempt': run['run_attempt']}
+
+
+def list_runs(filename, getter=None):
+    """Wider bounded view; always sort by the latest attempt, not creation time."""
+    getter = getter or api
+    data = getter('actions/workflows/'+filename+'/runs?branch=main&per_page=100')
+    runs = data['workflow_runs']
+    if any(r.get('head_branch') != 'main' or r.get('path') != '.github/workflows/'+filename
+           or r.get('repository', {}).get('full_name') != REPO for r in runs):
+        raise ValueError('Unexpected run provenance')
+    return sorted(runs, key=started, reverse=True)
+
+
+def timing_evidence(runs, due, at):
+    scheduled = next((r for r in runs if r.get('event') == 'schedule'), None)
+    latest = runs[0] if runs else None
+    return {'slotAgeSeconds': max(0, int((at-due).total_seconds())),
+            'latestRun': ({k: latest.get(k) for k in
+                ('id', 'run_attempt', 'event', 'status', 'conclusion', 'created_at', 'run_started_at')}
+                if latest else None),
+            'lastScheduledRun': ({k: scheduled.get(k) for k in ('id','created_at','run_started_at')}
+                                 if scheduled else None)}
+
+
+def dispatch_recheck(kind, filename, at, due, runs, healthy, getter=None):
+    """Recheck every bound, not just active status, after an inspection race."""
+    current_due = due_slot(kind, at) if kind != 'production' else due
+    if current_due is None:
+        return 'night_pause' if kind == 'albums' else 'not_due'
+    if current_due != due:
+        return 'slot_changed'  # Do not reuse the previous hour's evidence.
+    latest = list_runs(filename, getter)
+    action = recovery_action(latest, at, due, healthy)
+    if action != 'dispatch':
+        return action
+    known = {(r['id'], r.get('run_attempt'), r.get('status'), r.get('conclusion')) for r in runs}
+    if any((r['id'], r.get('run_attempt'), r.get('status'), r.get('conclusion')) not in known for r in latest):
+        return 'evidence_changed'  # Re-evaluate new results on the next inspection.
+    return 'dispatch'
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--apply', action='store_true')
@@ -174,13 +239,18 @@ def main():
             or not os.getenv('GH_TOKEN')):
         raise ValueError('Main-only watchdog')
     at = datetime.now(UTC)
-    report = {'checkedAt':at.isoformat(),'mode':'apply' if args.apply else 'audit','batches':[]}
+    report = {'checkedAt':at.isoformat(),'mode':'apply' if args.apply else 'audit',
+              'trigger':os.getenv('GITHUB_EVENT_NAME', 'manual'), 'batches':[]}
+    if os.getenv('GITHUB_EVENT_NAME') == 'workflow_run':
+        event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+        report['completion'] = trusted_completion(event)
     if os.getenv('PRODUCTION_PAUSED') == 'true':
         report['state'] = 'paused'
     else:
         head = api('git/ref/heads/main')['object']['sha']
         for kind,(filename,prefix,pause) in SPECS.items():
-            row = {'batch':kind,'workflow':filename}
+            at = datetime.now(UTC)
+            row = {'batch':kind,'workflow':filename,'checkedAt':at.isoformat()}
             report['batches'].append(row)
             if os.getenv(pause) == 'true':
                 row['state']='paused'
@@ -191,8 +261,8 @@ def main():
                 continue
             row['dueAt']=due.isoformat()
             try:
-                runs = api('actions/workflows/'+filename+'/runs?branch=main&per_page=10')['workflow_runs']
-                runs = sorted(runs, key=started, reverse=True)
+                runs = list_runs(filename)
+                row['timing'] = timing_evidence(runs,due,at)
                 if any(r.get('status') in ACTIVE for r in runs):
                     row['state']='active'
                     row['activeRuns']=[r['id'] for r in runs if r.get('status') in ACTIVE]
@@ -203,6 +273,8 @@ def main():
                     row['evidenceRun']=success['id']
                     row['evidenceAttempt']=success['run_attempt']
                     if kind == 'production':
+                        head = api('git/ref/heads/main')['object']['sha']
+                        row['mainSha'] = head
                         good = success.get('head_sha') == head
                     elif kind == 'catalog':
                         good = recent(success.get('run_started_at'),due,at)
@@ -213,6 +285,12 @@ def main():
                             files = {}
                             row['evidenceState'] = 'unavailable'
                         good = evidence_ok(kind, files, due, at)
+                        pub = files.get({'albums':'albums-publication.json',
+                            'schedule':'schedule-publication.json','music':'music-publication.json',
+                            'history':'history-publication.json'}[kind], {})
+                        row['publication'] = {k:pub.get(k) for k in
+                            ('status','generatedAt','publishedAt','verifiedAt','verifiedReadback')}
+                        row['verifiedCurrentSlot'] = bool(good)
                         if kind == 'albums':
                             from album_hourly import coverage
                             cov = coverage(files.get('albums/snapshot.json',{}),at)
@@ -221,9 +299,9 @@ def main():
                 row['state']=action
                 # Recheck immediately before dispatch; do not enqueue duplicates from stale listings.
                 if action == 'dispatch' and args.apply:
-                    latest = api('actions/workflows/'+filename+'/runs?branch=main&per_page=10')['workflow_runs']
-                    if any(r.get('status') in ACTIVE for r in latest):
-                        row['state']='active'
+                    action = dispatch_recheck(kind,filename,datetime.now(UTC),due,runs,good)
+                    row['state'] = action
+                    if action != 'dispatch':
                         continue
                     api('actions/workflows/'+filename+'/dispatches','POST',{'ref':'main'})
                     row['state']='dispatched'
@@ -232,8 +310,9 @@ def main():
                 row['state']='inspection_failed'
                 row['error']=type(exc).__name__
         report['state']='attention' if any(r['state'] in ('dispatch','dispatched','inspection_failed','retry_budget')
-                                           or any(r.get('missingHours',{}).values())
                                            for r in report['batches']) else 'checked'
+        report['historicalGaps'] = {r['batch']: r['missingHours'] for r in report['batches']
+                                    if any(r.get('missingHours',{}).values())}
         if args.apply:
             try:
                 title='[배치] 예약 누락·게시 지연·배포 복구 점검'

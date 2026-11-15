@@ -16,7 +16,8 @@
 
 ## 복구 제어
 기존 5개 수집 일정과 앨범 01:00~06:59 중지는 유지한다.
-`batch-watchdog.yml`은 매시 12/32/52분 및 수동 실행으로 실제 성공 산출물을 확인한다.
+`batch-watchdog.yml`은 매시 02/12/22/32/42/52분 및 수동 실행으로 실제 성공 산출물을 확인한다.
+허용된 main 수집·배포의 `workflow_run: completed`도 검사 계기가 된다. 검사 계기는 게시 성공 판정이 아니다.
 검사 자체는 생산 쓰기 대기열을 점유하지 않는다. 새 실행은 기존 main 워크플로를
 workflow_dispatch로 요청하므로 원래 일시정지/접근/검증/공통 쓰기 직렬화가 적용된다.
 
@@ -38,3 +39,49 @@ GitHub 내부 예약 보충만으로 GitHub 예약 이벤트 자체의 누락은
 작업을 확인하고 필요 시 재실행한다. 새 토큰/서비스 비밀값은 복사하지 않는다.
 외부 점검도 지연될 수 있으며 모든 정각 실행을 보증하지 않는다. 최근 상태/실제 게시
 산출물로 성공을 확인하며, 설정 추가만으로 정상화 완료라고 보고하지 않는다.
+
+## 2026-11-15 예약 실행 누락 재검토
+
+### 관측과 한계
+- 2026-11-15 12:00~15:00 KST에 저장소 Actions API의 `event=schedule` 실행 생성 기록은 0건이었다.
+  조회: `/actions/runs?branch=main&event=schedule&created=2026-11-15T03:00:00Z..2026-11-15T06:00:00Z`.
+  마지막 예약 제어기 43670002276의 최초 생성은 11:55:32 KST였지만 3차 시도 시작은 14:13:17이었다.
+  재시도 시간을 새 cron 도착으로 집계하지 않는다. 생성된 실행의 실패와 생성 자체 공백을 구분한다.
+- 14시 공지 43680157259는 14:13:36 요청, 14:18:16 job 시작, 14:21:43 종료였다.
+  호출 지연에 더해 공통 생산 대기열의 대기 시간이 존재한다. 공통 잠금은 유실 방지를 위해 유지한다.
+- GitHub 공식 문서는 정각 부하 시 schedule 지연/누락 가능성을 명시한다.
+  이 저장소에서 GitHub 내부의 특정 장애·부하·계정 문제가 원인이라고 확정할 증거는 없다.
+- 모든 생산 workflow에 이미 `queue: max`가 있다. 기본 단일 pending 교체 문제를 원인으로 단정하거나
+  `cancel-in-progress: true`로 바꾸지 않는다. 긴 배포/수집 전체의 직렬화는 여전히 지연 요인이다.
+
+### 이번 수정
+- 5개 원래 수집 일정은 그대로 둔다. 보충 검사에만 :02/:22/:42를 추가해 기존 :12/:32/:52를 포함한
+  10분 간격으로 만든다. 예약 전달 자체가 보장된다는 의미가 아니다.
+- 허용된 6개 main 수집/배포 완료 이벤트에서도 검사한다. 자기 자신·CI·PR·fork는 제외한다.
+  event payload뿐 아니라 Actions API로 저장소·브랜치·workflow path·event를 재검증한다.
+  항상 main 코드를 checkout하며 이벤트가 지정한 코드나 실행파일을 내려받아 실행하지 않는다.
+  완료 이벤트의 연쇄 횟수에는 GitHub 제한이 있으므로 이것을 영구적인 독립 시계로 사용하지 않는다.
+- 최근 실행 조회를 10개에서 100개로 넓히고 latest attempt 시각으로 정렬한다.
+  dispatch 직전 active뿐 아니라 15분 cooldown, rolling 1시간 2회 상한, 회차/새벽 경계를 재검사한다.
+  검사 도중 새 실행·새 attempt·완료 결과가 생기면 `evidence_changed`로 다음 검사까지 보류한다.
+- 공지는 현재 :05 회차의 generatedAt 및 필수 6개 출처 lastSuccessAt, 실제 서버 바이트 재조회를
+  모두 만족할 때 `already_current`로 종료한다. 공개 출처 collect와 current/previous 데이터 재쓰기를
+  생략하되 기존 데이터 시각을 바꾸지 않는다. 앞선 workflow의 설치·Cafe 검증 단계는 계속 수행된다.
+  부분 수집·오래된 출처·시간대 없는 시각·정책 정리가 필요한 데이터는 no-op으로 처리하지 않는다.
+- 공지 게시 산출물 v2에 `publishedAt`, `verifiedAt`, `verifiedReadback`, `feedWritten`을 기록한다.
+  기존 게시 재검증에는 새 publishedAt을 만들지 않으며 `feedWritten=false`로 구별한다.
+  실제 기존 코드에도 바이트 readback 검사가 있었지만 명시적 보고 필드가 없었다.
+- 생성 시각/최신 attempt 시작/현재 회차 시각/게시 증거를 제어기 산출물에 기록한다.
+  이미 알려진 과거 차트 공백만으로 현재 회차를 장애로 올리지 않고 historicalGaps에 별도 남긴다.
+  미관측 과거 순위는 채우지 않는다.
+
+### 변경하지 않는 경계
+- 앨범 KST 01:00~06:59 중지, 활동기록 최초 주 2026-11-15, 모든 pause·접근권한·계정·시크릿,
+  기존 GitHub 권한, 공통 생산 concurrency 및 서버 lock, 이미지·화면·과거 기록은 그대로 유지한다.
+- 두 공지 실행 파일의 소스 해시만 승인 manifest에 갱신한다. 이미지/화면/인증 해시는 변경하지 않는다.
+- GitHub 예약과 완료 이벤트가 모두 전달되지 않는 구간은 이 변경만으로 해결할 수 없다.
+  독립 시간별 점검을 유지하며 엄격한 정각 보장이 필요하면 별도 신뢰된 외부 스케줄러가 필요하다.
+  새 외부 서비스·토큰·유료 도구는 이번 작업에서 만들지 않는다.
+
+참고: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+참고: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency

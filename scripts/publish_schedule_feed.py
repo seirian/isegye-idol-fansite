@@ -12,6 +12,7 @@ import auth_routing
 import notice_policy
 import schedule_health
 from collections import Counter
+from datetime import datetime, timedelta
 FOLDER=d.ROOT+'/.schedule-feed'
 MARKER=b'isegye-schedule-feed:v1\n'
 ALLOWED={'current.json','previous.json','.owner','.lock'}
@@ -19,9 +20,33 @@ def path(name):
     d.require(name in ALLOWED,'Unknown feed file')
     return FOLDER+'/'+name
 
+def current_slot_verified(value, now):
+    """No inferred timestamps: require this :05 slot and every real source clock."""
+    def aware(value):
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if dt.tzinfo is None:
+            raise ValueError('Timezone required')
+        return dt
+    try:
+        at = aware(now)
+        local = at.astimezone(feed.KST)
+        due = local.replace(minute=5, second=0, microsecond=0)
+        if due > local:
+            due -= timedelta(hours=1)
+        if not due <= aware(value['generatedAt']) <= at:
+            return False
+        health = schedule_health.assess(value, now)
+        return health['state'] == 'complete' and all(
+            due <= aware(health['sources'][sid]['lastSuccessAt']) <= at
+            for sid in schedule_health.REQUIRED)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return False
+
+
 def publish(remote,collect=feed.collect):
     remote.directory('/web');remote.directory(d.ROOT)
     d.require(remote.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Wrong site owner')
+    d.require(remote.info(d.ROOT+'/.deploy-lock') is None,'Production deployment in progress')
     router=remote.read(d.ROOT+'/.htaccess') or b''
     release,gated=auth_routing.release_of(router)
     d.require(gated,'Authentication router required')
@@ -41,6 +66,18 @@ def publish(remote,collect=feed.collect):
         old_value=feed.validate(json.loads(old)) if old else None
         previous=feed.validate(notice_policy.clean_snapshot(old_value)) if old_value else None
         removed={k:len(old_value[k])-len(previous[k]) if old_value else 0 for k in ('news','events','forecasts')}
+        checked = feed.stamp()
+        if previous and previous == old_value and current_slot_verified(previous, checked):
+            d.require(remote.read(path('current.json')) == old, 'Feed changed during no-op verification')
+            d.require(remote.read(d.ROOT+'/.htaccess') == router, 'Router changed during verification')
+            d.require(remote.snapshot() == protected, 'Protected file changed during verification')
+            return {'status':'already_current','evidenceVersion':2,'generatedAt':previous['generatedAt'],
+                    'verifiedAt':checked,'verifiedReadback':True,'sha256':d.digest(old),
+                    'collectionHealth':schedule_health.assess(previous,checked),
+                    'counts':{k:len(previous[k]) for k in ('events','news','forecasts')},
+                    'protectedFilesUnchanged':True,'accountStoreReadOrWritten':False,
+                    'feedWritten':False}
+
         value=feed.validate(notice_policy.clean_snapshot(collect(previous=previous)))
         value['collectionHealth']=schedule_health.assess(value)
         raw=(json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode()
@@ -57,7 +94,12 @@ def publish(remote,collect=feed.collect):
         remote.replace(path('current.json'),raw,old)
         remote.s.chmod(path('current.json'),0o600)
         d.require(remote.read(path('current.json'))==raw,'Feed bytes differ')
-        return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),
+        d.require(remote.read(d.ROOT+'/.htaccess') == router, 'Router changed after publication')
+        d.require(remote.snapshot() == protected, 'Protected file changed after publication')
+        verified_at = feed.stamp()
+        return {'status':'published','evidenceVersion':2,'generatedAt':value['generatedAt'],
+                'publishedAt':verified_at,'verifiedAt':verified_at,'verifiedReadback':True,
+                'feedWritten':True,'sha256':d.digest(raw),
                 'counts':{k:len(value[k]) for k in ('events','news','forecasts')},
                 'collectionHealth':value['collectionHealth'],
                 'cafeNewsByKstDay':dict(Counter(feed.iso(r['publishedAt']).astimezone(feed.KST).date().isoformat() for r in value['news'] if r['sourceId']=='cafe-members' and r.get('publishedAt'))),
@@ -106,5 +148,5 @@ def main():
             except Exception:pass
         Path('schedule-publication.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(result,ensure_ascii=False))
-    return 0 if result['status']=='published' else 1
+    return 0 if result['status'] in ('published','already_current') else 1
 if __name__=='__main__':sys.exit(main())
