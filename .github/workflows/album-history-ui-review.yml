@@ -1,0 +1,53 @@
+name: Album historical UI isolated review
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/album-history-ui-review.yml']
+permissions: {contents: read}
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0 tinycss2==1.4.0 playwright==1.56.0
+      - run: python repair/compose_all_album_history.py
+      - name: Verify pure archive and existing UI contracts
+        run: |
+          npm test > archive-js-tests.log 2>&1
+          python -m unittest discover -s tests -p 'test_album_history_backfill.py' -v > archive-python-tests.log 2>&1
+      - name: Build complete credential-free preview using existing local seeds
+        env:
+          DEPLOY_ENV: preview
+          ISEGYE_BASELINE_ONLY: 'true'
+        run: |
+          python scripts/prepare_album_release.py
+          npm run build
+          python scripts/promote_review_2nd.py
+          python scripts/promote_albums.py
+      - run: bash scripts/ci_browser_install.sh python
+      - name: Exercise release dates, source labels, recent views and mobile layout
+        run: python tests/albums_production_browser.py
+      - name: Archive exact reviewed changes without secrets
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          names=['scripts/album_history_backfill.py','scripts/daily_albums.py','scripts/promote_albums.py','albums/flow.js','albums/flow-view.js','albums/flow.css','albums/accepted.json','tests/test_album_history_backfill.py','tests/album-history.test.js','tests/albums_production_browser.py']
+          with zipfile.ZipFile('archive-reviewed-files.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for name in names:z.write(name,name)
+          Path('archive-reviewed-hashes.json').write_text(json.dumps({n:hashlib.sha256(Path(n).read_bytes()).hexdigest() for n in names},indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: archive-ui-review-${{ github.run_id }}
+          path: |
+            archive-reviewed-files.zip
+            archive-reviewed-hashes.json
+            archive-js-tests.log
+            archive-python-tests.log
+            test-results/albums-production/
+          retention-days: 30
