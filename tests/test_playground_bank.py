@@ -49,6 +49,34 @@ class Bank(unittest.TestCase):
   with self.assertRaises(ValueError):c.verify(row,lambda u:{'type':'video','author_url':'https://www.youtube.com/@fan','title':'테스트 cover'})
  def test_title_mismatch_is_not_verified(self):
   with self.assertRaises(ValueError):c.verify({'videoId':'12345678901','channelUrl':'https://www.youtube.com/@INE','title':'다른 곡','owner':'ine'},lambda u:{'type':'video','author_url':'https://www.youtube.com/@INE','title':'테스트'})
+ def test_reference_search_uses_migrated_api_hub(self):
+  from urllib.parse import urlsplit,parse_qs
+  calls=[]
+  def fetch(url,headers):
+   calls.append((url,headers));return {'items':[{'link':'https://m.cafe.naver.com/ca-fe/cafes/27842958/articles/21702194','title':'<b>문제</b> &amp; 답안'},{'link':'https://cafe.naver.com/other/123','title':'not ours'}]}
+  found,errors=c.discover_references(fetch,{'ISEGYE_NAVER_CLIENT_ID':' fake-id ','ISEGYE_NAVER_CLIENT_SECRET':' fake-key '})
+  self.assertEqual(errors,[]);self.assertEqual(set(found),{'21721901','21741748','21702194'});self.assertEqual(found['21702194']['title'],'문제 & 답안')
+  self.assertEqual(len(calls),2)
+  for url,headers in calls:
+   parsed=urlsplit(url);self.assertEqual(parsed.scheme,'https');self.assertEqual(parsed.hostname,'naverapihub.apigw.ntruss.com');self.assertEqual(parsed.path,'/search/v1/cafearticle');self.assertEqual(parse_qs(parsed.query)['format'],['json'])
+   self.assertEqual(headers,{'X-NCP-APIGW-API-KEY-ID':'fake-id','X-NCP-APIGW-API-KEY':'fake-key'})
+ def test_reference_search_default_reuses_credential_safe_transport(self):
+  with patch.object(c.source_api,'request',return_value=b'{"items":[]}') as request:
+   c.search_json(c.source_api.NAVER_SEARCH_URL,{'test':'value'});request.assert_called_once_with(c.source_api.NAVER_SEARCH_URL,headers={'test':'value'})
+ def test_reference_search_missing_or_bad_keys_never_sends_request(self):
+  for env,reason in [({},'not_configured'),({'ISEGYE_NAVER_CLIENT_ID':'a\nb','ISEGYE_NAVER_CLIENT_SECRET':'c'},'invalid_key_format')]:
+   def forbidden(*args):self.fail('Invalid credentials must not be sent')
+   found,errors=c.discover_references(forbidden,env);self.assertEqual(len(found),2);self.assertEqual(errors,['naver_search_'+reason])
+ def test_reference_search_reports_safe_codes_not_response_bodies(self):
+  env={'ISEGYE_NAVER_CLIENT_ID':'fake-id','ISEGYE_NAVER_CLIENT_SECRET':'fake-key'}
+  def fail(*args):raise c.source_api.FeedError('http_403_api_210')
+  _,errors=c.discover_references(fail,env);self.assertEqual(errors,['naver_search_http_403_api_210']*2)
+  def unsafe(*args):raise c.source_api.FeedError('contains fake-key and response body')
+  _,errors=c.discover_references(unsafe,env);self.assertEqual(errors,['naver_search_FeedError']*2)
+ def test_public_reader_refuses_credentials_before_network(self):
+  with self.assertRaises(ValueError):c.read('https://www.youtube.com/oembed',{'X-NCP-APIGW-API-KEY':'fake-key'})
+ def test_reference_search_bad_schema_cannot_be_verified_zero(self):
+  _,errors=c.discover_references(lambda *args:{'items':'wrong'}, {'ISEGYE_NAVER_CLIENT_ID':'fake-id','ISEGYE_NAVER_CLIENT_SECRET':'fake-key'});self.assertEqual(errors,['naver_search_ValueError']*2)
  def test_publish_only_owned_bank_paths(self):
   r=Remote();before=dict(r.files);f,a=b.assemble(None,[proposal(1,self.now)],self.now);res=p.publish(r,f,self.report(f,added=1),{})
   self.assertEqual(res['added'],1);self.assertTrue(res['verifiedReadback']);self.assertEqual(len(json.loads(r.read(p.path('current.json')))['catalog']['questions']),33)
