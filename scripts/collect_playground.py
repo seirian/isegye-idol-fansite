@@ -5,11 +5,13 @@ from pathlib import Path
 from urllib.parse import urlencode,unquote
 import csv,hashlib,json,os,re,sys,urllib.request,urllib.error
 import playground_bank as bank
+import schedule_feed as source_api
 ROOT=Path(__file__).resolve().parents[1];WORK=ROOT/'playground-state'
 NAMES=bank.NAMES
 
 def read(url,headers=None):
-    # Fixed API endpoints only; redirects are not followed with API credentials.
+    # Public oEmbed reader. API credentials belong only to source_api.request.
+    if headers:raise ValueError('Public source reader refuses credentials')
     from schedule_feed import NoRedirect
     req=urllib.request.Request(url,headers={'User-Agent':'IsegyeFanArchive/1.0',**(headers or {})})
     with urllib.request.build_opener(NoRedirect).open(req,timeout=18) as response:
@@ -51,18 +53,32 @@ def verify(row,fetch=read):
     if len(bank.norm(row['title']))<2 or bank.norm(row['title']) not in bank.norm(d.get('title','')):raise ValueError('Title mismatch')
     return {'member':row['owner']}
 
-def discover_references(fetch=read):
+def search_json(url,headers=None):
+    # Reuse the site's migrated API HUB transport: fixed host/path, no redirects,
+    # NCP header allowlist and sanitized HTTP error codes. Never use legacy OpenAPI.
+    return json.loads(source_api.request(url,headers=headers))
+
+def discover_references(fetch=search_json,env=None):
     seeds=['21721901','21741748'];found={i:{'url':'https://cafe.naver.com/steamindiegame/'+i,'title':'기존 참고 글'} for i in seeds};errors=[]
-    keys=[os.getenv(k,'') for k in ('ISEGYE_NAVER_CLIENT_ID','ISEGYE_NAVER_CLIENT_SECRET')]
+    env=os.environ if env is None else env
+    keys=[env.get(k,'').strip() for k in ('ISEGYE_NAVER_CLIENT_ID','ISEGYE_NAVER_CLIENT_SECRET')]
     if not all(keys):return found,['naver_search_not_configured']
+    if not all(33<=ord(char)<=126 for char in ''.join(keys)):
+        return found,['naver_search_invalid_key_format']
     for query in ('왁물원 이세돌 퀴즈 정답','이세계아이돌 문제 답안'):
         try:
-            data=fetch('https://openapi.naver.com/v1/search/cafearticle.json?'+urlencode({'query':query,'display':10,'start':1,'sort':'date'}),dict(zip(('X-Naver-Client-Id','X-Naver-Client-Secret'),keys)))
-            if not isinstance(data.get('items'),list):raise ValueError('Search schema')
+            url=source_api.NAVER_SEARCH_URL+'?'+urlencode({'query':query,'display':10,'start':1,'sort':'date','format':'json'})
+            data=fetch(url,dict(zip(source_api.NAVER_SEARCH_HEADER_NAMES,keys)))
+            if not isinstance(data,dict) or not isinstance(data.get('items'),list) or len(data['items'])>10:raise ValueError('Search schema')
             for item in data['items']:
-                match=re.fullmatch(r'https://(?:m\.)?cafe\.naver\.com/steamindiegame/(\d+)',item.get('link',''))
-                if match:found.setdefault(match[1],{'url':'https://cafe.naver.com/steamindiegame/'+match[1],'title':re.sub('<[^>]*>','',item.get('title',''))[:140]})
-        except Exception as e:errors.append('naver_search_'+type(e).__name__)
+                if not isinstance(item,dict):raise ValueError('Search item schema')
+                canonical=source_api.source_url(item.get('link',''))
+                match=re.fullmatch(r'https://cafe\.naver\.com/steamindiegame/(\d{1,12})',canonical or '')
+                if match:found.setdefault(match[1],{'url':canonical,'title':source_api.text(item.get('title',''),140)})
+        except Exception as e:
+            # Persist bounded diagnostic codes, never bodies, headers or key values.
+            reason=str(e) if isinstance(e,source_api.FeedError) and re.fullmatch(r'http_\d{3}(?:_api_[a-zA-Z0-9]+)?',str(e)) else type(e).__name__
+            errors.append('naver_search_'+reason)
     return found,errors
 
 def check_reference_bodies(found,previous,now):

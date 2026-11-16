@@ -1,0 +1,69 @@
+name: Playground - question bank source checks
+on:
+  push:
+    branches: [main, 'feature/playground']
+    paths:
+      - scripts/collect_playground.py
+      - scripts/playground_bank.py
+      - scripts/publish_playground_bank.py
+      - tests/test_playground_bank.py
+      - .github/workflows/playground-bank-checks.yml
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: playground-bank-checks-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.repository == 'seirian/isegye-idol-fansite'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Test source endpoints, credential boundaries, deduplication and recovery
+        run: python -m unittest discover -s tests -p test_playground_bank.py -v
+      - name: Check existing API HUB without hosting credentials
+        env:
+          ISEGYE_NAVER_CLIENT_ID: ${{ secrets.ISEGYE_NAVER_CLIENT_ID }}
+          ISEGYE_NAVER_CLIENT_SECRET: ${{ secrets.ISEGYE_NAVER_CLIENT_SECRET }}
+        run: |
+          python - <<'PY'
+          import sys,json,os
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          import collect_playground as c
+          found,errors=c.discover_references()
+          report={'status':'searched' if not errors else 'failed','errors':errors,'candidateCount':len(found),'endpoint':'NAVER API HUB','hostingAccessed':False,'questionsPublished':False}
+          Path('playground-search-check.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(report,ensure_ascii=False))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('놀이터 검색 API: '+report['status']+' · 후보 '+str(len(found))+'건. 원문 게시·서버 변경 없음.\n')
+          if errors:raise SystemExit(1)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-search-${{ github.run_id }}-${{ github.run_attempt }}
+          path: playground-search-check.json
+          retention-days: 30
+  refresh:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {contents: read, actions: write}
+    steps:
+      - name: Request the existing main-only daily batch after successful source checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          token=os.environ.pop('GH_TOKEN')
+          url='https://api.github.com/repos/seirian/isegye-idol-fansite/actions/workflows/playground-daily.yml/dispatches'
+          req=urllib.request.Request(url,method='POST',data=json.dumps({'ref':'main'}).encode(),headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'})
+          with urllib.request.urlopen(req,timeout=30) as response:
+              if response.status!=204:raise SystemExit('Daily batch dispatch rejected')
+          print('Requested existing main-only playground daily workflow; publication guards unchanged.')
+          PY
