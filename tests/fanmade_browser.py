@@ -34,7 +34,8 @@ try:
   check('original unregistered clearly disabled',page.locator('.detail-info button.primary').is_disabled())
   check('gallery has three frames',page.locator('[data-index]').count()==3)
   page.locator('[data-frame][data-delta="1"]').click();expect(page.locator('[data-index="1"]')).to_have_attribute('aria-pressed','true')
-  page.locator('[data-zoom]').click();expect(page.locator('#zoom')).to_be_visible();page.keyboard.press('ArrowRight');check('zoom supports keyboard gallery', '3 / 3' in page.locator('#zoom .frame-controls').inner_text());page.keyboard.press('Escape');expect(page.locator('#zoom')).not_to_be_visible();check('zoom focus returns to work',page.locator('[data-zoom]').evaluate('(e)=>e===document.activeElement'))
+  # Native dialog close is queued; wait for the focus-restoration handler, not merely removal of `open`.
+  page.locator('[data-zoom]').click();expect(page.locator('#zoom')).to_be_visible();page.keyboard.press('ArrowRight');check('zoom supports keyboard gallery', '3 / 3' in page.locator('#zoom .frame-controls').inner_text());page.keyboard.press('Escape');expect(page.locator('#zoom')).not_to_be_visible();expect(page.locator('[data-zoom]')).to_be_focused();check('zoom focus returns to work',page.locator('[data-zoom]').evaluate('(e)=>e===document.activeElement'))
   page.locator('.detail-actions [data-save]').click();expect(page.locator('.detail-actions [data-save]')).to_have_attribute('aria-pressed','true')
   page.locator('.detail-actions [data-save]').click();expect(page.locator('.detail-actions [data-save]')).to_have_attribute('aria-pressed','false');page.locator('.detail-actions [data-save]').click()
   page.locator('[data-share]').click();expect(page.locator('#share')).to_be_visible();check('share uses deep link',page.locator('#share-url').input_value().endswith('#/work/small-stage'));page.keyboard.press('Escape')
