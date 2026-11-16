@@ -48,7 +48,7 @@ def publish(remote,candidate,discovery,references):
             by={q['id']:q for q in candidate['catalog']['questions']}
             d.require(all(by.get(q['id'])==q for q in old['catalog']['questions']),'Existing question changed or removed')
             d.require(all(candidate['catalog']['sources'].get(k)==v for k,v in old['catalog']['sources'].items()),'Existing evidence changed')
-        raw=bank.encoded(candidate);rraw=bank.encoded(references)
+        raw=bank.published_bytes(candidate);rraw=bank.encoded(references)
         d.require(len(raw)<=5000000 and len(rraw)<=400000,'Snapshot size')
         d.require(remote.read(d.ROOT+'/.htaccess')==router,'Concurrent production deployment')
         if previous:remote.replace(path('previous.json'),previous,remote.read(path('previous.json')));remote.s.chmod(path('previous.json'),0o600)
