@@ -1,6 +1,6 @@
 """Real HTTP tests of the integrated operating app (not the standalone preview)."""
 from pathlib import Path
-import http.server,socketserver,threading,json,os,sys
+import http.server,socketserver,threading,json,os,sys,hashlib
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
 import playground_bank as bank
@@ -35,8 +35,17 @@ try:
   page.screenshot(path=str(OUT/'home-1440.png'),full_page=True)
   page.locator('[data-start=daily]').click();expect(page.locator('[data-answer]')).to_have_count(4)
   check('production deep link',page.url.endswith('#/playground/play'))
-  page.locator('[data-action=hint]').click();expect(page.locator('.notice.hint')).to_be_visible()
-  page.locator('[data-answer]').first.click();expect(page.locator('[data-action=next]')).to_be_visible();page.reload(wait_until='networkidle');expect(page.locator('[data-action=next]')).to_be_visible()
+  page.locator('[data-action=hint]').click();expect(page.locator('[data-action=hint]')).to_be_disabled()
+  current=page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1'))")
+  expected_hint=next(q['hint'] for q in feed['catalog']['questions'] if q['id']==current['session']['ids'][0])
+  expect(page.get_by_text(expected_hint,exact=False).last).to_be_visible()
+  page.locator('[data-answer]').first.click();expect(page.locator('[data-action=next]')).to_be_visible()
+  before_reload=page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1'))")
+  (OUT/'resume-before.json').write_text(json.dumps(before_reload,ensure_ascii=False,indent=2))
+  check('answered round persisted before reload',len(before_reload['session']['answers'])==1)
+  page.reload(wait_until='networkidle')
+  (OUT/'resume-after.json').write_text(page.evaluate("localStorage.getItem('isegye:playground:v1')||'null'"))
+  expect(page.locator('[data-action=next]')).to_be_visible()
   check('production resume survives reload',page.locator('.feedback').count()==1)
   for i in range(5):
    if i:page.locator('[data-action=skip]').click()
@@ -60,5 +69,11 @@ try:
   ctx3=b.new_context();ctx3.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new DOMException('blocked','SecurityError')}})");p3=ctx3.new_page();p3.route('**/api/**',apis);p3.route('https://**',lambda r:r.abort());p3.goto(url+'/#/playground');p3.locator('[data-start=daily]').click();p3.locator('[data-answer]').first.click();p3.locator('.pg-tools a[href="#/playground/records"]').click();p3.locator('.pg-tools a[href="#/playground"]').click();p3.locator('a[href="#/playground/play"]').first.click();expect(p3.locator('.feedback')).to_be_visible();check('blocked storage preserves in-tab play across menu routes',True);ctx3.close()
   b.close()
 finally:
+ try:
+  if 'page' in locals() and not page.is_closed():
+   (OUT/'failure-dom.html').write_text(page.content());(OUT/'failure-playground.html').write_text(page.locator('.playground-component').evaluate('(e)=>e.shadowRoot.innerHTML'))
+ except Exception:pass
+ (OUT/'compiled-playground.js').write_bytes((ROOT/'dist/src/playground.js').read_bytes())
+ (OUT/'source-hashes.json').write_text(json.dumps({n:hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in ('playground/app.js','playground/core.js','site/playground-runtime.js','dist/src/playground.js')},indent=2))
  server.shutdown();(OUT/'browser.json').write_text(json.dumps({'mode':'real HTTP operating SPA','checks':checks},ensure_ascii=False,indent=2))
 print(json.dumps({'passed':len(checks),'mode':'HTTP production'}))
