@@ -67,7 +67,7 @@ def build(out=None):
     html=(out/'index.html').read_text();html=one(html,'<script src="src/app.js"></script>','<script src="src/playground.js"></script><script src="src/app.js"></script>');(out/'index.html').write_text(html)
     for name in ('production-ui.js','public-production-ui.js'):
         p=out/'src'/name;s=p.read_text();s=one(s,'<h2>검색과 개인 설정</h2>','<h2><a href="#/playground">놀이터</a></h2><p>오늘의 다섯 문제, 주제별 퀴즈와 발매 순서 게임을 즐길 수 있습니다. 플레이 기록은 이 브라우저에만 보관합니다.</p><h2>검색과 개인 설정</h2>');p.write_text(s)
-    meta['playground']={'schemaVersion':1,'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'route':'/#/playground','readEndpoint':'/api/playground','seedVersion':seed['version'],'seedQuestions':len(seed['questions']),'storageKey':'isegye:playground:v1','dailySchedule':'매일 07:37 Asia/Seoul','seedSha256':hashlib.sha256((out/'src/playground-seed.json').read_bytes()).hexdigest()}
+    meta['playground']={'schemaVersion':1,'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'route':'/#/playground','readEndpoint':'/api/playground','seedVersion':seed['version'],'seedQuestions':len(seed['questions']),'storageKey':'isegye:playground:v1','dailySchedule':'매일 08:00 Asia/Seoul','seedSha256':hashlib.sha256((out/'src/playground-seed.json').read_bytes()).hexdigest()}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     for n in ('app.js','playground.js','playground-admin.js'):subprocess.run(['node','--check',str(out/'src'/n)],check=True)
     print(json.dumps({'status':'playground_composed','route':'/#/playground','seedQuestions':len(seed['questions'])}))
