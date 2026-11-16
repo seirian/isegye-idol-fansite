@@ -13,7 +13,11 @@
   function node(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = String(text); if (cls) e.className = cls; return e; }
   function badge(state, text) { return node('span', text || labels[state] || labels.unknown, 'badge '+(labels[state] ? state : 'unknown')); }
   function isStale() { return !data || failed || Date.now()-Date.parse(data.checkedAt) > data.staleAfterSeconds*1000 || Date.parse(data.checkedAt)>Date.now()+120000; }
-  function state(row) { return isStale() ? 'unknown' : row.state; }
+  function rowExpired(row) {
+    // A fresh snapshot of the previous slot is not evidence for a new slot.
+    return isStale() || (!!row.nextDueAt && Date.now() >= Date.parse(row.nextDueAt)+(row.key==='watchdog'?300000:0));
+  }
+  function state(row) { return rowExpired(row) ? 'unknown' : row.state; }
   function runBadge(run) {
     if (!run) return badge('unknown','실행 기록 없음');
     if (active.has(run.status)) return badge('running',run.status==='in_progress'?'실행 중':'대기 중');
@@ -25,17 +29,22 @@
     const a = node('a',text,'external'); a.href=url; a.target='_blank'; a.rel='noopener noreferrer'; return a;
   }
   function health() {
-    const el=$('health'); el.classList.toggle('warn',isStale());
+    const el=$('health'); const slotChanged=!!data&&data.batches.some(rowExpired);
+    el.classList.toggle('warn',isStale()||slotChanged);
     if (!data) { el.textContent=failed?'상태 조회에 실패했습니다. 정상 여부를 확인할 수 없습니다.':'모니터링 자료를 확인하고 있습니다.'; return; }
     const age=Math.max(0,Math.floor((Date.now()-Date.parse(data.checkedAt))/60000));
-    el.textContent=(isStale()?'⚠ 최신 상태 확인 필요 · ':'● 마지막 자료 확인 · ')+date(data.checkedAt)+` · ${age}분 전`+(failed?' · 조회 실패, 이전 자료를 참고용으로 표시합니다.':isStale()?' · 45분 이상 지난 자료이거나 시각이 유효하지 않습니다. 정상으로 판정하지 않습니다.':' · 실행 기록과 게시 증거를 대조했습니다.');
+    el.textContent=((isStale()||slotChanged)?'⚠ 최신 상태 확인 필요 · ':'● 마지막 자료 확인 · ')+date(data.checkedAt)+` · ${age}분 전`+(failed?' · 조회 실패, 이전 자료를 참고용으로 표시합니다.':isStale()?' · 오래되었거나 시각이 유효하지 않은 자료입니다. 정상으로 판정하지 않습니다.':slotChanged?' · 새 예정 회차가 도래한 항목은 재확인 전까지 확인 불가로 표시합니다.':' · 실행 기록과 게시 증거를 대조했습니다.');
   }
   function render() {
-    health(); if (!data) return;
+    health();
+    if (!data) {
+      if(failed){$('rows').replaceChildren();const tr=node('tr');const td=node('td','자료 조회에 실패했습니다. 로그인 상태와 접근 권한을 확인한 뒤 다시 읽어 주세요.','empty');td.colSpan=7;tr.append(td);$('rows').append(tr);}
+      return;
+    }
     $('total').textContent=data.batches.length+'개'; $('summary').replaceChildren();
     for (const key of ['healthy','running','attention','paused','unknown']) {
       const el=node('div',undefined,'metric'); el.dataset.state=key;
-      el.append(node('span',labels[key],'label'),node('strong',data.batches.filter(r=>state(r)===key).length),node('small',key==='healthy'?'현재 회차 증거 기준':key==='unknown'?'오래된 자료·조회 실패 포함':'실행·반영을 함께 확인'));
+      el.append(node('span',labels[key],'label'),node('strong',data.batches.filter(r=>state(r)===key).length),node('small',key==='healthy'?'현재 회차 증거 기준':key==='unknown'?'새 회차·오래된 자료 포함':'실행·반영을 함께 확인'));
       $('summary').append(el);
     }
     const total=node('div',undefined,'metric'); total.append(node('span','전체 모니터링','label'),node('strong',data.batches.length),node('small','수집 6 · 배포 1 · 복구 1')); $('summary').append(total);
@@ -44,8 +53,8 @@
     $('rows').replaceChildren();
     for (const row of rows) {
       const tr=node('tr'); const name=node('td'); name.append(node('strong',row.name),node('small',row.schedule));
-      const run=node('td'); run.append(runBadge(row.run)); if(isStale())run.append(node('small','마지막 조회 당시 상태'));
-      const pub=node('td'); pub.append(badge(isStale()?'unknown':row.dataState));
+      const run=node('td'); run.append(runBadge(row.run)); if(rowExpired(row))run.append(node('small','마지막 조회 당시 상태'));
+      const pub=node('td'); pub.append(badge(rowExpired(row)?'unknown':row.dataState));
       if (row.historicalGapCount) pub.append(node('small',`과거 관측 공백 ${row.historicalGapCount}시간`));
       if (row.lastVerifiedAt) pub.append(node('small','재조회 '+date(row.lastVerifiedAt)));
       const due=node('td',row.dueAt?date(row.dueAt):'이벤트 기준'); due.append(node('small','다음 '+(row.nextDueAt?date(row.nextDueAt):'이벤트 발생 시')));
@@ -82,9 +91,9 @@
   function openDetail(row,button){
     opener=button;$('detail-title').textContent=row.name;const body=$('detail-body');body.replaceChildren();
     body.append(node('p',row.note||'실행 결과와 현재 회차의 반영 증거를 확인합니다.','detail-note'));
-    if(isStale())body.append(node('p','오래되었거나 재조회에 실패한 자료입니다. 아래는 마지막 확인 당시의 기록입니다.','detail-note'));
+    if(rowExpired(row))body.append(node('p','새 예정 회차가 도래했거나 오래되었거나 재조회에 실패한 자료입니다. 아래는 마지막 확인 당시의 기록입니다.','detail-note'));
     const grid=node('dl',undefined,'detail-grid');
-    const fields=[['예정 주기',row.schedule],['이번 회차',date(row.dueAt)],['다음 예정',date(row.nextDueAt)],['마지막 자료 확인',date(row.checkedAt)],['실행 생성',date(row.run?.createdAt)],['실제 작업 시작',date(row.run?.jobStartedAt)],['수집 결과 생성',date(row.evidence?.generatedAt)],['게시 시각',date(row.evidence?.publishedAt)],['서버 재조회',date(row.evidence?.readbackAt)],['명시적 재조회 검증',row.evidence?.verifiedReadback===true?'검증됨':row.evidence?.verifiedReadback===false?'실패':'증거 없음'],['전체 실행 이력 조회',row.listingComplete?'완료':'불완전 · 최신 여부 확정 불가'],['대기 / 실행 소요',seconds(row.run?.queueSeconds)+' / '+seconds(row.run?.durationSeconds)]];
+    const fields=[['예정 주기',row.schedule],['자료 기준 회차',date(row.dueAt)],['다음 예정',date(row.nextDueAt)],['마지막 자료 확인',date(row.checkedAt)],['실행 생성',date(row.run?.createdAt)],['실제 작업 시작',date(row.run?.jobStartedAt)],['수집 결과 생성',date(row.evidence?.generatedAt)],['게시 시각',date(row.evidence?.publishedAt)],['서버 재조회',date(row.evidence?.readbackAt)],['명시적 재조회 검증',row.evidence?.verifiedReadback===true?'검증됨':row.evidence?.verifiedReadback===false?'실패':'증거 없음'],['전체 실행 이력 조회',row.listingComplete?'완료':'불완전 · 최신 여부 확정 불가'],['대기 / 실행 소요',seconds(row.run?.queueSeconds)+' / '+seconds(row.run?.durationSeconds)]];
     for(const [key,value] of fields){const div=node('div');div.append(node('dt',key),node('dd',value));grid.append(div);}body.append(grid);
     body.append(safeLink(row.run?.url,'GitHub 실행·원본 로그 열기 ↗'));
     if(row.evidenceRun && row.evidenceRun.id!==row.run?.id){body.append(node('p','데이터 반영의 근거는 별도 성공 실행입니다.','muted'),safeLink(row.evidenceRun.url,'게시 검증 근거 실행 ↗'));}
