@@ -1,0 +1,66 @@
+name: REBELS reviewed repair staging
+on:
+  push:
+    branches: ['fix/rebels-melon-backfill-20261116']
+    paths: ['.github/workflows/rebels-stage.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0 tinycss2==1.4.0
+      - name: Reproduce exact reviewed facts and attribution from fixed evidence hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/rebels_stage.py
+      - name: Run complete unit regression and baseline audit without credentials
+        run: |
+          npm test > rebels-stage-js.log
+          python -m unittest discover -s tests -p 'test_*.py' -v > rebels-stage-python.log 2>&1
+          python scripts/rebels_melon_backfill.py audit --snapshot rebels-baseline-evidence.json
+          python - <<'PY'
+          import json
+          x=json.load(open('rebels-backfill-report.json'))
+          assert x['addedPoints']==172 and not x['conflicts'] and x['otherTracksUnchanged'] and x['sourceClocksUnchanged']
+          assert x['charts']['melon_top100']['after']['verifiedSlots']==159
+          assert x['charts']['melon_hot100']['after']['verifiedSlots']==125
+          PY
+      - name: Prepare clean tree only; never move a branch or access production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          import json,os,hashlib
+          base='https://api.github.com/repos/seirian/isegye-idol-fansite'
+          def api(path,data=None):
+              body=json.dumps(data).encode() if data is not None else None
+              req=Request(base+path,data=body,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+              with urlopen(req,timeout=30) as r:return json.load(r)
+          expected='c92169038fecbb8ee952856417d89e6cce0c3e51'
+          assert api('/git/ref/heads/main')['object']['sha']==expected,'Main advanced; manual reconciliation required'
+          hashes={'albums/backfills/rebels-20261116.json':'7f0d257f5c8c921b8573425cde384387c20b30e7a3af82e553dacf74741e5e6e','scripts/rebels_melon_backfill.py':'f800b726e3fd4443535a695285314810603210eddb08b7ce9db4ea3c08906bf4','scripts/daily_albums.py':'12ed925dcaa44265430865d5e7d114bbadb2d36a2fdb4813b90bd5580d2cca76','albums/flow.js':'279b48b9c4ec7b46972a015666637a3e42adb752f6a6964dc9271aa6ba7278aa','albums/flow-view.js':'a2d55475b644641b1bae85471e3c37dce29006a251576ba5854331782281199e','albums/accepted.json':'2317a52ef01a9852f6693c4d490c2652f20387810243ec64118bde2e2e13be47','tests/test_rebels_melon_backfill.py':'7badded297355433484afb5e40e905fe06fbd16fa343fb48b2c165845518046f','tests/rebels-backfill.test.js':'22417c2851854a3322cc865e54475aad5a736a9ff4b22bf17cda1b8cba1b1527','docs/REBELS_BACKFILL_20261116.md':'07b18ea86fb5e8acd8b0dec84c784c2de2028e40746bb7cf3a9bfcc6312f57e0'}
+          rows=[]
+          for path,sha in hashes.items():
+              raw=Path(path).read_bytes();assert hashlib.sha256(raw).hexdigest()==sha,path+' hash differs'
+              rows.append({'path':path,'mode':'100644','type':'blob','content':raw.decode()})
+          tree=api('/git/trees',{'base_tree':'6c68f10ac62dd47e24da9d46bdc5fe68fa915e71','tree':rows})
+          report={'baseCommit':expected,'tree':tree['sha'],'fileHashes':hashes,'productionTouched':False,'testsPassed':True,'baselineAdded':172}
+          Path('rebels-stage-tree.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: rebels-reviewed-tree-${{ github.run_id }}
+          path: |
+            rebels-stage-tree.json
+            rebels-stage-js.log
+            rebels-stage-python.log
+            rebels-backfill-report.json
+          retention-days: 30
