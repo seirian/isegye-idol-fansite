@@ -169,6 +169,12 @@ def collect(previous):
     data = domestic_collect(data, previous, chart_kinds=KINDS)
     data = records_collect(data, previous)
     data = preserve(previous, data)
+    # Finite REBELS-only repair; pinned local facts, never a recurring external crawl.
+    from rebels_melon_backfill import apply as repair_rebels, END as repair_cutoff
+    identity = data.get('tracks', {}).get('rebels', {}).get('melon', {})
+    if (identity.get('trackId') == '603813508' and identity.get('albumId') == '15120216'
+            and clock(data['generatedAt']) >= repair_cutoff):
+        repair_rebels(data, at=clock(data['generatedAt']))
     data['scope'] = 'production album observations; hourly refresh outside KST 01:00-06:59'
     data.pop('publication', None)
     data.pop('hourlyCoverage', None)

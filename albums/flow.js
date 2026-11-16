@@ -89,3 +89,20 @@ export function albumFreeServiceStatus(provider, item={}, providers={}, now=Date
   if(p.state==='error') return {state:'error',label:'일시적 연결 실패',detail:'공개 검색 API 재시도 · 결제나 인증키 불필요'};
   return {state:'unmatched',label:'곡 매칭 대기',detail:'미국 카탈로그의 동일 음원을 확인 중입니다'};
 }
+
+// A fixed, song-specific historical source. Never accept arbitrary feed URLs.
+export function albumHistoricalReference(item, kind) {
+  const h=item?.melonHistoricalBackfill;
+  if(!h || h.schemaVersion!==1 || h.sourceType!=='guyso_public_historical'
+      || h.trackId!=='603813508' || h.albumId!=='15120216'
+      || item?.melon?.trackId!==h.trackId || item?.melon?.albumId!==h.albumId
+      || !/^[a-f0-9]{64}$/.test(h.datasetSha256||''))return null;
+  const slug={melon_top100:'top100',melon_hot100:'hot100-d100'}[kind];
+  if(!slug)return null;
+  const url=`https://xn--o39an51b2re.com/chart/melon/${slug}/trend/ranking/603813508`;
+  const entry=h.charts?.[kind],from=Date.parse('2026-11-09T18:00:00+09:00'),to=Date.parse('2026-11-16T09:00:00+09:00');
+  if(entry?.source!==url || !Array.isArray(entry.at) || entry.at.length>160)return null;
+  const times=entry.at.map(Date.parse);
+  if(times.some(t=>!Number.isFinite(t)||t<from||t>to||t%3600000))return null;
+  return {url,times:new Set(times),label:'가이섬 대조·보완'};
+}
