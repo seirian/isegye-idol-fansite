@@ -4,7 +4,7 @@ IN_MEMORY=1 is a local DOM-only fallback, never used by CI or deployed.
 from pathlib import Path
 from functools import partial
 from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
-import json,os,re,sys,threading
+import json,os,re,sys,threading,time
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
 from compose_admin_visibility import POLICY,project
@@ -34,6 +34,14 @@ try:
   context=browser.new_context(viewport={'width':1440,'height':1000})
   context.route('**/*',lambda route:route.continue_() if route.request.url.startswith(url) else route.abort())
   page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)))
+  def wait_role(allowed):
+   # Poll from the test runner: wait_for_function uses page-side eval, which
+   # the production CSP correctly rejects. Never weaken CSP for a test.
+   deadline=time.monotonic()+10
+   while time.monotonic()<deadline:
+    if page.evaluate('() => IsegyeOps.allowed()') is allowed:return
+    page.wait_for_timeout(50)
+   raise AssertionError('Administrator visibility did not become '+str(allowed))
   def mount(role,route='status'):
    state.update(role=role,fail=False)
    if not MEMORY:
@@ -55,8 +63,10 @@ try:
      if relative=='src/app.js':
       code=code.replace("!/^https?:$/.test(location.protocol)",'false').replace("await import('/src/admin-operations.js')","await Promise.resolve({createViews:window.__adminFixtureFactory})")
      page.add_script_tag(content=code)
+    # The fixture installs scripts individually; retry after runtime-feeds has loaded.
+    page.evaluate("window.dispatchEvent(new Event('focus'))")
    expect(page.locator('#main h1')).to_be_visible()
-   if role=='admin':page.wait_for_function('IsegyeOps.allowed()===true')
+   if role=='admin':wait_role(True)
    else:page.wait_for_timeout(80)
   def go(route):
    page.evaluate('(r)=>{location.hash="#/"+r;render()}',route)
@@ -105,14 +115,14 @@ try:
   state['fail']=True
   if MEMORY:page.evaluate('window.__fixtureFail=true')
   page.evaluate("window.dispatchEvent(new Event('focus'))")
-  page.wait_for_function('IsegyeOps.allowed()===false')
+  wait_role(False)
   check('status request failure removes privileged markup',page.locator('[data-admin-only]').count()==0)
   state['fail']=False
   if MEMORY:page.evaluate('window.__fixtureFail=false')
-  page.evaluate("window.dispatchEvent(new Event('focus'))");page.wait_for_function('IsegyeOps.allowed()===true')
+  page.evaluate("window.dispatchEvent(new Event('focus'))");wait_role(True)
   state['role']='member'
   if MEMORY:page.evaluate("window.__fixtureRole='member'")
-  page.evaluate("window.dispatchEvent(new Event('focus'))");page.wait_for_function('IsegyeOps.allowed()===false')
+  page.evaluate("window.dispatchEvent(new Event('focus'))");wait_role(False)
   check('role loss removes admin diagnostics',page.locator('[data-admin-only]').count()==0)
   go('song/cat-save-world?demo=1');check('expired administrator cannot keep example graph',page.locator('.ai-demo').count()==0)
   go('series/music-beginning');check('six official introductory videos preserved',page.locator('[data-music-beginning-video]').count()==6)
