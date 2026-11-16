@@ -40,13 +40,15 @@ try:
     content={k:metrics('#main .page-heading '+sel) for k,sel in [('title','h1'),('label','.eyebrow'),('description','h1+p')]}
     go('playground');expect(page.locator('.playground-component h1')).to_have_text('놀이터');page.wait_for_timeout(100)
     pg={k:metrics('.playground-component .page-heading '+sel) for k,sel in [('title','h1'),('label','.eyebrow'),('description','h1+p')]}
+    (OUT/f'heading-{width}-{theme}.json').write_text(json.dumps({'content':content,'playground':pg,'rootTheme':page.evaluate('document.documentElement.dataset.theme')},ensure_ascii=False,indent=2))
+    page.screenshot(path=str(OUT/f'home-{width}-{theme}.png'),full_page=True)
+    check(f'{width} {theme} persisted theme',page.evaluate('document.documentElement.dataset.theme')==theme)
     for k in content:
      for prop in ('top','left'):check(f'{width} {theme} {k} {prop}',abs(content[k][prop]-pg[k][prop])<0.6)
      for prop in ('font','size','weight','line','spacing','color'):check(f'{width} {theme} {k} {prop}',content[k][prop]==pg[k][prop])
-    (OUT/f'heading-{width}-{theme}.json').write_text(json.dumps({'content':content,'playground':pg},ensure_ascii=False,indent=2))
     check(f'{width} {theme} no overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
     check('top tools removed',page.locator('.pg-tools').count()==0)
-    check('80 baseline visible','80개 문항' in page.locator('.playground-component').inner_text())
+    check('80 baseline visible','80개 문항' in page.locator('.playground-component .card .bottom').first.inner_text())
     page.screenshot(path=str(OUT/f'home-{width}-{theme}.png'),full_page=True)
   check('guest has no reference footer',page.locator('.pg-admin-footer').count()==0)
   check('guest never downloaded reference module','/src/playground-admin.js' not in requests)
