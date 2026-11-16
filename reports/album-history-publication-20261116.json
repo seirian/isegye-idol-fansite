@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "status": "published",
+  "verifiedReadback": true,
+  "checkedAtKst": "2026-11-16T12:07:17.764460+09:00",
+  "sourceCutoffKst": "2026-11-16T10:00:00+09:00",
+  "commit": "20aede7ca2b821d155f528e6a9853e1903b28975",
+  "release": "r4be351f229e7",
+  "productionRunId": 43793607537,
+  "ciRunId": 43793678621,
+  "publicationRunId": 43796108582,
+  "publicationArtifactId": 14194800771,
+  "publicationArtifactSha256": "d5db57467d37e3e0b20fc52c291bd7bfdc0d0198729de11528aee92530d018aa",
+  "datasetSha256": "c617afafca19b5c1f3f33225d29472ef12861f809b19bf78746aa14eeec12801",
+  "beforeSha256": "5a28d1819e2e9544fb214484fa4e1e5b94cb3cc3265297a182e423c6665fc2fc",
+  "afterSha256": "d4cf1fe0cc21c95dbc497cc0aa47a65a34f05803961a68521ac186d669d88e6e",
+  "scope": {
+    "registeredAlbumWorks": 16,
+    "searchedTitles": 26,
+    "matchedMelonTracks": 24,
+    "matchedMelonAlbums": 14,
+    "charts": ["melon_top100", "melon_hot100"],
+    "start": "Each individually verified song release timestamp",
+    "hot100Boundary": "First 100-day eligible period, inspected through day 101 conservatively"
+  },
+  "addedHistoricalSlots": 29349,
+  "rollingAdded": 2772,
+  "rollingIsSubsetOfHistoricalAdditions": true,
+  "permanentVerifiedSlotsAfter": 31455,
+  "existingValidObservationsIndependentlyPreserved": 3146,
+  "conflicts": [],
+  "sourceClocksUnchanged": true,
+  "unrelatedFieldsUnchanged": true,
+  "routingUnchanged": true,
+  "accountStoreReadOrWritten": false,
+  "collectionGeneratedAtUnchanged": "2026-11-16T02:20:23.731639+00:00",
+  "charts": {
+    "melon_top100": {"addedHistoricalSlots": 4893, "rollingAdded": 1113, "verifiedSlotsAfter": 6459},
+    "melon_hot100": {"addedHistoricalSlots": 24456, "rollingAdded": 1659, "verifiedSlotsAfter": 24996}
+  },
+  "albums": [
+    {"album": "RE : WIND", "tracks": 1, "top100Added": 141, "hot100Added": 0, "totalAdded": 141},
+    {"album": "겨울봄", "tracks": 1, "top100Added": 127, "hot100Added": 0, "totalAdded": 127},
+    {"album": "KIDDING", "tracks": 1, "top100Added": 2494, "hot100Added": 1905, "totalAdded": 4399},
+    {"album": "Misty Rainbow", "tracks": 1, "top100Added": 92, "hot100Added": 1088, "totalAdded": 1180},
+    {"album": "Stargazers", "tracks": 3, "top100Added": 212, "hot100Added": 2750, "totalAdded": 2962},
+    {"album": "Be My Light", "tracks": 2, "top100Added": 468, "hot100Added": 3713, "totalAdded": 4181},
+    {"album": "화이트 (White)", "tracks": 1, "top100Added": 127, "hot100Added": 1905, "totalAdded": 2032},
+    {"album": "Smile For You", "tracks": 1, "top100Added": 99, "hot100Added": 1450, "totalAdded": 1549},
+    {"album": "마법소녀 이세계아이돌 OST", "tracks": 1, "top100Added": 372, "hot100Added": 1905, "totalAdded": 2277},
+    {"album": "차원을 넘어 이세계아이돌 OST", "tracks": 1, "top100Added": 160, "hot100Added": 1860, "totalAdded": 2020},
+    {"album": "이세계 페스티벌 2025 Theme Song", "tracks": 1, "top100Added": 53, "hot100Added": 1536, "totalAdded": 1589},
+    {"album": "이세계 페스티벌", "tracks": 2, "top100Added": 159, "hot100Added": 3620, "totalAdded": 3779},
+    {"album": "NO CAT, NO LIFE!", "tracks": 3, "top100Added": 146, "hot100Added": 2448, "totalAdded": 2594},
+    {"album": "Across Dimensions", "tracks": 5, "top100Added": 243, "hot100Added": 276, "totalAdded": 519}
+  ],
+  "excluded": [
+    {"sid": "but-you-want-more", "album": "But You Want More", "reason": "Currently registered video-only work without a verified linked Melon identity; unchanged"},
+    {"sid": "isegye-cypher", "album": "이세돌 싸이퍼", "reason": "Currently registered video-only work without a verified linked Melon identity; unchanged"}
+  ],
+  "rebels": {
+    "newObservationsInThisRun": 0,
+    "existingRepairPreserved": true,
+    "top100VerifiedSlots": 160,
+    "top100Unverified": ["2026-11-10T16:00:00+09:00"],
+    "hot100VerifiedSlots": 126,
+    "hot100UnverifiedHours": 35
+  },
+  "review": {
+    "periodPagesVerified": 531,
+    "periodPageFailures": 0,
+    "javascriptPassed": 286,
+    "pythonPassed": 717,
+    "pythonExistingConditionalSkip": 1,
+    "historicalBrowserAssertionsPassed": 59,
+    "actualDatasetArchiveDecodeChecksPassed": true,
+    "actualDatasetNinetyDayRetentionChecksPassed": true,
+    "actualDatasetDailyReuseChecksPassed": true,
+    "runtimeSameGeneratedAtAcceptanceChecksPassed": true,
+    "independentArtifactHashAndBeforeAfterChecksPassed": true,
+    "independentIdempotenceCheckPassed": true
+  },
+  "limitations": [
+    "Null trend cells were not treated as chart-out. Only exact-hour complete 100-song charts prove an out observation.",
+    "Unknown hours include source omissions, non-publication, eligibility boundaries and unproven chart-out. No complete all-hour history claim.",
+    "Historical archives are permanent and distinct from the rolling 30-day feed. Existing collection schedules remain unchanged.",
+    "No recurring third-party collection was added. Daily reuse reads the finite local reviewed dataset only after the UI-gated publication.",
+    "Final counts differ from the earlier baseline audit because the live feed continued to acquire verified records during the work."
+  ]
+}
