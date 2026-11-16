@@ -9,6 +9,7 @@ def once(old,new):
 once("OUT=ROOT/'test-results/auth'","OUT=ROOT/'test-results/batch-monitor'")
 once("str(ROOT/'tests/auth/fixture_router.php')","str(ROOT/'tests/review_host_fixture.php')")
 once("    signing=base/'signing.pem';cert=base/'cert.pem'",'''    sys.path.insert(0,str(ROOT/'scripts'));sys.path.insert(0,str(ROOT/'tests'))
+    from playwright.sync_api import expect
     from test_batch_monitor import fixture_snapshot
     from deploy_batch_monitor import release_payload
     from datetime import datetime,timedelta,timezone
@@ -52,14 +53,14 @@ once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]')
             check('monitor mobile has no page overflow',op.evaluate('document.documentElement.scrollWidth<=innerWidth'))
             op.set_viewport_size({'width':1440,'height':1000})
             op.route(url+'/ops/batches/data.json',lambda route:route.abort())
-            op.locator('#refresh').click();op.wait_for_function("document.querySelector('#health').textContent.includes('조회 실패')")
+            op.locator('#refresh').click();expect(op.locator('#health')).to_contain_text('조회 실패')
             check('monitor failed fetch not green',op.locator('#summary [data-state="healthy"] strong').inner_text()=='0')
             op.unroute(url+'/ops/batches/data.json')
             stale=fixture_snapshot(datetime.now(timezone.utc)-timedelta(hours=2));install_monitor(stale)
-            op.locator('#refresh').click();op.wait_for_function("document.querySelector('#summary [data-state=unknown] strong').textContent==='8'")
+            op.locator('#refresh').click();expect(op.locator('#summary [data-state="unknown"] strong')).to_have_text('8')
             check('monitor stale data never green',op.locator('#summary [data-state="healthy"] strong').inner_text()=='0')
             malicious=fixture_snapshot();malicious['batches'][0]['note']='<img src=x onerror=alert(1)>'
-            install_monitor(malicious);op.locator('#refresh').click();op.wait_for_function("!document.querySelector('#refresh').disabled")
+            install_monitor(malicious);op.locator('#refresh').click();expect(op.locator('#refresh')).to_be_enabled()
             op.locator('button[aria-label="음반 · 멜론 차트 상세"]').click()
             check('monitor report text cannot inject markup',op.locator('#detail img').count()==0)
             op.keyboard.press('Escape')

@@ -177,7 +177,6 @@ def run_view(run):
 def next_due(kind, at):
     if kind == 'production':
         return None
-    # Minute scan is bounded even for the weekly schedule and uses the existing policy.
     after = at.replace(second=0, microsecond=0)
     current = policy.due_slot(kind, at) if kind != 'watchdog' else None
     for minute in range(1, 10081):
@@ -190,6 +189,31 @@ def next_due(kind, at):
             if due is not None and due == candidate and due != current:
                 return iso(due)
     return None
+
+
+def watchdog_state(report, at):
+    checked = stamp(report['checkedAt'])
+    if checked > at+timedelta(minutes=2) or at-checked > timedelta(minutes=45):
+        return 'unknown'
+    state = report.get('state')
+    if state == 'paused':
+        return 'paused'
+    if state in ('attention', 'inspection_failed'):
+        return 'attention'
+    if state == 'pending':
+        return 'running'
+    if state != 'checked':
+        return 'unknown'
+    rows = report.get('batches')
+    if not isinstance(rows, list) or len(rows) != len(policy.SPECS):
+        return 'unknown'
+    if any(not isinstance(row, dict) for row in rows):
+        return 'unknown'
+    if {row.get('batch') for row in rows} != set(policy.SPECS):
+        return 'unknown'
+    if any(row.get('state') not in ('healthy','paused','night_pause','not_due') for row in rows):
+        return 'unknown'
+    return 'healthy'
 
 
 def row_state(row):
@@ -256,11 +280,8 @@ def inspect(kind, at, head, getter):
         row['evidenceRun'] = run_view(success)
         if kind == 'watchdog':
             report = extra_artifact(getter, success, 'batch-watchdog', 'batch-watchdog.json')
-            checked = stamp(report['checkedAt'])
-            row['evidence'] = {'checkedAt': iso(checked), 'status': report.get('state')}
-            row['dataState'] = ('unknown' if checked > at+timedelta(minutes=2) or at-checked > timedelta(minutes=45)
-                                else 'attention' if report.get('state') in ('attention', 'inspection_failed')
-                                else 'running' if report.get('state') == 'pending' else 'healthy')
+            row['evidence'] = {'checkedAt': iso(stamp(report['checkedAt'])), 'status': report.get('state')}
+            row['dataState'] = watchdog_state(report, at)
             row['note'] = '복구 점검 결과이며 개별 배치 게시 완료를 의미하지 않습니다.'
         elif kind == 'production':
             report = extra_artifact(getter, success, 'isegye-production', 'auth-deployment.json')
@@ -283,7 +304,6 @@ def inspect(kind, at, head, getter):
                        'playground':'playground-publication.json'}[kind]
             pub = files.get(pubname, {})
             good = policy.evidence_ok(kind, files, due, at)
-            # Legacy schedule reports are not explicit readback evidence for the UI.
             if kind == 'schedule' and pub.get('verifiedReadback') is not True:
                 good = False
             row['dataState'] = 'healthy' if good else 'attention'

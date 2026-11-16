@@ -34,7 +34,7 @@ jobs:
         run: |
           npm test
           /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_watchdog*.py' -v
-          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_monitor.py' -v
+          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_monitor*.py' -v
           php -l monitoring/BatchMonitor.php
           node --check monitoring/monitor.js
       - name: Build protected monitor without changing operating source
@@ -53,7 +53,6 @@ jobs:
   publish:
     needs: validate
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
-    # Test jobs never occupy the operating write queue. Every real write still does.
     concurrency:
       group: isegye-inour-production
       cancel-in-progress: false
