@@ -46,14 +46,18 @@ try:
    page.locator('[data-share-result]').click();expect(page.locator('#share')).to_be_visible();check('result shares operating route','https://isegye-idol.kr/#/playground' in page.locator('#share-text').input_value() and 'review-playground' not in page.locator('#share-text').input_value());page.locator('[data-action=close-share]').click()
    check('preview and bookmarks preserved',page.evaluate("localStorage.getItem('isegye:playground:review:v1')==='REVIEW_KEEP'&&localStorage.getItem('isegye:bookmarks:v1')==='BOOKMARK_KEEP'"))
    page.locator('.pg-tools a[href="#/playground/records"]').click();expect(page.locator('.record-row')).to_have_count(1)
-   page.locator('.desktop-nav a[href="#/music"]').click();expect(page.locator('#main h1')).to_be_visible();check('existing music still works','음악' in page.locator('#main').inner_text())
+   page.locator('.desktop-nav a[href="#/music"]').click()
+   expect(page.get_by_role('heading',name='한 곡에서 시작되는 이야기',exact=True)).to_be_visible()
+   expect(page.locator('.playground-component')).to_have_count(0)
+   check('existing music still works',page.locator('#music-q').count()==1)
    page.locator('.desktop-nav a[href="#/playground"]').click();expect(page.locator('[data-start=daily]')).to_be_visible()
    page.locator('[data-start=order]').click();expect(page.locator('[data-answer]')).to_have_count(2);page.locator('[data-answer]').first.click();check('order feedback distinguishes audio dates','국내 음원 발매' in page.locator('.feedback').inner_text())
    page.goto(url+'/#/playground/quiz');expect(page.locator('[data-category]')).to_have_count(5)
+   titles={'playground':'놀이터','playground/quiz':'좋아하는 주제부터','playground/play':'먼저 발매된 곡은 무엇일까요?','playground/records':'내 플레이 기록','playground/sources':'문항과 참고 자료'}
    for width in (320,390,768,1440):
     page.set_viewport_size({'width':width,'height':1000})
-    for route in ('playground','playground/quiz','playground/play','playground/records','playground/sources'):
-     page.goto(url+'/#/'+route);expect(page.locator('.playground-component')).to_be_visible();page.wait_for_timeout(120)
+    for route,title in titles.items():
+     page.goto(url+'/#/'+route);expect(page.locator('.playground-component h1')).to_have_text(title)
      check('no overflow '+str(width)+' '+route,page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
      if width in (390,1440) and route=='playground':page.screenshot(path=str(OUT/f'home-{width}.png'),full_page=True)
    check('no JavaScript runtime errors',not errors)
