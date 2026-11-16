@@ -1,0 +1,88 @@
+name: Album history reconciled main review
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/album-history-reconciled-review.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 14ce702cebb92d6d455b5a2fcdc06fc4d3f22afa
+          persist-credentials: false
+      - run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0 tinycss2==1.4.0 playwright==1.56.0
+      - name: Restore only the thirteen already-reviewed files by fixed artifact digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import sys,os,hashlib,json,zipfile,io
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from album_observation_archive import request,API
+          token=os.environ.pop('GH_TOKEN');raw=request(API+'/actions/artifacts/14192963474/zip',token,binary=True);token=None
+          if hashlib.sha256(raw).hexdigest()!='3d10e00589ff73a18707f4076b2dda2a14fb7607f732ddf4936f813978afe43a':raise ValueError('Changed reviewed artifact')
+          outer=zipfile.ZipFile(io.BytesIO(raw));inner=zipfile.ZipFile(io.BytesIO(outer.read('album-history-generated-files.zip')))
+          names=['.github/workflows/album-history-backfill.yml','albums/accepted.json','albums/backfills/catalog-20261116.json','albums/flow.js','albums/flow-view.js','albums/flow.css','docs/ALBUM_HISTORY_20261116.md','scripts/daily_albums.py','scripts/promote_albums.py','scripts/album_history_backfill.py','tests/album-history.test.js','tests/test_album_history_backfill.py','tests/albums_production_browser.py']
+          if sorted(inner.namelist())!=sorted(names):raise ValueError('Unexpected reviewed files')
+          for name in names:
+            item=inner.getinfo(name)
+            if item.file_size>4000000:raise ValueError('Oversized reviewed file')
+            p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(inner.read(item))
+          Path('album-history-reviewed-names.json').write_text(json.dumps(names))
+          for name in ['album-history-baseline-audit.json','album-history-review-summary.json','album-history-evidence-manifest.json']:
+            Path(name).write_bytes(outer.read(name))
+          PY
+      - name: Complete regression on the newer main catalog
+        run: |
+          npm test > album-history-js-tests.log 2>&1
+          python -m unittest discover -s tests -p 'test_*.py' -v > album-history-python-tests.log 2>&1
+      - name: Build unchanged current site with historical controls
+        env:
+          DEPLOY_ENV: preview
+          ISEGYE_BASELINE_ONLY: 'true'
+        run: |
+          python scripts/prepare_album_release.py
+          npm run build
+          python scripts/promote_review_2nd.py
+          python scripts/promote_albums.py
+      - run: bash scripts/ci_browser_install.sh python
+      - run: python tests/albums_production_browser.py
+      - name: Prepare detached exact tree; retain newer videos and never publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          import os,json,hashlib,zipfile
+          api='https://api.github.com/repos/seirian/isegye-idol-fansite';token=os.environ.pop('GH_TOKEN')
+          def call(path,data=None):
+            req=Request(api+path,data=json.dumps(data).encode() if data is not None else None,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'IsegyeHistoryReviewedTree/1.0'})
+            with urlopen(req,timeout=30) as r:return json.load(r)
+          base='14ce702cebb92d6d455b5a2fcdc06fc4d3f22afa'
+          if call('/git/ref/heads/main')['object']['sha']!=base:raise ValueError('Main changed; reconciliation required')
+          base_tree=call('/git/commits/'+base)['tree']['sha'];names=json.loads(Path('album-history-reviewed-names.json').read_text());entries=[];hashes={}
+          with zipfile.ZipFile('album-history-reviewed-files.zip','w',zipfile.ZIP_DEFLATED) as archive:
+            for name in names:
+              raw=Path(name).read_bytes();blob=call('/git/blobs',{'content':raw.decode(),'encoding':'utf-8'})['sha']
+              if blob!=hashlib.sha1(('blob '+str(len(raw))+'\0').encode()+raw).hexdigest():raise ValueError('Blob identity mismatch')
+              entries.append({'path':name,'mode':'100644','type':'blob','sha':blob});hashes[name]=hashlib.sha256(raw).hexdigest();archive.write(name,name)
+          tree=call('/git/trees',{'base_tree':base_tree,'tree':entries})['sha'];token=None
+          Path('album-history-reviewed-tree.json').write_text(json.dumps({'baseCommit':base,'baseTree':base_tree,'tree':tree,'entries':entries,'sha256':hashes},indent=2));print(json.dumps({'baseCommit':base,'tree':tree}))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: album-history-reconciled-${{ github.run_id }}
+          path: |
+            album-history-*.json
+            album-history-*.log
+            album-history-reviewed-files.zip
+            test-results/albums-production/
+          retention-days: 30
