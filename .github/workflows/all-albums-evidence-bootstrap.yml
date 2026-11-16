@@ -1,0 +1,43 @@
+name: All album historical source inspection
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/all-albums-evidence-bootstrap.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Export current source and inspect four public pages without secrets
+        run: |
+          mkdir -p album-evidence
+          git archive --format=zip --output=album-evidence/repository.zip HEAD
+          python - <<'PY'
+          from urllib.request import Request, urlopen
+          from pathlib import Path
+          import json, hashlib, time
+          base='https://xn--o39an51b2re.com'
+          paths=['/search/melon','/song/melon/34421197','/chart/melon/top100/trend/ranking/34421197?end=2022-01-16','/chart/melon/hot100-d100/trend/ranking/36710003?end=2023-09-17']
+          report=[]
+          for i,path in enumerate(paths):
+            url=base+path
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.2 (one-time historical verification)'}),timeout=25) as r:
+                raw=r.read(4000001); final=r.url
+              if len(raw)>4000000: raise ValueError('Response limit')
+              name=f'bootstrap-{i}.html';Path('album-evidence',name).write_bytes(raw)
+              report.append({'url':url,'finalUrl':final,'file':name,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+            except Exception as exc: report.append({'url':url,'error':type(exc).__name__})
+            time.sleep(1)
+          Path('album-evidence/report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: all-albums-bootstrap-${{ github.run_id }}
+          path: album-evidence/
+          retention-days: 7
