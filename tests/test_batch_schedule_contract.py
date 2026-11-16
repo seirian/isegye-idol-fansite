@@ -8,8 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 KST = timezone(timedelta(hours=9))
 EXPECTED = {
     'music-daily.yml': ('0 21 * * *', 7, lambda d: (d.hour, d.minute) == (6, 0)),
+    'playground-daily.yml': ('0 23 * * *', 7, lambda d: (d.hour, d.minute) == (8, 0)),
     'albums-daily.yml': ('0 0-15,22-23 * * *', 126, lambda d: d.minute == 0 and not 1 <= d.hour < 7),
-    'schedule-refresh.yml': ('5 * * * *', 168, lambda d: d.minute == 5),
+    'schedule-refresh.yml': ('5 1,3,5,7,9,11,13,15,17,19,21,23 * * *', 84, lambda d: d.hour % 2 == 0 and d.minute == 5),
     'history-monthly.yml': ('0 15 * * 6', 1, lambda d: d.weekday() == 6 and (d.hour, d.minute) == (0, 0)),
 }
 

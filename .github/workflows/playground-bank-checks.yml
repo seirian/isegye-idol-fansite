@@ -47,23 +47,3 @@ jobs:
           name: playground-search-${{ github.run_id }}-${{ github.run_attempt }}
           path: playground-search-check.json
           retention-days: 30
-  refresh:
-    needs: check
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    permissions: {contents: read, actions: write}
-    steps:
-      - name: Request the existing main-only daily batch after successful source checks
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python - <<'PY'
-          import json,os,urllib.request
-          token=os.environ.pop('GH_TOKEN')
-          url='https://api.github.com/repos/seirian/isegye-idol-fansite/actions/workflows/playground-daily.yml/dispatches'
-          req=urllib.request.Request(url,method='POST',data=json.dumps({'ref':'main'}).encode(),headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'})
-          with urllib.request.urlopen(req,timeout=30) as response:
-              if response.status!=204:raise SystemExit('Daily batch dispatch rejected')
-          print('Requested existing main-only playground daily workflow; publication guards unchanged.')
-          PY

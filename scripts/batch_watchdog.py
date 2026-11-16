@@ -37,7 +37,7 @@ MAX_RUN_PAGES = 20
 MAX_ARTIFACT_PAGES = 10
 COMPLETION_WORKFLOWS = {
     'Albums - hourly verified metadata and chart refresh': 'albums-daily.yml',
-    'Schedule - hourly permitted-source refresh': 'schedule-refresh.yml',
+    'Schedule - every 2 hours permitted-source refresh': 'schedule-refresh.yml',
     'Production - isolated inour SFTP deployment': 'production.yml',
 }
 ACTIVE = {'queued', 'pending', 'in_progress', 'waiting', 'requested'}
@@ -60,10 +60,11 @@ def due_slot(kind, at):
             return None
         return local.replace(minute=0, second=0, microsecond=0).astimezone(UTC)
     if kind == 'schedule':
-        due = local.replace(minute=5, second=0, microsecond=0)
-        return (due if due <= local else due-timedelta(hours=1)).astimezone(UTC)
+        # Anchor to even KST hours, not UTC parity; before :05 use the prior slot.
+        due = local.replace(hour=local.hour-local.hour%2, minute=5, second=0, microsecond=0)
+        return (due if due <= local else due-timedelta(hours=2)).astimezone(UTC)
     if kind in ('music', 'catalog','playground'):
-        hour, minute = (6, 0) if kind == 'music' else (7, 37) if kind == 'playground' else (7, 15)
+        hour, minute = (6, 0) if kind == 'music' else (8, 0) if kind == 'playground' else (7, 15)
         due = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
         return (due if due <= local else due-timedelta(days=1)).astimezone(UTC)
     if kind == 'history':

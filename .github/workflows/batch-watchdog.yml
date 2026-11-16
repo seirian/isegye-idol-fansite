@@ -8,7 +8,7 @@ on:
   workflow_run:
     workflows:
       - Albums - hourly verified metadata and chart refresh
-      - Schedule - hourly permitted-source refresh
+      - Schedule - every 2 hours permitted-source refresh
       - Production - isolated inour SFTP deployment
     types: [completed]
     branches: [main]
