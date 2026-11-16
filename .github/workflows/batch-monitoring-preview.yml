@@ -1,0 +1,79 @@
+name: Batch monitoring - protected read-only review
+on:
+  push:
+    branches: [feature/batch-monitoring]
+    paths:
+      - monitoring/**
+      - scripts/*batch_monitor*.py
+      - tests/*batch_monitor*.py
+      - .github/workflows/batch-monitoring-preview.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+  queue: max
+jobs:
+  preview:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
+    environment:
+      name: production
+      url: https://isegye-idol.kr/ops/batches/
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Respect existing production pause
+        env: {PRODUCTION_PAUSED: '${{ vars.PRODUCTION_PAUSED }}'}
+        run: test "$PRODUCTION_PAUSED" != true
+      - name: Install pinned build and browser tools
+        run: |
+          python -m venv /tmp/batch-monitor-tools
+          /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 playwright==1.56.0 cryptography==46.0.3 paramiko==5.0.0
+          bash scripts/ci_browser_install.sh /tmp/batch-monitor-tools/bin/python
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+      - name: Verify unchanged policy and read-only monitor
+        run: |
+          npm test
+          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_watchdog*.py' -v
+          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_monitor.py' -v
+          php -l monitoring/BatchMonitor.php
+          node --check monitoring/monitor.js
+      - name: Build protected monitor without changing operating source
+        run: |
+          /tmp/batch-monitor-tools/bin/python scripts/build_batch_monitor_host.py
+          php -l auth-bundle/Gateway.php
+      - name: Verify guest member admin and desktop mobile UI using synthetic identities
+        run: /tmp/batch-monitor-tools/bin/python tests/batch_monitor_host_browser.py
+      - name: Read actual GitHub evidence without dispatch or collection
+        run: /tmp/batch-monitor-tools/bin/python scripts/batch_monitor_snapshot.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+      - name: Publish only private monitor and verified admin route
+        run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py
+        env:
+          MONITOR_PREVIEW_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-monitor-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            batch-monitor-deployment.json
+            test-results/batch-monitor/
+          retention-days: 30
+          if-no-files-found: warn
