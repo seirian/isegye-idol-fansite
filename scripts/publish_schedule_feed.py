@@ -5,6 +5,7 @@ The official Search API is discovery only. Bounded browser-reviewed metadata is 
 Existing Google access gate serves this feed only to authorized visitors.
 """
 from pathlib import Path
+from datetime import datetime, timezone
 import base64,hashlib,json,os,socket,sys
 import inour_sftp as d
 import schedule_feed as feed
@@ -55,9 +56,12 @@ def publish(remote,collect=feed.collect):
             d.require(remote.read(path('previous.json'))==clean_backup,'Backup cleanup differs')
             remote.s.chmod(path('previous.json'),0o600)
         remote.replace(path('current.json'),raw,old)
+        published_at=datetime.now(timezone.utc).isoformat()
         remote.s.chmod(path('current.json'),0o600)
         d.require(remote.read(path('current.json'))==raw,'Feed bytes differ')
         return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),
+                'publishedAt':published_at,'readbackAt':datetime.now(timezone.utc).isoformat(),
+                'verifiedReadback':True,'evidenceVersion':2,
                 'counts':{k:len(value[k]) for k in ('events','news','forecasts')},
                 'collectionHealth':value['collectionHealth'],
                 'cafeNewsByKstDay':dict(Counter(feed.iso(r['publishedAt']).astimezone(feed.KST).date().isoformat() for r in value['news'] if r['sourceId']=='cafe-members' and r.get('publishedAt'))),

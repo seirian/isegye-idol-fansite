@@ -17,6 +17,38 @@ class FallbackTests(unittest.TestCase):
   cells=''.join(f'<div><h3>{label}</h3><span>{rank}위</span><span>23.8.19</span></div>' for label,rank in zip(c.LABELS,values))
   return f'<astro-island component-url="/FeaturedSongSelector.js" props="{props}"></astro-island><h2>멜론 최고 성적</h2>{cells}'
  def parse(self,body=None):return c.parse_reference(body or self.page(),self.m,799,self.when)
+ def test_selector_discovers_new_release_and_requires_unique_identity(self):
+  rebels={'state':'ok','trackId':'600000832','albumId':'15120216','title':'REBELS',
+          'album':'Across Dimensions','artist':'이세계아이돌 (ISEGYE IDOL)'}
+  rows=[{'id':832,'name':'REBELS','albumName':'Across Dimensions',
+         'artistName':'이세계아이돌 (ISEGYE IDOL)'},
+        {'id':900,'name':'REBELS','albumName':'Different Album',
+         'artistName':'이세계아이돌 (ISEGYE IDOL)'}]
+  self.assertEqual(c.discover_ids(json.dumps(rows).encode(),{'rebels':{'melon':rebels}}),{'rebels':832})
+  rows.append(dict(rows[0],id=833))
+  self.assertNotIn('rebels',c.discover_ids(json.dumps(rows).encode(),{'rebels':{'melon':rebels}}))
+ def test_selector_unknown_page_is_not_saved_as_a_rank(self):
+  rebels={'state':'ok','trackId':'600000832','albumId':'15120216','title':'REBELS',
+          'album':'Across Dimensions','artist':'이세계아이돌 (ISEGYE IDOL)'}
+  doc={'tracks':{'rebels':{'melon':rebels}}}
+  selector=json.dumps([{'id':832,'name':'REBELS','albumName':'Across Dimensions',
+       'artistName':'이세계아이돌 (ISEGYE IDOL)'}]).encode()
+  def fetch(url):
+   if url == c.SELECTOR:return selector
+   return self.page().encode() # KIDDING fixture must fail Melon identity validation
+  report=c.collect_reference_peaks(doc,{},fetch)
+  self.assertEqual(report['rebels']['state'],'error')
+  self.assertNotIn('melonPeakFallback',doc['tracks']['rebels'])
+ def test_selector_failure_preserves_verified_values_without_retimestamp(self):
+  rebels={'state':'ok','trackId':'600000832','albumId':'15120216','title':'REBELS',
+          'album':'Across Dimensions','artist':'이세계아이돌 (ISEGYE IDOL)'}
+  old=self.parse()
+  old.update(trackId=rebels['trackId'],albumId=rebels['albumId'],source=c.source_url(832))
+  doc={'tracks':{'rebels':{'melon':rebels}}}
+  report=c.collect_reference_peaks(doc,{'tracks':{'rebels':{'melonPeakFallback':old}}},lambda url: (_ for _ in ()).throw(TimeoutError()))
+  self.assertEqual(report['rebels']['state'],'unverified')
+  self.assertEqual(doc['tracks']['rebels']['melonPeakFallback']['checkedAt'],old['checkedAt'])
+  self.assertEqual(doc['tracks']['rebels']['melonPeakFallback']['fetchState'],'error')
  def test_seven_separate_charts(self):
   p=self.parse();self.assertEqual(len(p['records']),7);self.assertEqual(p['records']['top100']['rank'],6);self.assertEqual(p['records']['daily']['rank'],41);self.assertEqual(p['records']['hot100']['rank'],2);self.assertEqual(p['records']['hot100_30']['rank'],1)
  def test_facts_only(self):

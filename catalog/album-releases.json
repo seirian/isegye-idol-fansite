@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "id": "across-dimensions",
+      "title": "Across Dimensions",
+      "date": "2026-11-09",
+      "format": "두 번째 미니 앨범",
+      "members": ["ine", "jingburger", "lilpa", "jururu", "gosegu", "viichan"],
+      "source": "https://www.melon.com/album/detail.htm?albumId=15120216",
+      "melonAlbumId": "15120216",
+      "checkedAt": "2026-11-09T17:09:55+00:00",
+      "videoEvidenceRun": 42658600443,
+      "tracks": [
+        {"id": "love-cells", "title": "연애세포 (恋愛細胞)", "aliases": ["연애세포"], "videoId": "NCrqAAdZlGk", "kind": "official_audio", "channelKey": "c2"},
+        {"id": "rebels", "title": "REBELS", "videoId": "y-klhPVFblg", "kind": "official_mv", "channelKey": "c2", "titleTrack": true},
+        {"id": "back-2-the-future", "title": "BACK 2 THE FUTURE", "videoId": "GHJ9XiIx_AQ", "kind": "official_audio", "channelKey": "c2"},
+        {"id": "anti-hero", "title": "ANTI-HERO", "videoId": "HlKpuPGpG84", "kind": "official_audio", "channelKey": "c2"},
+        {"id": "dream-residue", "title": "Dream Residue", "videoId": "zI3m2AmGQhI", "kind": "official_audio", "channelKey": "c2"}
+      ]
+    }
+  ]
+}

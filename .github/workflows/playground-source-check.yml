@@ -1,0 +1,67 @@
+name: Playground - public source review
+on:
+  push:
+    branches: ['feature/playground']
+    paths: ['.github/workflows/playground-source-check.yml']
+permissions:
+  contents: read
+jobs:
+  references:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Install read-only public browser
+        run: |
+          python -m venv /tmp/playground-research
+          /tmp/playground-research/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/playground-research/bin/python
+      - name: Read visible public references only
+        run: |
+          /tmp/playground-research/bin/python - <<'PY'
+          import json,re
+          from pathlib import Path
+          from urllib.parse import quote
+          from playwright.sync_api import sync_playwright
+          out=Path('playground-research');out.mkdir()
+          records=[]
+          with sync_playwright() as p:
+            b=p.chromium.launch();ctx=b.new_context(locale='ko-KR',timezone_id='Asia/Seoul')
+            def read(url,key):
+              page=ctx.new_page();row={'url':url,'key':key,'status':'unverified'}
+              try:
+                res=page.goto(url,wait_until='domcontentloaded',timeout=30000);page.wait_for_timeout(6000)
+                row['http']=res.status if res else None;row['title']=page.title();row['finalUrl']=page.url
+                frames=[]
+                for f in page.frames:
+                  if not f.locator('body').count():continue
+                  content=f.locator('.ArticleContentBox,.article_viewer,.se-main-container,article')
+                  if content.count():text=content.first.inner_text(timeout=3000)
+                  else:text=f.locator('body').inner_text(timeout=3000)
+                  frames.append({'url':f.url,'text':text[:45000],'links':f.locator('a').evaluate_all('(aa)=>aa.map(a=>({text:a.innerText,url:a.href})).filter(a=>a.text && /퀴즈|정답|해설|이세계|아이네|징버거|릴파|주르르|고세구|비챤/.test(a.text)).slice(0,65)')})
+                row['frames']=frames;row['status']='visible_content_captured'
+                page.screenshot(path=str(out/(key+'.png')),full_page=False)
+              except Exception as e:row['error']=type(e).__name__
+              finally:page.close()
+              records.append(row);(out/(key+'.json')).write_text(json.dumps(row,ensure_ascii=False,indent=2));print(json.dumps({k:v for k,v in row.items() if k!='frames'},ensure_ascii=False))
+              return row
+            for aid in (21721901,21741748):read('https://cafe.naver.com/steamindiegame/'+str(aid),'cafe-'+str(aid))
+            read('https://namu.wiki/w/'+quote('이세계아이돌'),'namu-group')
+            query=quote('이세돌 퀴즈 정답')
+            search=read('https://search.naver.com/search.naver?where=article&query='+query,'naver-quiz-search')
+            links=[a for f in search.get('frames',[]) for a in f.get('links',[]) if re.search(r'cafe\.naver\.com/(?:steamindiegame/|ca-fe/web/cafes/27842958/articles/)',a['url'])]
+            seen=set()
+            for a in links:
+              if a['url'] in seen:continue
+              seen.add(a['url']);read(a['url'],'extra-'+str(len(seen)))
+              if len(seen)>=3:break
+            b.close()
+          (out/'index.json').write_text(json.dumps([{k:v for k,v in r.items() if k!='frames'} for r in records],ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-reference-inspection
+          path: playground-research/
+          retention-days: 1

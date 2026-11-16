@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "selection": "owner_requested_video_ids",
+  "source": "YouTube Data API v3 videos.list",
+  "evidenceRun": 43573401740,
+  "checkedAt": "2026-11-14T07:56:19.498394+00:00",
+  "channel": {
+    "key": "mbc-music-core-selected",
+    "name": "MBCkpop",
+    "channelId": "UCe52oeb7Xv_KaJsEzcKXJJg",
+    "url": "https://www.youtube.com/channel/UCe52oeb7Xv_KaJsEzcKXJJg"
+  },
+  "videos": [
+    {
+      "id": "sy40EGkSfRA",
+      "title": "ISEGYE IDOL (이세계아이돌) - REBELS | Show! MusicCore | MBC261114방송",
+      "publishedAt": "2026-11-14T06:37:04Z",
+      "durationSeconds": 188,
+      "type": "external_performance",
+      "performanceKind": "music_broadcast",
+      "relatedSong": "rebels",
+      "program": "쇼! 음악중심",
+      "broadcastDate": "2026-11-14",
+      "broadcastDateBasis": "source_title",
+      "privacyStatus": "public",
+      "embeddable": true,
+      "definition": "hd",
+      "regionRestriction": {
+        "blocked": [
+          "JP"
+        ]
+      }
+    }
+  ]
+}

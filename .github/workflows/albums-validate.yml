@@ -1,0 +1,33 @@
+name: Albums - public source validation
+on:
+  pull_request:
+    branches: [main]
+    paths: ['catalog/album-releases.json', 'scripts/album*.py', 'scripts/daily_albums.py', 'scripts/collect_album*.py', '.github/workflows/albums-validate.yml']
+permissions: {contents: read}
+jobs:
+  sources:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Install pinned public source readers
+        run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0
+      - name: Verify live album identities, artwork and Melon chart timestamps without deployment credentials
+        run: |
+          python scripts/check_album_release_videos.py
+          python scripts/prepare_album_release.py
+          python scripts/daily_albums.py
+          python scripts/daily_albums.py --check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: album-source-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            albums-health.json
+            albums/snapshot.json
+            albums/asset-cache/
+            test-results/albums-domestic/
+            test-results/albums-records/
+            test-results/music-sources/
+          retention-days: 14

@@ -1,19 +1,16 @@
 name: Music - daily verified catalog refresh
 on:
   schedule:
-    - cron: '43 21 * * *' # next calendar day, 06:43 Asia/Seoul
+    - cron: '0 21 * * *' # daily 06:00 Asia/Seoul (UTC previous day 21:00)
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Production - isolated inour SFTP deployment']
-    types: [completed]
-    branches: [main]
 permissions: {contents: read}
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
+  queue: max
 jobs:
   refresh:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 18

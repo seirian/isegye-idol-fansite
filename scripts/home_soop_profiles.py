@@ -66,7 +66,11 @@ def build(output, fetcher=None):
     folder.mkdir(parents=True, exist_ok=True)
     profiles = {}
     for row in rows:
-        data = prepare((fetcher or download)(row), row)
+        if fetcher is not None:
+            data = prepare(fetcher(row), row)
+        else:
+            from profile_cache import load_soop
+            data = load_soop(row)
         target = folder/(row['id']+'.webp')
         if target.is_symlink():
             raise ValueError('Refusing profile file symlink')

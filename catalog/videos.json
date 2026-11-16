@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-09T01:42:23.970085+00:00",
+  "checkedAt": "2026-11-16T01:57:36.634102+00:00",
   "channels": [
     {
       "key": "ine-0",
       "channelId": "UCroM00J2ahCN6k-0-oAiDxg",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -5117,14 +5117,14 @@
       "coverageMode": "official_api_full",
       "title": "아이네 INE",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCroM00J2ahCN6k-0-oAiDxg",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 13
     },
     {
       "key": "ine-1",
       "channelId": "UCmHltryGykfakS-JmaxrNBg",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -14044,14 +14044,14 @@
       "coverageMode": "official_api_full",
       "title": "데친 숙주나물",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmHltryGykfakS-JmaxrNBg",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "ine-2",
       "channelId": "UCBF6nBTgFN_xzrLMF9eiRhw",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -17907,16 +17907,48 @@
       "coverageMode": "official_api_full",
       "title": "아이네 다시보기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBF6nBTgFN_xzrLMF9eiRhw",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 10
     },
     {
       "key": "jingburger-0",
       "channelId": "UCHE7GBQVtdh-c1m3tjFdevQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "Zarm1JbokzI",
+          "title": "[Across Dimensions] 앨범에서 징버거 극락 파트는?",
+          "publishedAt": "2026-11-15T06:00:03+00:00",
+          "url": "https://www.youtube.com/watch?v=Zarm1JbokzI",
+          "thumbnail": "https://i.ytimg.com/vi/Zarm1JbokzI/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "jNr-d5ymasc",
+          "title": "이세계아이돌 [REBELS] 댓글 반응 모음🕶️",
+          "publishedAt": "2026-11-14T07:30:20+00:00",
+          "url": "https://www.youtube.com/watch?v=jNr-d5ymasc",
+          "thumbnail": "https://i.ytimg.com/vi/jNr-d5ymasc/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "f-ElgHwe0p8",
+          "title": "언니, 바람 좀 쐴래?",
+          "publishedAt": "2026-11-12T03:00:36+00:00",
+          "url": "https://www.youtube.com/watch?v=f-ElgHwe0p8",
+          "thumbnail": "https://i.ytimg.com/vi/f-ElgHwe0p8/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "spsJTTy5x4U",
+          "title": "이번 크리스마스에 함께 보내고 싶은 여자친구를 고르시오 - [징버거 핫클립]",
+          "publishedAt": "2026-11-09T09:00:20+00:00",
+          "url": "https://www.youtube.com/watch?v=spsJTTy5x4U",
+          "thumbnail": "https://i.ytimg.com/vi/spsJTTy5x4U/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "S5xi9v-tNCY",
           "title": "사람의 팔이 2개인 이유",
@@ -26962,16 +26994,56 @@
       "coverageMode": "official_api_full",
       "title": "징버거 JINGBURGER",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCHE7GBQVtdh-c1m3tjFdevQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "jingburger-1",
       "channelId": "UC-S9NE-xzcBpxOFSvsmOzAA",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "3Dcew9Ypius",
+          "title": "아~... 쓰륄",
+          "publishedAt": "2026-11-14T03:00:02+00:00",
+          "url": "https://www.youtube.com/watch?v=3Dcew9Ypius",
+          "thumbnail": "https://i.ytimg.com/vi/3Dcew9Ypius/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "k7nLlnUBMeA",
+          "title": "와우에서 닉값패치가 되어버렸다. (징버거 반응)",
+          "publishedAt": "2026-11-11T05:00:10+00:00",
+          "url": "https://www.youtube.com/watch?v=k7nLlnUBMeA",
+          "thumbnail": "https://i.ytimg.com/vi/k7nLlnUBMeA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "2RkEXl5Mtbk",
+          "title": "왁굳형 작명센스에 충격받은 부가땅",
+          "publishedAt": "2026-11-10T03:00:24+00:00",
+          "url": "https://www.youtube.com/watch?v=2RkEXl5Mtbk",
+          "thumbnail": "https://i.ytimg.com/vi/2RkEXl5Mtbk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "ig7dgmArmow",
+          "title": "지박령 귀신",
+          "publishedAt": "2026-11-08T08:00:08+00:00",
+          "url": "https://www.youtube.com/watch?v=ig7dgmArmow",
+          "thumbnail": "https://i.ytimg.com/vi/ig7dgmArmow/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "6XhQG5sfkF0",
+          "title": "이게 뭐냐구우우우웃!!!",
+          "publishedAt": "2026-11-07T03:00:05+00:00",
+          "url": "https://www.youtube.com/watch?v=6XhQG5sfkF0",
+          "thumbnail": "https://i.ytimg.com/vi/6XhQG5sfkF0/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "Y4eQ-kAX25E",
           "title": "왁굳형의 겨하",
@@ -55049,14 +55121,14 @@
       "coverageMode": "official_api_full",
       "title": "징버거가 짱이다",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-S9NE-xzcBpxOFSvsmOzAA",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 71
     },
     {
       "key": "jingburger-2",
       "channelId": "UCrN7Gb8xIZF_0ZYA1cmVNxQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -58456,19 +58528,43 @@
       "coverageMode": "official_api_full",
       "title": "징버거의 다시부기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrN7Gb8xIZF_0ZYA1cmVNxQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 9
     },
     {
       "key": "lilpa-0",
       "channelId": "UC-oCJP9t47v7-DmsnmXV38Q",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
+          "id": "q0GPDkmIspk",
+          "title": "무파엔딩",
+          "publishedAt": "2026-11-15T02:00:29+00:00",
+          "url": "https://www.youtube.com/watch?v=q0GPDkmIspk",
+          "thumbnail": "https://i.ytimg.com/vi/q0GPDkmIspk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "ya1w3RVkSiw",
+          "title": "왁타버스에 설계당한 봉준감독",
+          "publishedAt": "2026-11-08T11:30:18+00:00",
+          "url": "https://www.youtube.com/watch?v=ya1w3RVkSiw",
+          "thumbnail": "https://i.ytimg.com/vi/ya1w3RVkSiw/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "L8h32-mknoA",
+          "title": "봉루먼쇼",
+          "publishedAt": "2026-11-07T11:06:39+00:00",
+          "url": "https://www.youtube.com/watch?v=L8h32-mknoA",
+          "thumbnail": "https://i.ytimg.com/vi/L8h32-mknoA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
           "id": "C0rds74PwMA",
-          "title": "SBO 시작!! 부터 대패??!!! 무파 자이언츠 대위기 - [무파 자이언츠 EP.01]",
+          "title": "SBO 시작!! 부터 대패??!!!",
           "publishedAt": "2026-11-04T09:15:40+00:00",
           "url": "https://www.youtube.com/watch?v=C0rds74PwMA",
           "thumbnail": "https://i.ytimg.com/vi/C0rds74PwMA/mqdefault.jpg",
@@ -58524,7 +58620,7 @@
         },
         {
           "id": "1J9KQu_x20c",
-          "title": "감자탕 일주일 먹기 vs 투구 17,000개 vs 발 셀카 vs 와우 게임하기  - [무파 자이언츠 EP.00]",
+          "title": "감자탕 일주일 먹기 vs 투구 17,000개 vs 발 셀카 vs 와우 게임하기",
           "publishedAt": "2026-10-23T09:15:38+00:00",
           "url": "https://www.youtube.com/watch?v=1J9KQu_x20c",
           "thumbnail": "https://i.ytimg.com/vi/1J9KQu_x20c/mqdefault.jpg",
@@ -67575,16 +67671,64 @@
       "coverageMode": "official_api_full",
       "title": "릴파 lilpa",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-oCJP9t47v7-DmsnmXV38Q",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "lilpa-1",
       "channelId": "UC8dEJs2kpS5x2vI1X7aaUhA",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "rsCQHwY6Uio",
+          "title": "음악중심에나온이세계아이돌릴파님아니세요?",
+          "publishedAt": "2026-11-15T06:30:23+00:00",
+          "url": "https://www.youtube.com/watch?v=rsCQHwY6Uio",
+          "thumbnail": "https://i.ytimg.com/vi/rsCQHwY6Uio/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "yqkl6i9paNA",
+          "title": "'띨'",
+          "publishedAt": "2026-11-11T03:30:15+00:00",
+          "url": "https://www.youtube.com/watch?v=yqkl6i9paNA",
+          "thumbnail": "https://i.ytimg.com/vi/yqkl6i9paNA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-13T02:36:33.861286+00:00"
+        },
+        {
+          "id": "8VLUJ84nGKo",
+          "title": "노래 잘하는 사람들은 연기도 잘할까? - [노잘사연 w.견자희 뢴트게늄 투미츠]",
+          "publishedAt": "2026-11-09T03:44:35+00:00",
+          "url": "https://www.youtube.com/watch?v=8VLUJ84nGKo",
+          "thumbnail": "https://i.ytimg.com/vi/8VLUJ84nGKo/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "FimRv5cmAUA",
+          "title": "나 벽 안에 있어!!",
+          "publishedAt": "2026-11-08T05:00:02+00:00",
+          "url": "https://www.youtube.com/watch?v=FimRv5cmAUA",
+          "thumbnail": "https://i.ytimg.com/vi/FimRv5cmAUA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "6DiD4fjdZYQ",
+          "title": "야이나쁜놈들아",
+          "publishedAt": "2026-11-08T04:00:38+00:00",
+          "url": "https://www.youtube.com/watch?v=6DiD4fjdZYQ",
+          "thumbnail": "https://i.ytimg.com/vi/6DiD4fjdZYQ/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "auB83UrPurs",
+          "title": "1년 전 진행했던 충격의 VR챗 상황극 후속편이 나왔습니다 - [Cellular : Oblivion]",
+          "publishedAt": "2026-11-07T02:21:33+00:00",
+          "url": "https://www.youtube.com/watch?v=auB83UrPurs",
+          "thumbnail": "https://i.ytimg.com/vi/auB83UrPurs/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "c2Bl6Jvx8Zo",
           "title": "개킹받는 볼륨바",
@@ -90166,16 +90310,24 @@
       "coverageMode": "official_api_full",
       "title": "릴파의 순간들",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8dEJs2kpS5x2vI1X7aaUhA",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 57
     },
     {
       "key": "lilpa-2",
       "channelId": "UCp_jHNjcoiXC7SlElrBmzBA",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "yZgBTiEN3rI",
+          "title": "[와우 포에버] 사진 동아리 출범 (w.타요 힌콕)",
+          "publishedAt": "2026-11-12T03:00:02+00:00",
+          "url": "https://www.youtube.com/watch?v=yZgBTiEN3rI",
+          "thumbnail": "https://i.ytimg.com/vi/yZgBTiEN3rI/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
         {
           "id": "ndSChfeMQvM",
           "title": "[아크레이더스] 엄청난 스케일의 로봇과 아포칼립스 세계관에서 파밍하고 탈출하는 어센션 챌린지 (w.도그홀, 유시에)",
@@ -93413,14 +93565,14 @@
       "coverageMode": "official_api_full",
       "title": "릴파의 종합게임",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCp_jHNjcoiXC7SlElrBmzBA",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 9
     },
     {
       "key": "lilpa-3",
       "channelId": "UCgAGT75UQWtTUpsG6Yq6LCw",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -93940,14 +94092,14 @@
       "coverageMode": "official_api_full",
       "title": "LILPA ARCHIVE [ISEGYE IDOL]",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgAGT75UQWtTUpsG6Yq6LCw",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 2
     },
     {
       "key": "lilpa-4",
       "channelId": "UC-CFlSjMSWaCjocMtXau8RQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -94139,16 +94291,48 @@
       "coverageMode": "official_api_full",
       "title": "과일박쥐Fruitbat",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-CFlSjMSWaCjocMtXau8RQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 1
     },
     {
       "key": "jururu-0",
       "channelId": "UCTifMx1ONpElK5x6B4ng8eg",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "W2c7W7sMPtE",
+          "title": "터질듯한 미시 버거 ➡ 다음장에..",
+          "publishedAt": "2026-11-14T09:03:11+00:00",
+          "url": "https://www.youtube.com/watch?v=W2c7W7sMPtE",
+          "thumbnail": "https://i.ytimg.com/vi/W2c7W7sMPtE/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "_nA4EnY65v0",
+          "title": "진짜 아내를 찾아야 하는 우왁굳 - 이세돌+엔젤님 모캡합방",
+          "publishedAt": "2026-11-13T09:07:38+00:00",
+          "url": "https://www.youtube.com/watch?v=_nA4EnY65v0",
+          "thumbnail": "https://i.ytimg.com/vi/_nA4EnY65v0/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "-hzDddkSU8o",
+          "title": "이야야하야하우나야하야하우~나뿌르르릿하하하이야아아아아아하!!!!!!!!!!!!",
+          "publishedAt": "2026-11-09T03:45:21+00:00",
+          "url": "https://www.youtube.com/watch?v=-hzDddkSU8o",
+          "thumbnail": "https://i.ytimg.com/vi/-hzDddkSU8o/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "nbvPinMvJow",
+          "title": "로블록스에서 주르르 나이 맞추기",
+          "publishedAt": "2026-11-08T10:13:15+00:00",
+          "url": "https://www.youtube.com/watch?v=nbvPinMvJow",
+          "thumbnail": "https://i.ytimg.com/vi/nbvPinMvJow/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "RCWi25tBnlM",
           "title": "로블록스 숨은 노래 고수ㄷㄷ",
@@ -100810,16 +100994,56 @@
       "coverageMode": "official_api_full",
       "title": "주르르 JURURU",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCTifMx1ONpElK5x6B4ng8eg",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 17
     },
     {
       "key": "jururu-1",
       "channelId": "UCgGvSg2lscdNUx9ZJIBh9FQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "cLCcLnkSRH0",
+          "title": "쭐땅이",
+          "publishedAt": "2026-11-14T08:22:02+00:00",
+          "url": "https://www.youtube.com/watch?v=cLCcLnkSRH0",
+          "thumbnail": "https://i.ytimg.com/vi/cLCcLnkSRH0/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "kwOvlcBP2RM",
+          "title": "저 르르랑 친해요",
+          "publishedAt": "2026-11-14T07:52:02+00:00",
+          "url": "https://www.youtube.com/watch?v=kwOvlcBP2RM",
+          "thumbnail": "https://i.ytimg.com/vi/kwOvlcBP2RM/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "ceNgMlON5kw",
+          "title": "떨어질까 말까",
+          "publishedAt": "2026-11-10T07:41:46+00:00",
+          "url": "https://www.youtube.com/watch?v=ceNgMlON5kw",
+          "thumbnail": "https://i.ytimg.com/vi/ceNgMlON5kw/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "ui0LDOV-C8Q",
+          "title": "나혼자 와우 포에버 하드코어",
+          "publishedAt": "2026-11-08T10:11:09+00:00",
+          "url": "https://www.youtube.com/watch?v=ui0LDOV-C8Q",
+          "thumbnail": "https://i.ytimg.com/vi/ui0LDOV-C8Q/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "fy-ruG5oCyM",
+          "title": "스키타면서 볶음밥 요리하기",
+          "publishedAt": "2026-11-08T10:02:06+00:00",
+          "url": "https://www.youtube.com/watch?v=fy-ruG5oCyM",
+          "thumbnail": "https://i.ytimg.com/vi/fy-ruG5oCyM/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "bwwQbe19ajw",
           "title": "두고보자",
@@ -133977,14 +134201,14 @@
       "coverageMode": "official_api_full",
       "title": "봉인 풀린 주르르",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgGvSg2lscdNUx9ZJIBh9FQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 84
     },
     {
       "key": "jururu-2",
       "channelId": "UCo28fS0LmlcyPcKItrZMPiQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -135296,16 +135520,72 @@
       "coverageMode": "official_api_full",
       "title": "주르르 다시보기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCo28fS0LmlcyPcKItrZMPiQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 5
     },
     {
       "key": "gosegu-0",
       "channelId": "UCV9WL7sW6_KjanYkUUaIDfQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "y820E1MCzzM",
+          "title": "결승의 무게 [롤드컵 결승 GEN vs BLG]",
+          "publishedAt": "2026-11-15T02:46:09+00:00",
+          "url": "https://www.youtube.com/watch?v=y820E1MCzzM",
+          "thumbnail": "https://i.ytimg.com/vi/y820E1MCzzM/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "b6soe-AbaEI",
+          "title": "앨범강도 고세구",
+          "publishedAt": "2026-11-14T09:07:06+00:00",
+          "url": "https://www.youtube.com/watch?v=b6soe-AbaEI",
+          "thumbnail": "https://i.ytimg.com/vi/b6soe-AbaEI/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "IsEUbdOqDHY",
+          "title": "또 너야 고세구?",
+          "publishedAt": "2026-11-11T09:05:23+00:00",
+          "url": "https://www.youtube.com/watch?v=IsEUbdOqDHY",
+          "thumbnail": "https://i.ytimg.com/vi/IsEUbdOqDHY/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "zlnlCwFVl1E",
+          "title": "분명 둘 중 하나인데",
+          "publishedAt": "2026-11-09T08:00:36+00:00",
+          "url": "https://www.youtube.com/watch?v=zlnlCwFVl1E",
+          "thumbnail": "https://i.ytimg.com/vi/zlnlCwFVl1E/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "Xrz38ATUrXc",
+          "title": "고생하셨습니다...! [롤드컵 4강 T1 vs BLG]",
+          "publishedAt": "2026-11-09T04:47:11+00:00",
+          "url": "https://www.youtube.com/watch?v=Xrz38ATUrXc",
+          "thumbnail": "https://i.ytimg.com/vi/Xrz38ATUrXc/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "JSOv2vmrHNw",
+          "title": "젠지, 결승으로 가는 길 [롤드컵 4강 GEN vs IG]",
+          "publishedAt": "2026-11-08T03:38:30+00:00",
+          "url": "https://www.youtube.com/watch?v=JSOv2vmrHNw",
+          "thumbnail": "https://i.ytimg.com/vi/JSOv2vmrHNw/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "Wj_ofspa7FY",
+          "title": "\"역대급 천재 괴물\" [롤드컵 8강 T1 vs KC]",
+          "publishedAt": "2026-11-07T04:25:20+00:00",
+          "url": "https://www.youtube.com/watch?v=Wj_ofspa7FY",
+          "thumbnail": "https://i.ytimg.com/vi/Wj_ofspa7FY/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "CRB1nWAHECY",
           "title": "전혀 예상 못한 결과 [롤드컵 8강 DK vs BLG]",
@@ -144591,14 +144871,14 @@
       "coverageMode": "official_api_full",
       "title": "고세구 GOSEGU",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCV9WL7sW6_KjanYkUUaIDfQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 24
     },
     {
       "key": "gosegu-1",
       "channelId": "UCEx_jGvD7ejBxeTsLvc62yQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -144822,16 +145102,32 @@
       "coverageMode": "official_api_full",
       "title": "GOSEGU Music",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCEx_jGvD7ejBxeTsLvc62yQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 1
     },
     {
       "key": "gosegu-2",
       "channelId": "UCSSPlgcyDA5eoN3hrkXpvHg",
-      "checkedAt": "2026-11-09T01:42:18.630336+00:00",
-      "status": "ok",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
+      "status": "stale",
       "videos": [
+        {
+          "id": "qGISOV916f4",
+          "title": "신곡 의상 보여주는 세구",
+          "publishedAt": "2026-11-15T06:20:17+00:00",
+          "url": "https://www.youtube.com/watch?v=qGISOV916f4",
+          "thumbnail": "https://i.ytimg.com/vi/qGISOV916f4/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "HSGF9QJVK2U",
+          "title": "로블록스에 벽 느껴버린 버른살들 ㅋㅋㅋㅋ",
+          "publishedAt": "2026-11-15T06:05:21+00:00",
+          "url": "https://www.youtube.com/watch?v=HSGF9QJVK2U",
+          "thumbnail": "https://i.ytimg.com/vi/HSGF9QJVK2U/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
         {
           "id": "AlXrLXpGJbI",
           "title": "수상할 정도로 로블록스와 잘맞는 98년생 - 로블록스 첫 도전기",
@@ -177909,15 +178205,15 @@
       "coverageMode": "official_api_full",
       "title": "고세구의 좀더",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSSPlgcyDA5eoN3hrkXpvHg",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 83
     },
     {
       "key": "gosegu-3",
       "channelId": "UCc4qGj6d8LBXW2qZ9GZQWqQ",
-      "checkedAt": "2026-11-09T01:42:18.630336+00:00",
-      "status": "ok",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
+      "status": "stale",
       "videos": [
         {
           "id": "LZ3kzhidFvs",
@@ -181284,16 +181580,32 @@
       "coverageMode": "official_api_full",
       "title": "밥친구 고세구",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCc4qGj6d8LBXW2qZ9GZQWqQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 10
     },
     {
       "key": "viichan-0",
       "channelId": "UCs6EwgxKLY9GG4QNUrP5hoQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
+        {
+          "id": "k8XTtLJY480",
+          "title": "유출 상습범 고세구",
+          "publishedAt": "2026-11-12T07:17:24+00:00",
+          "url": "https://www.youtube.com/watch?v=k8XTtLJY480",
+          "thumbnail": "https://i.ytimg.com/vi/k8XTtLJY480/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "8AP0xq7uqK0",
+          "title": "이게 내 갓생이야",
+          "publishedAt": "2026-11-09T06:47:33+00:00",
+          "url": "https://www.youtube.com/watch?v=8AP0xq7uqK0",
+          "thumbnail": "https://i.ytimg.com/vi/8AP0xq7uqK0/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "rB4N-DkVM2k",
           "title": "치이카와 안 본 뇌 괴롭히기 😈",
@@ -189763,14 +190075,14 @@
       "coverageMode": "official_api_full",
       "title": "비챤 VIichan",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCs6EwgxKLY9GG4QNUrP5hoQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 22
     },
     {
       "key": "viichan-1",
       "channelId": "UCuJUfqThFp5-k-lrHcO1dFg",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -205962,14 +206274,14 @@
       "coverageMode": "official_api_full",
       "title": "비챤의 나랑놀아",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCuJUfqThFp5-k-lrHcO1dFg",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 42
     },
     {
       "key": "viichan-2",
       "channelId": "UCk2vPN7LATiMz_r8VUiA0KQ",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
+      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
       "status": "stale",
       "videos": [
         {
@@ -210089,7 +210401,7 @@
       "coverageMode": "official_api_full",
       "title": "비챤의 무릉도원",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCk2vPN7LATiMz_r8VUiA0KQ",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 11
     },
@@ -210098,12 +210410,228 @@
       "channelId": "UCmblbE_WxTaFWcMEGFJ_97w",
       "title": "ISEGYE IDOL",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmblbE_WxTaFWcMEGFJ_97w",
-      "checkedAt": "2026-11-06T11:11:18.689975+00:00",
-      "attemptedAt": "2026-11-09T01:42:18.630336+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "status": "ok",
       "coverageComplete": true,
       "coverageMode": "official_api_full",
       "videos": [
+        {
+          "id": "5AiFel_-OdY",
+          "title": "😈 REBELS with #안경누나 #주르르 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-15T11:00:34+00:00",
+          "url": "https://www.youtube.com/watch?v=5AiFel_-OdY",
+          "thumbnail": "https://i.ytimg.com/vi/5AiFel_-OdY/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "z29BauI8QDA",
+          "title": "#JINGBURGER 덤비면 메롱 😛💛 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #징버거 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-15T09:00:25+00:00",
+          "url": "https://www.youtube.com/watch?v=z29BauI8QDA",
+          "thumbnail": "https://i.ytimg.com/vi/z29BauI8QDA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "eDU1ceKPyWQ",
+          "title": "#INE 덤비면 메롱 😛💜 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #아이네 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-15T03:00:22+00:00",
+          "url": "https://www.youtube.com/watch?v=eDU1ceKPyWQ",
+          "thumbnail": "https://i.ytimg.com/vi/eDU1ceKPyWQ/mqdefault.jpg",
+          "firstSeenAt": "2026-11-15T22:48:40.933110+00:00"
+        },
+        {
+          "id": "xnFbTiTRBoQ",
+          "title": "#GOSEGU X #VIICHAN Born to be REBELS 😈🩵💚 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-14T11:00:40+00:00",
+          "url": "https://www.youtube.com/watch?v=xnFbTiTRBoQ",
+          "thumbnail": "https://i.ytimg.com/vi/xnFbTiTRBoQ/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "oKNv9A6BuE4",
+          "title": "#VIICHAN Born to be REBELS 😈💚 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #비챤 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-14T09:00:12+00:00",
+          "url": "https://www.youtube.com/watch?v=oKNv9A6BuE4",
+          "thumbnail": "https://i.ytimg.com/vi/oKNv9A6BuE4/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "JJvhn0h-pt0",
+          "title": "#LILPA X #JURURU Born to be REBELS 😈💙🩷 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-13T11:00:01+00:00",
+          "url": "https://www.youtube.com/watch?v=JJvhn0h-pt0",
+          "thumbnail": "https://i.ytimg.com/vi/JJvhn0h-pt0/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "NkWHJvxDB7E",
+          "title": "#GOSEGU Born to be REBELS 😈🩵 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #고세구 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-13T10:00:03+00:00",
+          "url": "https://www.youtube.com/watch?v=NkWHJvxDB7E",
+          "thumbnail": "https://i.ytimg.com/vi/NkWHJvxDB7E/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "MuHcoCo6x_A",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘REBELS’ Official Performance Video",
+          "publishedAt": "2026-11-13T09:00:18+00:00",
+          "url": "https://www.youtube.com/watch?v=MuHcoCo6x_A",
+          "thumbnail": "https://i.ytimg.com/vi/MuHcoCo6x_A/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "UAYrIFSpufo",
+          "title": "#INE X #JINGBURGER Born to be REBELS 😈💜💛 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-12T12:00:34+00:00",
+          "url": "https://www.youtube.com/watch?v=UAYrIFSpufo",
+          "thumbnail": "https://i.ytimg.com/vi/UAYrIFSpufo/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "Tc2LahrOXCk",
+          "title": "이세계아이돌 (ISEGYE IDOL) ‘REBELS’ 응원법 (Fanchant Guide)",
+          "publishedAt": "2026-11-12T11:00:33+00:00",
+          "url": "https://www.youtube.com/watch?v=Tc2LahrOXCk",
+          "thumbnail": "https://i.ytimg.com/vi/Tc2LahrOXCk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "xe2fyBxWRkI",
+          "title": "#JURURU Born to be REBELS 😈🩷 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #주르르 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-12T09:00:23+00:00",
+          "url": "https://www.youtube.com/watch?v=xe2fyBxWRkI",
+          "thumbnail": "https://i.ytimg.com/vi/xe2fyBxWRkI/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "0t6t0IG9ueU",
+          "title": "#JINGBURGER X #JURURU Born to be REBELS 😈💛🩷 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-11T11:00:28+00:00",
+          "url": "https://www.youtube.com/watch?v=0t6t0IG9ueU",
+          "thumbnail": "https://i.ytimg.com/vi/0t6t0IG9ueU/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "rdusm1gQnBw",
+          "title": "#LILPA Born to be REBELS 😈💙 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #릴파 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-11T09:00:23+00:00",
+          "url": "https://www.youtube.com/watch?v=rdusm1gQnBw",
+          "thumbnail": "https://i.ytimg.com/vi/rdusm1gQnBw/mqdefault.jpg",
+          "firstSeenAt": "2026-11-14T22:48:36.810759+00:00"
+        },
+        {
+          "id": "AuBYW4YRhE4",
+          "title": "#INE X #VIICHAN Born to be REBELS 😈💜💚 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-10T11:00:07+00:00",
+          "url": "https://www.youtube.com/watch?v=AuBYW4YRhE4",
+          "thumbnail": "https://i.ytimg.com/vi/AuBYW4YRhE4/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "n7JI3ks7qeo",
+          "title": "#JINGBURGER Born to be REBELS 😈💛 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-10T09:00:21+00:00",
+          "url": "https://www.youtube.com/watch?v=n7JI3ks7qeo",
+          "thumbnail": "https://i.ytimg.com/vi/n7JI3ks7qeo/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "sUSJk3J-SpY",
+          "title": "[ISEGYE IDOL] ‘Across Dimensions’ LISTENING PARTY 🪐",
+          "publishedAt": "2026-11-10T03:00:03+00:00",
+          "url": "https://www.youtube.com/watch?v=sUSJk3J-SpY",
+          "thumbnail": "https://i.ytimg.com/vi/sUSJk3J-SpY/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "Ag3A5I9V40c",
+          "title": "#LILPA X #GOSEGU Born to be REBELS 😈💙🩵 #이세계아이돌 #ISEGYEIDOL #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-09T13:00:22+00:00",
+          "url": "https://www.youtube.com/watch?v=Ag3A5I9V40c",
+          "thumbnail": "https://i.ytimg.com/vi/Ag3A5I9V40c/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "e2NcpAc3fzc",
+          "title": "#INE Born to be REBELS 😈💜  #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #아이네 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-09T10:00:08+00:00",
+          "url": "https://www.youtube.com/watch?v=e2NcpAc3fzc",
+          "thumbnail": "https://i.ytimg.com/vi/e2NcpAc3fzc/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "ZYl53cJ6Q7Y",
+          "title": "새로운 세계 우리로 만들어 가 🌎✨ #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #ISEGYEIDOL_REBELS",
+          "publishedAt": "2026-11-09T09:02:11+00:00",
+          "url": "https://www.youtube.com/watch?v=ZYl53cJ6Q7Y",
+          "thumbnail": "https://i.ytimg.com/vi/ZYl53cJ6Q7Y/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "58oaPqk4qEk",
+          "title": "덤비면 메롱 😛 놀리고 앞질러가 🏃 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #ISEGYEIDOL_REBELS",
+          "publishedAt": "2026-11-09T09:02:03+00:00",
+          "url": "https://www.youtube.com/watch?v=58oaPqk4qEk",
+          "thumbnail": "https://i.ytimg.com/vi/58oaPqk4qEk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "dOBb1zR36Uk",
+          "title": "Born to be REBELS 😈 우리를 누가 막아 🚫 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #ISEGYEIDOL_REBELS",
+          "publishedAt": "2026-11-09T09:01:51+00:00",
+          "url": "https://www.youtube.com/watch?v=dOBb1zR36Uk",
+          "thumbnail": "https://i.ytimg.com/vi/dOBb1zR36Uk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "zI3m2AmGQhI",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘Dream Residue’ (Official Audio)",
+          "publishedAt": "2026-11-09T09:01:23+00:00",
+          "url": "https://www.youtube.com/watch?v=zI3m2AmGQhI",
+          "thumbnail": "https://i.ytimg.com/vi/zI3m2AmGQhI/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "HlKpuPGpG84",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘ANTI-HERO’ (Official Audio)",
+          "publishedAt": "2026-11-09T09:01:14+00:00",
+          "url": "https://www.youtube.com/watch?v=HlKpuPGpG84",
+          "thumbnail": "https://i.ytimg.com/vi/HlKpuPGpG84/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "GHJ9XiIx_AQ",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘BACK 2 THE FUTURE’ (Official Audio)",
+          "publishedAt": "2026-11-09T09:01:08+00:00",
+          "url": "https://www.youtube.com/watch?v=GHJ9XiIx_AQ",
+          "thumbnail": "https://i.ytimg.com/vi/GHJ9XiIx_AQ/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "Wqx8qNFpQbo",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘REBELS’ (Official Audio)",
+          "publishedAt": "2026-11-09T09:00:59+00:00",
+          "url": "https://www.youtube.com/watch?v=Wqx8qNFpQbo",
+          "thumbnail": "https://i.ytimg.com/vi/Wqx8qNFpQbo/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "NCrqAAdZlGk",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘연애세포 (恋愛細胞)’ (Official Audio)",
+          "publishedAt": "2026-11-09T09:00:53+00:00",
+          "url": "https://www.youtube.com/watch?v=NCrqAAdZlGk",
+          "thumbnail": "https://i.ytimg.com/vi/NCrqAAdZlGk/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
+        {
+          "id": "y-klhPVFblg",
+          "title": "ISEGYE IDOL (이세계아이돌) ‘REBELS’ Official MV",
+          "publishedAt": "2026-11-09T09:00:02+00:00",
+          "url": "https://www.youtube.com/watch?v=y-klhPVFblg",
+          "thumbnail": "https://i.ytimg.com/vi/y-klhPVFblg/mqdefault.jpg",
+          "firstSeenAt": "2026-11-11T01:54:45.388040+00:00"
+        },
         {
           "id": "6OX1l5kav8c",
           "title": "ISEGYE IDOL (이세계아이돌) ‘REBELS’ PRE-RELEASE SPOILER",

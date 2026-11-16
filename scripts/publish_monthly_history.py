@@ -35,6 +35,8 @@ def publish(remote, fresh):
     d.require(gated, 'Access gate required')
     meta = json.loads(remote.read(d.ROOT + '/_isegye_releases/' + rid + '/build-info.json') or b'{}')
     d.require(meta.get('monthlyHistory', {}).get('schemaVersion') == 1, 'History-enabled release not active')
+    if fresh.get('cadence') == 'weekly':
+        d.require(meta.get('monthlyHistory', {}).get('cadence') == 'weekly', 'Weekly history-compatible release not active')
     protected = remote.snapshot()
     schedule = read_snapshot(remote, d.ROOT + '/.schedule-feed', b'isegye-schedule-feed:v1\n', 2097152)
     music = read_snapshot(remote, d.ROOT + '/.music-feed', b'isegye-daily-music:v1\n', 1500000)
@@ -66,7 +68,7 @@ def publish(remote, fresh):
         if raw != old:
             remote.replace(path('current.json'), raw, old); remote.s.chmod(path('current.json'), 0o600)
         d.require(remote.read(path('current.json')) == raw, 'History publication readback differs')
-        return {'status': 'published', 'release': rid, 'generatedAt': value['generatedAt'], 'through': value['through'],
+        return {'status': 'published', 'release': rid, 'generatedAt': value['generatedAt'], 'through': value['through'], 'cadence': value.get('cadence', 'monthly'),
                 'added': len(added), 'updated': len(updated), 'totalAuto': len(value['events']),
                 'curatedPreserved': len(history.base()['events']), 'totalDisplayed': len(history.base()['events']) + len(value['events']),
                 'newItems': added, 'coverage': value['coverage'], 'sha256': d.digest(raw),

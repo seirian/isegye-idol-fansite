@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import history_cadence
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,7 +95,7 @@ def enhance_visual_history(out: Path, app: str, css: str, html: str) -> tuple[st
     app = once(app, '<span class="catalog-muted">목록용 그래픽 · 공식 앨범 커버 아님</span>', '<span class="catalog-muted">${visualMusicThumbnail(s)?\'YouTube 영상 썸네일\':\'목록용 그래픽 · 공식 앨범 커버 아님\'}</span>')
     app = app.replace('LIVE와 홈 화면은 SOOP에 공개 방송 상태를 직접 요청합니다.', 'LIVE와 홈 화면은 SOOP에 공개 방송 상태를 직접 요청하며, 방송 미리보기는 SOOP 이미지 서버에서 불러옵니다.')
     core = re.sub(r'^export ', '', (ROOT / 'visuals/core.js').read_text(), flags=re.M)
-    app = once(app, 'shell();render();', 'const HISTORY=' + json.dumps(public, ensure_ascii=False, separators=(',', ':')) + ';\n' + core + '\n' + (ROOT / 'visuals/ui.js').read_text() + '\n' + (ROOT / 'visuals/monthly-history.js').read_text() + '\nshell();render();')
+    app = once(app, 'shell();render();', 'const HISTORY=' + json.dumps(public, ensure_ascii=False, separators=(',', ':')) + ';\n' + core + '\n' + history_cadence.ui((ROOT / 'visuals/ui.js').read_text()) + '\n' + history_cadence.validator((ROOT / 'visuals/monthly-history.js').read_text()) + '\nshell();render();')
     app = once(app, '<span class="music-video-label">YouTube</span>', '<span class="music-video-label">${e(musicVideoLabel(s))}</span>')
     css += '\n' + (ROOT / 'visuals/theme.css').read_text()
     html = once(html, "img-src 'self' data: https://i.ytimg.com", "img-src 'self' data: https://i.ytimg.com https://liveimg.sooplive.com")
@@ -103,7 +104,7 @@ def enhance_visual_history(out: Path, app: str, css: str, html: str) -> tuple[st
         raise ValueError('Retired visitor UI remains')
     meta_path = out / 'build-info.json'
     meta = json.loads(meta_path.read_text())
-    meta['monthlyHistory'] = {'schemaVersion': 1, 'endpoint': '/api/history', 'scheduleKst': '매월 1일 09:43', 'curatedBaseline': len(history['events'])}
+    meta['monthlyHistory'] = {'schemaVersion': 1, 'endpoint': '/api/history', 'scheduleKst': '매주 일요일 00:00', 'cadence': 'weekly', 'curatedBaseline': len(history['events'])}
     meta['visualHistory'] = {'version': 1, 'historyItems': len(history['events']), 'historyFrom': min(r['date'] for r in history['events']), 'checkedAt': history['checkedAt'], 'liveThumbnail': 'current-broadcast-only', 'musicThumbnails': 'YouTube-video-id', 'navigationCount': 7}
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
     for path, text in [(data_path, data), (out / 'src/app.js', app), (out / 'src/styles.css', css), (out / 'index.html', html)]:

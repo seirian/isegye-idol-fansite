@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import build_review_1st as first
+import history_cadence
 import compose_member_legal as member_legal
 import compose_community_shortcuts as community
 import compose_content_polish as content_polish
@@ -87,7 +88,7 @@ def runtime(baseline, data):
             'archiveNotices':[r for r in data['notices'] if r['id'] in ids]}
     seed['knownSources'] += [[f'https://cafe.naver.com/steamindiegame/{i}', 'fan-roundup'] for i in archive.get('fanIds',[])]
     schedule = re.sub(r'^export ', '', (ROOT/'schedule/core.js').read_text(), flags=re.M)
-    monthly = (ROOT/'visuals/monthly-history.js').read_text().split('function monthlyHistoryRoute()')[0]
+    monthly = history_cadence.validator((ROOT/'visuals/monthly-history.js').read_text()).split('function monthlyHistoryRoute()')[0]
     validators = ('const FeedValidators=(()=>{\n'+schedule+'\nconst HISTORY='+first.script_json(seed['history'])+';\n'
                   + next(line for line in source.splitlines() if line.startswith('const HISTORY_TYPES='))+'\n'+monthly+
                   '\nreturn {scheduleValidate,scheduleApprovedRows,scheduleCollectionMessage,monthly:feed=>{applyMonthlyHistory(feed);return HISTORY;}};})();\n')

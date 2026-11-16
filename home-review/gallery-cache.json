@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "runId": 42922168252,
+    "artifactId": 13812453298,
+    "archiveSha256": "6f35fe840af0729353a8c6cd5b8af5096f21befaebc2d6652836deb27fa315bc",
+    "headSha": "f6147b469366f5791bd84109f001776729b962a9"
+  },
+  "images": {
+    "mafia": {
+      "sourceSha256": "15719f19e4ec8d5db2a3d2bd9764870444ff3ed188af20a261cc03e2255c808e",
+      "sha256": "be60ca3c89c15a5a3d72d4a113b7ffeddb9bc4e436102625b1818e4e8baa3dda",
+      "width": 1600,
+      "height": 900,
+      "bytes": 267494,
+      "sourceUrl": "https://cdn.kpopping.com/kpics/2026/06/1781627727652-04dqj7-0.png",
+      "sourceWidth": 1600,
+      "sourceHeight": 900
+    },
+    "christmas": {
+      "sourceSha256": "6b68d0dd00aea3e1409b8e50f494eb6a4627909b696cb8da9dcccc5965bdc944",
+      "sha256": "b8b7ad64c95da60b5007c6ee38e3cc14bb90a77c3047c05cfb41478e00782738",
+      "width": 1600,
+      "height": 900,
+      "bytes": 401088,
+      "sourceUrl": "https://cdn.kpopping.com/kpics/2026/06/1781630020889-7crh4z-0.jpg",
+      "sourceWidth": 4096,
+      "sourceHeight": 2304
+    },
+    "pastel": {
+      "sourceSha256": "291ee787b970949648dea687b5308f14ae1b4a3e9886a4255ee1f630b864d0ed",
+      "sha256": "b8a75dd025dc886a89d9a91abd29c40de81057a01a696a31775ff31900b55335",
+      "width": 1600,
+      "height": 900,
+      "bytes": 215534,
+      "sourceUrl": "https://cdn.kpopping.com/kpics/2026/06/1781630640449-jits8e-0.png",
+      "sourceWidth": 2160,
+      "sourceHeight": 1215
+    },
+    "hanteo": {
+      "sourceSha256": "6d1fdaa4e6765fb8c2a58a351c1c78704f7bfeaec1c3bbfc0ecc4133b7ba8bcd",
+      "sha256": "71a331651a1c393994f83a6a2bcb5e7c7ed59f2497caa359393ab72fd7c35e49",
+      "width": 1280,
+      "height": 960,
+      "bytes": 338672,
+      "sourceUrl": "https://legacy.kpopping.com/ca/1/251209-HANTEO-NEWS-Twitter-Update-with-ISEGYE-IDOL-documents-1.jpeg",
+      "sourceWidth": 1280,
+      "sourceHeight": 960
+    },
+    "rewind": {
+      "sourceSha256": "a9cd2d35c8c4fb9d67f339a4e92f79ddf72ad8443a1c9fcbc74559b574802a14",
+      "sha256": "3a75d6e437c95d955a209d35df2746ea14b1203ddf3359e846334dc9ace190b5",
+      "width": 1280,
+      "height": 720,
+      "bytes": 198972,
+      "sourceUrl": "https://isegye-festival.com/wp-content/uploads/2024/05/maxresdefault-1.jpg",
+      "sourceWidth": 1280,
+      "sourceHeight": 720
+    }
+  }
+}

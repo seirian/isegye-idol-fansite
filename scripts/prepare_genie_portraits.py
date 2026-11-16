@@ -88,10 +88,7 @@ def main() -> None:
             if digest(target.read_bytes()) != r['sha256']:
                 raise ValueError('Unexpected existing portrait; no automatic replacement')
             continue
-        data = prepare(download(r), r)
-        with target.open('xb') as handle:
-            handle.write(data)
-        print(r['id'] + ': verified 600x600 Genie portrait')
+        raise ValueError('Approved portrait cache missing; restore reviewed bytes: ' + r['id'])
 
 if __name__ == '__main__':
     main()

@@ -172,19 +172,27 @@ def image_asset(url,key,size=400):
     return {'key':key,'path':'albums/asset-cache/'+digest+'.webp','sha256':digest,'source':url}
 
 def collect(result,previous,chart_kinds=None):
-    now=datetime.now(timezone.utc);stamp=now.isoformat();songs=json.loads((ROOT/'catalog/music.json').read_text())['songs']
+    from album_releases import load_catalog, releases
+    now=datetime.now(timezone.utc);stamp=now.isoformat();songs=load_catalog(ROOT)['songs']
     result['domesticCharts']={};result['assets']={'covers':{},'brands':{}};report={'checkedAt':stamp,'providers':{},'charts':{},'assets':{},'manual':[]}
     allrows={}
     for provider in SEARCH:
         rows=[];errors=[]
+        fetched=set()
         for artist,term in [('group','이세계아이돌'),('gosegu','고세구')]:
+            ids=[]
             try:
                 ids=search_albums(fetch(SEARCH[provider]+urlencode({'q':term})[2:]),provider,artist)
                 if not ids:raise ValueError('No exact artist album results')
-                for ident in ids:
-                    try:rows.extend(parse_album(fetch(ALBUM_URLS[provider]+ident),provider,ident))
-                    except Exception as exc:errors.append({'albumId':ident,'error':type(exc).__name__})
             except Exception as exc:errors.append({'artist':artist,'error':type(exc).__name__})
+            # Exact reviewed album URLs remain usable even when search indexing lags.
+            if provider=='melon' and artist=='group':
+                ids=list(dict.fromkeys(ids+[r['melonAlbumId'] for r in releases(ROOT)]))
+            for ident in ids:
+                if ident in fetched:continue
+                fetched.add(ident)
+                try:rows.extend(parse_album(fetch(ALBUM_URLS[provider]+ident),provider,ident))
+                except Exception as exc:errors.append({'albumId':ident,'error':type(exc).__name__})
         allrows[provider]=rows;count=0
         for song in songs:
             row=match(song,rows);item=result['tracks'][song['id']]

@@ -1,0 +1,54 @@
+name: REBELS - one-time verified historical repair
+on:
+  workflow_run:
+    workflows: ['Production - isolated inour SFTP deployment']
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+  queue: max
+jobs:
+  repair:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' &&
+        contains(github.event.workflow_run.head_commit.message, '[rebels-backfill-20261116]')))
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Preserve existing pause controls
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+        run: test "$PRODUCTION_PAUSED" != true && test "$ISEGYE_ALBUMS_PAUSED" != true
+      - name: Install isolated verified transfer dependencies
+        run: |
+          python -m venv /tmp/rebels-backfill
+          /tmp/rebels-backfill/bin/pip install beautifulsoup4==4.14.3 pillow==11.3.0 paramiko==5.0.0
+      - name: Test source, scope, conflict and atomic publication boundaries
+        run: |
+          /tmp/rebels-backfill/bin/python -m unittest discover -s tests -p 'test_rebels_melon_backfill.py' -v
+          node --test tests/rebels-backfill.test.js
+          rm -f rebels-backfill-report.json rebels-backfill-before.json rebels-backfill-after.json
+      - name: Patch only verified REBELS history without changing collection clocks
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+        run: /tmp/rebels-backfill/bin/python scripts/rebels_melon_backfill.py publish
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: rebels-backfill-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            rebels-backfill-report.json
+            rebels-backfill-before.json
+            rebels-backfill-after.json
+          retention-days: 30

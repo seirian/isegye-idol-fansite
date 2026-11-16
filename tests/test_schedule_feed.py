@@ -76,7 +76,7 @@ class Rules(unittest.TestCase):
   for n in ('../.auth-private/accounts.json','/web/.htaccess','index.html'):
    with self.assertRaises(d.Stop):pub.path(n)
  def test_schedule_main_scoped(self):
-  s=(ROOT/'.github/workflows/schedule-refresh.yml').read_text();self.assertIn("cron: '17 * * * *'",s);self.assertIn("github.ref == 'refs/heads/main'",s);self.assertIn('group: isegye-inour-production',s)
+  s=(ROOT/'.github/workflows/schedule-refresh.yml').read_text();self.assertIn("cron: '5 * * * *'",s);self.assertIn("github.ref == 'refs/heads/main'",s);self.assertIn('group: isegye-inour-production',s)
 if __name__=='__main__':unittest.main()
 
 from test_google_access_deploy import Remote,OLD
