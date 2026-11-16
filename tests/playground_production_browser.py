@@ -35,7 +35,7 @@ try:
   page.screenshot(path=str(OUT/'home-1440.png'),full_page=True)
   page.locator('[data-start=daily]').click();expect(page.locator('[data-answer]')).to_have_count(4)
   check('production deep link',page.url.endswith('#/playground/play'))
-  page.locator('[data-action=hint]').click();expect(page.locator('.hint')).to_be_visible()
+  page.locator('[data-action=hint]').click();expect(page.locator('.notice.hint')).to_be_visible()
   page.locator('[data-answer]').first.click();expect(page.locator('[data-action=next]')).to_be_visible();page.reload(wait_until='networkidle');expect(page.locator('[data-action=next]')).to_be_visible()
   check('production resume survives reload',page.locator('.feedback').count()==1)
   for i in range(5):
