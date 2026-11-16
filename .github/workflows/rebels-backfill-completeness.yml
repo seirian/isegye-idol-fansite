@@ -1,0 +1,39 @@
+name: REBELS blank-slot evidence verification
+on:
+  push:
+    branches: ['fix/rebels-melon-backfill-20261116']
+    paths: ['.github/workflows/rebels-backfill-completeness.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read bounded historical public charts without credentials
+        run: |
+          mkdir -p evidence
+          python - <<'PY'
+          from urllib.request import urlopen,Request
+          from pathlib import Path
+          import json,time,hashlib
+          times=[f'202611{d:02d}-{h:02d}' for d in range(10,17) for h in range(1,7) if (d,h)!=(11,1)]
+          times+=['20261109-18','20261110-16','20261112-07','20261112-09','20261113-07']
+          requests=[('top100',t) for t in times]+[('hot100-d100','20261109-18')]
+          result=[]
+          for kind,t in requests:
+              date,hour=t.split('-');url=f'https://xn--o39an51b2re.com/chart/melon/{kind}?date={date}&hour={hour}'
+              try:
+                  with urlopen(Request(url,headers={'User-Agent':'Isegye-Rebels-OneTime-Review/1.0'}),timeout=15) as r:raw=r.read(1500001);final=r.url
+                  if len(raw)>1500000:raise ValueError('Oversize page')
+                  name=f'{kind}-{t}.html';Path('evidence',name).write_bytes(raw)
+                  result.append({'url':url,'finalUrl':final,'file':name,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()})
+              except Exception as e:result.append({'url':url,'error':type(e).__name__})
+              time.sleep(1)
+          Path('evidence/index.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: rebels-blank-evidence-${{ github.run_id }}
+          path: evidence/
+          retention-days: 7
