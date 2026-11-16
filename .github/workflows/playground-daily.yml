@@ -1,0 +1,83 @@
+name: Playground - daily verified question bank
+on:
+  schedule:
+    - cron: '37 22 * * *' # 07:37 Asia/Seoul, UTC previous day
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Production - isolated inour SFTP deployment']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+  queue: max
+jobs:
+  refresh:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Respect independent question-bank and global pause controls
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+        run: test "$PRODUCTION_PAUSED" != true && test "$ISEGYE_PLAYGROUND_PAUSED" != true
+      - name: Test immutable answers, deduplication and rollback
+        run: |
+          python -m unittest discover -s tests -p test_playground_bank.py -v
+          node --test tests/playground-bank.test.js
+      - name: Install isolated source-reading and transfer tools
+        run: |
+          python -m venv /tmp/playground-daily
+          /tmp/playground-daily/bin/pip install paramiko==5.0.0 playwright==1.56.0 pillow==11.3.0
+          bash scripts/ci_browser_install.sh /tmp/playground-daily/bin/python
+      - name: Restore cumulative bank and verified music feed only
+        run: /tmp/playground-daily/bin/python scripts/publish_playground_bank.py restore
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Verify original channels and read public quiz reference bodies
+        run: /tmp/playground-daily/bin/python scripts/collect_playground.py
+        env:
+          ISEGYE_NAVER_CLIENT_ID: ${{ secrets.ISEGYE_NAVER_CLIENT_ID }}
+          ISEGYE_NAVER_CLIENT_SECRET: ${{ secrets.ISEGYE_NAVER_CLIENT_SECRET }}
+      - name: Atomically publish validated questions without redeploying the site
+        run: /tmp/playground-daily/bin/python scripts/publish_playground_bank.py publish
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Report actual additions and source limitations
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path('playground-publication.json');d=json.loads(p.read_text()) if p.exists() else {'status':'not_published'}
+          line=f"놀이터 문제은행: {d.get('status')}; 추가 {d.get('added','—')}, 전체 {d.get('questionCount','—')}; 서버 재확인 {d.get('verifiedReadback',False)}. 커뮤니티 후보는 자동 출제하지 않습니다."
+          print(line);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(line+'\n')
+          r=Path('playground-discovery.json')
+          if r.exists():
+              v=json.loads(r.read_text());bad=v.get('referenceWarnings',[])+[x.get('url',x.get('state')) for x in v.get('referenceChecks',[]) if x.get('state')!='body_checked']
+              if bad:print('::warning::Some reference bodies/searches were unavailable; no unverified answers were published.')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: daily-playground-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playground-publication.json
+            playground-discovery.json
+            playground-restore.json
+            playground-state/references.json
+          retention-days: 30

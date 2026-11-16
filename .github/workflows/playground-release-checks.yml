@@ -1,0 +1,46 @@
+name: Playground - production integration checks
+on:
+  push:
+    branches: ['feature/playground']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: playground-release-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Verify complete source and safe batch rules
+        run: |
+          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0
+          GITHUB_REF=refs/heads/feature/playground DEPLOY_ENV=preview python scripts/build_playground.py
+          GITHUB_REF=refs/heads/feature/fanmade DEPLOY_ENV=preview python scripts/build_fanmade.py
+          npm test
+          python -m unittest discover -s tests -p 'test_*.py' -v
+          npm run build
+      - name: Build production authentication with every existing review preserved
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          python scripts/build_playground_production_host.py
+      - name: Install isolated browser tools
+        run: |
+          python -m venv /tmp/playground-release
+          /tmp/playground-release/bin/pip install playwright==1.56.0 cryptography==46.0.3
+          bash scripts/ci_browser_install.sh /tmp/playground-release/bin/python
+      - name: Test real HTTP production menu and real TLS authorization
+        run: |
+          /tmp/playground-release/bin/python tests/playground_production_browser.py
+          /tmp/playground-release/bin/python tests/playground_bank_host_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-release-checks-${{ github.sha }}
+          path: test-results/
+          retention-days: 14

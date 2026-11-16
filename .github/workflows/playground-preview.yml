@@ -1,8 +1,7 @@
 name: Playground - isolated menu review
+# Preview approved for production; retained URL remains available.
 on:
-  push:
-    branches: ['feature/playground']
-    paths: ['playground/**', 'scripts/*playground*.py', 'tests/*playground*', 'docs/PLAYGROUND_REVIEW.md', '.github/workflows/playground-preview.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -10,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   preview:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/playground'
+    if: false # Superseded by tested main-only production deployment
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment:

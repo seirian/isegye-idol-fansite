@@ -27,6 +27,7 @@ SPECS = {
     'schedule': ('schedule-refresh.yml', 'schedule-publication', 'ISEGYE_SCHEDULE_PAUSED'),
     'music': ('music-daily.yml', 'daily-music', 'ISEGYE_MUSIC_PAUSED'),
     'history': ('history-monthly.yml', 'weekly-history', 'ISEGYE_HISTORY_PAUSED'),
+    'playground': ('playground-daily.yml', 'daily-playground', 'ISEGYE_PLAYGROUND_PAUSED'),
     'catalog': ('video-catalog.yml', None, 'ISEGYE_VIDEO_CATALOG_PAUSED'),
     'production': ('production.yml', None, 'PRODUCTION_PAUSED'),
 }
@@ -61,8 +62,8 @@ def due_slot(kind, at):
     if kind == 'schedule':
         due = local.replace(minute=5, second=0, microsecond=0)
         return (due if due <= local else due-timedelta(hours=1)).astimezone(UTC)
-    if kind in ('music', 'catalog'):
-        hour, minute = (6, 0) if kind == 'music' else (7, 15)
+    if kind in ('music', 'catalog','playground'):
+        hour, minute = (6, 0) if kind == 'music' else (7, 37) if kind == 'playground' else (7, 15)
         due = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
         return (due if due <= local else due-timedelta(days=1)).astimezone(UTC)
     if kind == 'history':
@@ -91,7 +92,7 @@ def evidence_ok(kind, files, due, at):
                      or (restore.get('status') == 'restored' and restore.get('source') == 'cumulative-feed'))
         return persisted and cov['currentComplete']
     pub = files.get({'music':'music-publication.json','schedule':'schedule-publication.json',
-                     'history':'history-publication.json'}[kind], {})
+                     'history':'history-publication.json','playground':'playground-publication.json'}[kind], {})
     if pub.get('status') != 'published' or not recent(pub.get('generatedAt'), due, at):
         return False
     if kind == 'schedule':
@@ -105,6 +106,8 @@ def evidence_ok(kind, files, due, at):
                         for k in REQUIRED_SCHEDULE))
     if pub.get('verifiedReadback') is not True:
         return False
+    if kind == 'playground':
+        return (pub.get('bankVerified') is True and pub.get('questionCount',0)>=32 and recent(pub.get('readbackAt'),due,at))
     if kind == 'music':
         states = pub.get('sourceStates', {})
         audit = files.get('test-results/music-sources/source-audit.json', {})
@@ -194,7 +197,7 @@ def artifact_files(run, prefix, filename, getter=api):
         raise ValueError('Evidence checksum mismatch')
     allowed = {'albums/snapshot.json','albums-restore.json','albums-publication.json',
                'schedule-publication.json','schedule-health.json','music-publication.json',
-               'test-results/music-sources/source-audit.json','history-publication.json'}
+               'test-results/music-sources/source-audit.json','history-publication.json','playground-publication.json'}
     files = {}
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         if sum(info.file_size for info in z.infolist() if info.filename in allowed) > MAX_ARCHIVE:
@@ -356,7 +359,7 @@ def inspect_batch(kind, at, getter=None):
             pub = files.get({'albums':'albums-publication.json',
                              'schedule':'schedule-publication.json',
                              'music':'music-publication.json',
-                             'history':'history-publication.json'}[kind], {})
+                             'history':'history-publication.json','playground':'playground-publication.json'}[kind], {})
             row['publicationEvidence'] = {key:pub[key] for key in
                 ('status','generatedAt','publishedAt','verifiedReadback','readbackAt','evidenceVersion') if key in pub}
             if kind == 'schedule':

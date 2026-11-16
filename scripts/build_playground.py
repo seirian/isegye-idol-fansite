@@ -9,7 +9,7 @@ BRANCH='feature/playground'
 BASE='7542c84466d87632d45baa5251a8e74781c58259'
 def validate(d):
     if d.get('schemaVersion')!=1 or not re.fullmatch(r'\d{4}-\d{2}-\d{2}\.\d+',d.get('version','')):raise ValueError('Schema/version')
-    if not 10<=len(d['questions'])<=200 or not 3<=len(d['tracks'])<=100:raise ValueError('Catalog bounds')
+    if not 10<=len(d['questions'])<=1000 or not 3<=len(d['tracks'])<=100:raise ValueError('Catalog bounds')
     sources=d['sources'];ids=[]
     for key,s in sources.items():
         u=urlparse(s['url'])
