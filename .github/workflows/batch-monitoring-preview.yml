@@ -5,33 +5,25 @@ on:
     paths:
       - monitoring/**
       - scripts/*batch_monitor*.py
-      - tests/*batch_monitor*.py
+      - tests/*batch_monitor*
       - .github/workflows/batch-monitoring-preview.yml
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
-concurrency:
-  group: isegye-inour-production
-  cancel-in-progress: false
-  queue: max
 jobs:
-  preview:
+  validate:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
-    environment:
-      name: production
-      url: https://isegye-idol.kr/ops/batches/
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '22'}
-      - name: Respect existing production pause
-        env: {PRODUCTION_PAUSED: '${{ vars.PRODUCTION_PAUSED }}'}
-        run: test "$PRODUCTION_PAUSED" != true
-      - name: Install pinned build and browser tools
+      - name: Install pinned validation tools without production credentials
         run: |
           python -m venv /tmp/batch-monitor-tools
           /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 playwright==1.56.0 cryptography==46.0.3 paramiko==5.0.0
@@ -51,6 +43,45 @@ jobs:
           php -l auth-bundle/Gateway.php
       - name: Verify guest member admin and desktop mobile UI using synthetic identities
         run: /tmp/batch-monitor-tools/bin/python tests/batch_monitor_host_browser.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-monitor-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/batch-monitor/
+          retention-days: 30
+          if-no-files-found: warn
+  publish:
+    needs: validate
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
+    # Test jobs never occupy the operating write queue. Every real write still does.
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    environment:
+      name: production
+      url: https://isegye-idol.kr/ops/batches/
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Require the latest review revision and respect existing pause
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/feature/batch-monitoring --jq .object.sha)" = "$GITHUB_SHA"
+      - name: Rebuild the same validated credential-free runtime
+        run: |
+          python -m venv /tmp/batch-monitor-tools
+          /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          /tmp/batch-monitor-tools/bin/python scripts/build_batch_monitor_host.py
+          php -l auth-bundle/Gateway.php
+          php -l auth-bundle/BatchMonitor.php
       - name: Read actual GitHub evidence without dispatch or collection
         run: /tmp/batch-monitor-tools/bin/python scripts/batch_monitor_snapshot.py
         env:
@@ -62,6 +93,9 @@ jobs:
           ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
           ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
           ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+      - name: Recheck latest review revision before publication
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/feature/batch-monitoring --jq .object.sha)" = "$GITHUB_SHA"
       - name: Publish only private monitor and verified admin route
         run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py
         env:
@@ -72,8 +106,6 @@ jobs:
         if: always()
         with:
           name: batch-monitor-review-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            batch-monitor-deployment.json
-            test-results/batch-monitor/
+          path: batch-monitor-deployment.json
           retention-days: 30
           if-no-files-found: warn
