@@ -1,0 +1,106 @@
+name: Album history exact final review
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/album-history-final-review.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0 tinycss2==1.4.0 playwright==1.56.0
+      - name: Restore only fixed digest-verified evidence archives without public source calls
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import sys,os,hashlib,json
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from album_observation_archive import request,API
+          token=os.environ.pop('GH_TOKEN')
+          sources=[('history-review.zip',14192269899,'4ffc1fc87f478be1d9def114df85dcc448f4db33bb25e741102d0ae5ab6f6231'),('dated-review.zip',14188916741,'0670d300c8115aa4148b48bf677b5ccfa2d86b62ab3e61b5c5bca1ddfd17076e'),('baseline-review.zip',14190278841,'f6c9b504fdaf40c5a280accf9c1a0446f2b6629c494dc8844bf5a61774cf86dd')]
+          for name,ident,digest in sources:
+            raw=request(API+'/actions/artifacts/'+str(ident)+'/zip',token,binary=True)
+            if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Changed evidence archive')
+            Path(name).write_bytes(raw)
+          token=None
+          Path('album-history-evidence-manifest.json').write_text(json.dumps(sources,indent=2))
+          PY
+      - name: Compose only approved historical UI and verify finite source dataset
+        run: |
+          python repair/compose_all_album_history.py
+          python repair/prepare_history_dataset.py history-review.zip dated-review.zip baseline-review.zip
+      - name: Complete JavaScript and Python regression
+        run: |
+          npm test > album-history-js-tests.log 2>&1
+          python -m unittest discover -s tests -p 'test_*.py' -v > album-history-python-tests.log 2>&1
+      - name: Build complete credential-free preview using existing local seeds
+        env:
+          DEPLOY_ENV: preview
+          ISEGYE_BASELINE_ONLY: 'true'
+        run: |
+          python scripts/prepare_album_release.py
+          npm run build
+          python scripts/promote_review_2nd.py
+          python scripts/promote_albums.py
+      - run: bash scripts/ci_browser_install.sh python
+      - name: Verify rendered historical navigation, sources, recent views and mobile layout
+        run: python tests/albums_production_browser.py
+      - name: Create detached reviewed objects only, never move a branch or access production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          import os,json,hashlib,zipfile
+          api='https://api.github.com/repos/seirian/isegye-idol-fansite'
+          token=os.environ.pop('GH_TOKEN')
+          def call(path,data=None):
+            req=Request(api+path,data=json.dumps(data).encode() if data is not None else None,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'IsegyeHistoryReviewedTree/1.0'})
+            with urlopen(req,timeout=30) as r:return json.load(r)
+          base='542181dab5d7955a505d2aa358a34e811da8bdf0'
+          if call('/git/ref/heads/main')['object']['sha']!=base:raise ValueError('Main changed; review requires reconciliation')
+          names=['.github/workflows/album-history-backfill.yml','albums/accepted.json','albums/backfills/catalog-20261116.json','albums/flow.js','albums/flow-view.js','albums/flow.css','docs/ALBUM_HISTORY_20261116.md','scripts/daily_albums.py','scripts/promote_albums.py','scripts/album_history_backfill.py','tests/album-history.test.js','tests/test_album_history_backfill.py','tests/albums_production_browser.py']
+          entries=[];hashes={}
+          with zipfile.ZipFile('album-history-reviewed-files.zip','w',zipfile.ZIP_DEFLATED) as archive:
+            for name in names:
+              raw=Path(name).read_bytes()
+              if len(raw)>4000000:raise ValueError('Oversized reviewed file')
+              blob=call('/git/blobs',{'content':raw.decode(),'encoding':'utf-8'})['sha']
+              expected=hashlib.sha1(('blob '+str(len(raw))+'\0').encode()+raw).hexdigest()
+              if blob!=expected:raise ValueError('Blob identity mismatch')
+              entries.append({'path':name,'mode':'100644','type':'blob','sha':blob});hashes[name]=hashlib.sha256(raw).hexdigest();archive.write(name,name)
+          tree=call('/git/trees',{'base_tree':'8bfea968d8e665150bab2fa32c774a7a4c72c735','tree':entries})['sha']
+          Path('album-history-reviewed-tree.json').write_text(json.dumps({'baseCommit':base,'tree':tree,'entries':entries,'sha256':hashes},indent=2))
+          print(json.dumps({'baseCommit':base,'tree':tree,'fileCount':len(names)}))
+          token=None
+          PY
+      - name: Retain review results and exact generated files even on failure
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          names=['.github/workflows/album-history-backfill.yml','albums/accepted.json','albums/backfills/catalog-20261116.json','albums/flow.js','albums/flow-view.js','albums/flow.css','docs/ALBUM_HISTORY_20261116.md','scripts/daily_albums.py','scripts/promote_albums.py','scripts/album_history_backfill.py','tests/album-history.test.js','tests/test_album_history_backfill.py','tests/albums_production_browser.py']
+          with zipfile.ZipFile('album-history-generated-files.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for name in names:
+              if Path(name).is_file():z.write(name,name)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: album-history-final-review-${{ github.run_id }}
+          path: |
+            album-history-*.json
+            album-history-*.log
+            album-history-reviewed-files.zip
+            album-history-generated-files.zip
+            test-results/albums-production/
+          retention-days: 30
