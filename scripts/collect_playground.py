@@ -112,7 +112,7 @@ def check_reference_bodies(found,previous,now):
 def collect(now=None):
     now=now or datetime.now(timezone.utc);WORK.mkdir(exist_ok=True)
     previous=json.loads((WORK/'previous.json').read_text()) if (WORK/'previous.json').exists() else None
-    if previous:bank.validate_feed(previous)
+    if previous:bank.validate_stored_feed(previous)
     existing={q.get('provenance',{}).get('factKey') for q in (previous['catalog'] if previous else bank.seed())['questions']}
     proposals=[];checks=[]
     for row in [r for r in rows() if r['factKey'] not in existing][:20]:
@@ -128,7 +128,7 @@ def collect(now=None):
     value,added=bank.assemble(previous,proposals,now)
     # Meaningful failure is reported instead of marking complete when every new source failed.
     essential_ok=not checks or any(c['state']=='verified' for c in checks)
-    report={'schemaVersion':1,'generatedAt':now.isoformat(),'status':'checked' if essential_ok else 'sources_unavailable','automaticAdded':len(added),'addedIds':added,'questionCount':len(value['catalog']['questions']),'sourceChecks':checks,'referenceChecks':reference_checks,'referenceWarnings':search_errors,'communityAutoPublished':False,'previousSha256':previous['sha256'] if previous else None}
+    report={'schemaVersion':1,'generatedAt':now.isoformat(),'status':'checked' if essential_ok else 'sources_unavailable','reviewedAdded':value.get('reviewedAdded',0),'automaticAdded':len(added),'addedIds':added,'questionCount':len(value['catalog']['questions']),'sourceChecks':checks,'referenceChecks':reference_checks,'referenceWarnings':search_errors,'communityAutoPublished':False,'previousSha256':previous['sha256'] if previous else None}
     (WORK/'candidate.json').write_bytes(bank.encoded(value));(WORK/'references.json').write_bytes(bank.encoded(references));(ROOT/'playground-discovery.json').write_bytes(bank.encoded(report))
     print(json.dumps({k:v for k,v in report.items() if k not in ('sourceChecks','referenceChecks')},ensure_ascii=False))
     return 0 if essential_ok else 1

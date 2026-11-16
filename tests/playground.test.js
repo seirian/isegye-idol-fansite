@@ -12,7 +12,7 @@ test('seeded shuffle stable, not mutating',()=>{const a=[1,2,3,4];assert.deepEqu
 test('daily identical across same day and source version',()=>assert.deepEqual(chooseQuestions(data,{mode:'daily',seed:'day'}),chooseQuestions(data,{mode:'daily',seed:'day'})));
 test('daily covers four categories, no repeated ids',()=>{const ids=chooseQuestions(data,{mode:'daily',seed:'day'});assert.equal(ids.length,5);assert.equal(new Set(ids).size,5);assert.equal(new Set(ids.map(id=>data.questions.find(q=>q.id===id).category)).size,4);});
 test('different dates can rotate bank',()=>assert.notDeepEqual(chooseQuestions(data,{mode:'daily',seed:'2026-11-16'}),chooseQuestions(data,{mode:'daily',seed:'2026-11-17'})));
-test('category filter respects available count',()=>{const ids=chooseQuestions(data,{category:'stories',count:10,seed:'x'});assert.equal(ids.length,6);assert(ids.every(id=>data.questions.find(q=>q.id===id).category==='stories'));});
+test('category filter respects available count',()=>{const ids=chooseQuestions(data,{category:'stories',count:10,seed:'x'});assert.equal(ids.length,10);assert(ids.every(id=>data.questions.find(q=>q.id===id).category==='stories'));});
 test('hundred seeds never repeat a question inside a round',()=>{for(let i=0;i<100;i++){const ids=chooseQuestions(data,{count:10,seed:i});assert.equal(new Set(ids).size,10);}});
 test('order game bounded unique different-date pairs',()=>{const p=orderPairs(data.tracks,'x',99);assert.equal(p.length,10);assert.equal(new Set(p.map(v=>[...v].sort().join(':'))).size,10);});
 test('same-day songs excluded, never arbitrarily ordered',()=>assert.equal(orderPairs([{id:'a',date:'2021-01-01'},{id:'b',date:'2021-01-01'}],'x').length,0));
@@ -34,7 +34,7 @@ test('resume preserves answered-but-not-advanced state',()=>{const s=recordAnswe
 test('old question bank resets safely',()=>assert.equal(cleanState({schema:1,version:'old',session:session()},data).session,null));
 test('blocked and corrupt storage safe',()=>{assert(readState({getItem(){throw Error();}},data).warning);assert(readState({getItem(){return '{';}},data).warning);assert.equal(saveState(null,{}),false);});
 test('valid local storage roundtrip',()=>{let raw;const store={getItem:()=>raw,setItem:(k,v)=>raw=v};const st=freshState(data.version);st.session=session();saveState(store,st);assert.deepEqual(readState(store,data).state,st);});
-test('all questions have sources and single distinct answer',()=>{assert.equal(data.questions.length,32);for(const q of data.questions){assert(q.sources.length);assert.equal(new Set(q.choices).size,4);assert(q.sources.every(s=>data.sources[s]));}});
+test('all questions have sources and single distinct answer',()=>{assert.equal(data.questions.length,80);for(const q of data.questions){assert(q.sources.length);assert.equal(new Set(q.choices).size,4);assert(q.sources.every(s=>data.sources[s]));}});
 test('preference items and known conflict omitted',()=>{for(const q of data.questions)for(const r of q.inspiration){if(r.source==='cafe-ruru')assert(!r.items.includes(20)&&!r.items.includes(21));if(r.source==='cafe-final')assert(!r.items.includes(25));}});
 test('source correction for question 51 crosschecked',()=>{const q=data.questions.find(q=>q.id==='covers-sign');assert.equal(q.choices[q.answer],'사인은 B');assert(q.sources.includes('video-bD8y_47cbTs'));});
 test('markup escaped and links safe',()=>{assert.equal(esc('<b>'), '&lt;b&gt;');assert.equal(safeLink('javascript:alert(1)'), '');assert.equal(safeLink('//evil.test'),'');assert.equal(safeLink('/#/song/rewind'),'/#/song/rewind');});

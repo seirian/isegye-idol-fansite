@@ -42,7 +42,8 @@
   ],
   "protectedPaths": [
     "/src/admin-operations.js",
-    "/build-info.json"
+    "/build-info.json",
+    "/src/playground-admin.js"
   ],
   "publicFiles": {
     "src/data.js": "src/public-data.js",

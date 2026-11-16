@@ -90,10 +90,10 @@ class Bank(unittest.TestCase):
   canonical=json.loads(b.encoded(feed));p.publish(r,canonical,self.report(canonical,added=1),{})
   wire=json.loads(r.read(p.path('current.json')))
   self.assertEqual(list(wire['catalog']['categories']),list(b.seed()['categories']))
-  self.assertEqual(wire['sha256'],feed['sha256']);self.assertEqual(len(wire['catalog']['questions']),33)
+  self.assertEqual(wire['sha256'],feed['sha256']);self.assertEqual(len(wire['catalog']['questions']),81)
  def test_publish_only_owned_bank_paths(self):
   r=Remote();before=dict(r.files);f,a=b.assemble(None,[proposal(1,self.now)],self.now);res=p.publish(r,f,self.report(f,added=1),{})
-  self.assertEqual(res['added'],1);self.assertTrue(res['verifiedReadback']);self.assertEqual(len(json.loads(r.read(p.path('current.json')))['catalog']['questions']),33)
+  self.assertEqual(res['added'],1);self.assertTrue(res['verifiedReadback']);self.assertEqual(len(json.loads(r.read(p.path('current.json')))['catalog']['questions']),81)
   for k,v in before.items():self.assertEqual(r.read(k),v)
   self.assertTrue(all(x.startswith(p.FOLDER+'/') for x in r.writes))
  def test_bad_evidence_never_publishes(self):
