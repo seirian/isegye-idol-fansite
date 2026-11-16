@@ -3,7 +3,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
 from functools import partial
 from playwright.sync_api import sync_playwright,expect
-import threading,json,os
+import threading,json,os,time
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'test-results/albums-production';OUT.mkdir(parents=True,exist_ok=True)
 class Handler(SimpleHTTPRequestHandler):
  def log_message(self,*args):pass
@@ -19,7 +19,13 @@ try:
   ctx.route('**/*',lambda r:r.continue_() if r.request.url.startswith(url) else r.abort())
   ctx.route('**/auth/status',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps({'authenticated':True,'administrator':True,'allowed':True})))
   def navigate(*args,**kwargs):
-   response=page.goto(*args,**kwargs);page.wait_for_function('typeof IsegyeOps!=="undefined"&&IsegyeOps.allowed()');return response
+   response=page.goto(*args,**kwargs)
+   # Use test-runner polling, not page-side eval rejected by the real CSP.
+   deadline=time.monotonic()+10
+   while time.monotonic()<deadline:
+    if page.evaluate('() => typeof IsegyeOps!=="undefined"&&IsegyeOps.allowed()'):return response
+    page.wait_for_timeout(50)
+   raise AssertionError('Administrator visibility was not authorized')
   for path in ('schedule','music','history','albums'):ctx.route('**/api/'+path,lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
   navigate(url,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
   check('home remains default',page.url.endswith('#/home'))

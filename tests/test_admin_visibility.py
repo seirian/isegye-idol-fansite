@@ -116,6 +116,12 @@ console.log(JSON.stringify({views:Object.keys(views).length,liveFeed:true,isolat
   result=subprocess.run(['node','-e',js],input=private,text=True,capture_output=True,timeout=10)
   self.assertEqual(result.returncode,0,result.stderr)
   self.assertEqual(json.loads(result.stdout),{'views':10,'liveFeed':True,'isolated':True})
+ def test_role_waits_preserve_strict_page_csp(self):
+  for name in ('admin_visibility_browser.py','albums_production_browser.py'):
+   text=(ROOT/'tests'/name).read_text()
+   self.assertNotIn('page.wait_for_function(',text)
+   self.assertIn('time.monotonic()+10',text)
+   self.assertIn('page.evaluate(',text)
  def test_no_session_policy_change(self):
   text=(ROOT/'auth/Session.php').read_text();self.assertIn('>= 7200',text);self.assertIn('>= 43200',text)
  def test_bundle_and_feed_reuse_existing_access_role(self):
