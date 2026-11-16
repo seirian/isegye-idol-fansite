@@ -1,0 +1,68 @@
+name: REBELS backfill evidence inspection
+on:
+  push:
+    branches: ['fix/rebels-melon-backfill-20261116']
+    paths: ['.github/workflows/rebels-backfill-source.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Export repository and bounded public evidence without deployment access
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence
+          git archive --format=zip --output=evidence/repository.zip HEAD
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from urllib.parse import urlparse, urljoin
+          import json, os, hashlib, time, re, sys
+          out=Path('evidence'); report=[]
+          base='https://xn--o39an51b2re.com'
+          urls=[base+'/song/melon/603813508',base+'/chart/melon/top100/trend/ranking/603813508',base+'/chart/melon/hot100-d100/trend/ranking/603813508',base+'/policy',base+'/robots.txt']
+          scripts=set()
+          for i,url in enumerate(urls):
+              try:
+                  with urlopen(Request(url,headers={'User-Agent':'Isegye-Rebels-OneTime-Review/1.0'}),timeout=25) as r:
+                      raw=r.read(2000001); final=r.url
+                  if len(raw)>2000000: raise ValueError('Oversize response')
+                  path=f'public-{i}.html';(out/path).write_bytes(raw)
+                  report.append({'url':url,'finalUrl':final,'file':path,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+                  if i in (1,2):
+                      for src in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',raw.decode('utf-8','replace')):
+                          target=urljoin(url,src)
+                          if urlparse(target).netloc==urlparse(base).netloc: scripts.add(target)
+              except Exception as exc: report.append({'url':url,'error':type(exc).__name__,'detail':str(exc)[:160]})
+              time.sleep(1)
+          for i,url in enumerate(sorted(scripts)[:6]):
+              try:
+                  with urlopen(Request(url,headers={'User-Agent':'Isegye-Rebels-OneTime-Review/1.0'}),timeout=25) as r:raw=r.read(2000001)
+                  if len(raw)>2000000: raise ValueError('Oversize script')
+                  path=f'public-script-{i}.js';(out/path).write_bytes(raw)
+                  report.append({'url':url,'file':path,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+              except Exception as exc:report.append({'url':url,'error':type(exc).__name__})
+          (out/'public-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          sys.path.insert(0,'scripts')
+          from album_observation_archive import request, API
+          token=os.environ.pop('GH_TOKEN'); selected=[]
+          for page in range(1,11):
+              rows=request(API+f'/actions/artifacts?per_page=100&page={page}',token).get('artifacts',[])
+              for row in rows:
+                  if re.fullmatch(r'(?:album-observation|daily-albums)-\d+-\d+',row['name']) and not row['expired'] and row['created_at']>='2026-11-09T09:00:00Z': selected.append(row)
+              if not rows or rows[-1]['created_at']<'2026-11-09T09:00:00Z':break
+          (out/'artifact-index.json').write_text(json.dumps(selected,ensure_ascii=False,indent=2))
+          print(json.dumps({'public':report,'candidateArchives':len(selected)},ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: rebels-backfill-evidence-${{ github.run_id }}
+          path: evidence/
+          retention-days: 7
