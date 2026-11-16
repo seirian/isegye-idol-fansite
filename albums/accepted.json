@@ -8,14 +8,14 @@
   "sourceHashes": {
     "albums/core.js": "60b38cd20c363c5f4e6e0de992013e72c836ef88f0f91eb559ca1f746208c073",
     "albums/peak-fallback.js": "a647567780404951eae8fb78597ffb594a6e72eb5c6ee1d3be0ac616232bf471",
-    "albums/flow.js": "279b48b9c4ec7b46972a015666637a3e42adb752f6a6964dc9271aa6ba7278aa",
+    "albums/flow.js": "c7beaa2037ba7893f9bda9e2e8c2add06644136b331bdffe5f1a3b55ad576bf6",
     "albums/ui.js": "32d22984166795d8642863477b2b18f4594b473d3ab893cb05ee05d7ac8b80b2",
-    "albums/flow-view.js": "a2d55475b644641b1bae85471e3c37dce29006a251576ba5854331782281199e",
+    "albums/flow-view.js": "6eabe1ed2f8ad6ff7d603e5619e8cc22ee496d2f0fa02ca539666ab480fe9f8c",
     "albums/theme.css": "54849828573f49232515586f89f4b0e5b9244ff547483c480a21ba33f988f58a",
     "albums/engagement.css": "53167e56a72d848cf376ed8cc0697f222cea230762bce2718c5f1fa6b8ba73d3",
     "albums/domestic.css": "6a7cbb01259f6790a8e6c72dd3f4214fc7e585134dc4d653eb3a78f74fdeb551",
     "albums/records.css": "e54210a183188f0a26c38be6f902cd2756e6f4e16a61363883ee6204efaa61d9",
-    "albums/flow.css": "095054f9fa2bb587bde18f99b70bba644c772d520d3a67cc1f5ac0c2eb390fb3"
+    "albums/flow.css": "93899dbabcda2cddbbcf9af72cc8b9398697f094bd9d24ef4b45d322ac09dcb6"
   },
   "amendments": [
     {
@@ -28,6 +28,20 @@
       "sourceHashes": {
         "albums/flow.js": "279b48b9c4ec7b46972a015666637a3e42adb752f6a6964dc9271aa6ba7278aa",
         "albums/flow-view.js": "a2d55475b644641b1bae85471e3c37dce29006a251576ba5854331782281199e"
+      }
+    },
+    {
+      "id": "catalog-history-20261116",
+      "scope": "Owner-requested release-to-cutoff history for the 16 registered albums/works; add dated history controls and source attribution; preserve recent UI and collection schedules.",
+      "previousSourceHashes": {
+        "albums/flow.js": "279b48b9c4ec7b46972a015666637a3e42adb752f6a6964dc9271aa6ba7278aa",
+        "albums/flow-view.js": "a2d55475b644641b1bae85471e3c37dce29006a251576ba5854331782281199e",
+        "albums/flow.css": "095054f9fa2bb587bde18f99b70bba644c772d520d3a67cc1f5ac0c2eb390fb3"
+      },
+      "sourceHashes": {
+        "albums/flow.js": "c7beaa2037ba7893f9bda9e2e8c2add06644136b331bdffe5f1a3b55ad576bf6",
+        "albums/flow-view.js": "6eabe1ed2f8ad6ff7d603e5619e8cc22ee496d2f0fa02ca539666ab480fe9f8c",
+        "albums/flow.css": "93899dbabcda2cddbbcf9af72cc8b9398697f094bd9d24ef4b45d322ac09dcb6"
       }
     }
   ]

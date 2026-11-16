@@ -75,6 +75,35 @@ try:
   expect(page.locator('.ai-hero .ai-cover img')).to_have_attribute('src','/api/albums/assets/'+sha+'.webp')
   check('dynamic cover bytes loaded',page.locator('.ai-hero .ai-cover img').evaluate('(e)=>e.complete&&e.naturalWidth>0'))
   check('existing and new songs survive music feed refresh',page.evaluate("D.songs.filter(s=>s.videoId==='y-klhPVFblg').length") == 1)
+  # Test-only old release archive. Never uploaded or mixed with published facts.
+  start='2021-12-17T12:00:00+09:00';cutoff='2026-11-16T10:00:00+09:00'
+  first=int(datetime.fromisoformat(start).timestamp()//3600)
+  rewind=fresh['tracks']['rewind'];track=rewind['melon']['trackId'];album=rewind['melon']['albumId']
+  rewind['melonHistoryArchive']={'schemaVersion':1,'sourceType':'guyso_public_historical',
+      'trackId':track,'albumId':album,'datasetSha256':'a'*64,'releaseAt':start,'through':cutoff,
+      'charts':{kind:{'source':'https://xn--o39an51b2re.com/chart/melon/'+slug+'/trend/ranking/'+track,
+          'through':cutoff,'points':[[first,None,0],[first+1,97,0],[first+2,91,0],[first+744,88,1]]}
+          for kind,slug in [('melon_top100','top100'),('melon_hot100','hot100-d100')]}}
+  page.goto(url+'#/song/rewind?range=history&metric=melon_top100');page.reload(wait_until='domcontentloaded')
+  form=page.locator('[data-album-history-form]');expect(form).to_be_visible()
+  expect(form.locator('input')).to_have_value('2022-01-15')
+  check('history archive starts at verified release',form.locator('input').get_attribute('min')=='2021-12-17')
+  check('history archive cutoff bounds date input',form.locator('input').get_attribute('max')=='2026-11-16')
+  check('old archive ranks render despite rolling retention',page.locator('.ai-flow-dot').count()==2)
+  check('source link is explicit',page.get_by_role('link',name='과거 기록 출처: 가이섬').count()==1)
+  check('historical view does not claim current-hour freshness',page.locator('.ai-hourly-health').count()==0)
+  form.locator('input').fill('2022-02-14');form.locator('button').click()
+  expect(page).to_have_url(__import__('re').compile('historyEnd=2022-02-14'))
+  expect(page.locator('.ai-flow-dot')).to_have_count(1)
+  check('selected historical window changes observations',page.locator('.ai-flow-dot').count()==1)
+  for width in (320,390,768,1440):
+   page.set_viewport_size({'width':width,'height':1000})
+   check('historical date controls no overflow '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+   if width in (390,1440):page.screenshot(path=str(OUT/f'history-{width}.png'),full_page=True)
+  page.get_by_role('link',name='24시간',exact=True).click()
+  expect(page.locator('[data-album-history-form]')).to_have_count(0)
+  expect(page.locator('.ai-hourly-health')).to_have_count(1)
+  check('recent view restored after historical navigation',page.locator('.ai-hourly-health').count()==1)
   check('no JavaScript exceptions',not errors)
   browser.close()
 finally:

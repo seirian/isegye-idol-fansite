@@ -175,6 +175,9 @@ def collect(previous):
     if (identity.get('trackId') == '603813508' and identity.get('albumId') == '15120216'
             and clock(data['generatedAt']) >= repair_cutoff):
         repair_rebels(data, at=clock(data['generatedAt']))
+    # Permanent compact history plus recent repair; no third-party requests.
+    from album_history_backfill import reuse_published
+    reuse_published(data, previous)
     data['scope'] = 'production album observations; hourly refresh outside KST 01:00-06:59'
     data.pop('publication', None)
     data.pop('hourlyCoverage', None)

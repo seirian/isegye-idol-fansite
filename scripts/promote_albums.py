@@ -52,7 +52,7 @@ def adapt(app):
             code=once(code,"albumInsights=next;albumApiState='동일 출처 API 확인';","albumInsights=next;albumApiState='동일 출처 API 확인';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();")
             code=once(code, "catch {albumApiState='갱신 확인 실패 · 마지막 확인 데이터 표시';}", "catch {albumApiState='갱신 확인 실패 · 마지막 확인 데이터 표시';if(/^#\\/(music|album|song)(?:[/?]|$)/.test(location.hash))render();}")
         if name=='flow-view.js':
-            code=once(code, '${graphic}<div class="ai-flow-summary">', '${graphic}${demo?"":albumFlowFreshness(kind)}<div class="ai-flow-summary">')
+            code=once(code, '${graphic}<div class="ai-flow-summary">', '${graphic}${(demo||window.enabled)?"":albumFlowFreshness(kind)}<div class="ai-flow-summary">')
             code=code.replace('정기 수집은 검토 단계에서 활성화하지 않았습니다.', '앨범 배치는 00시 및 07~23시 정각(KST)에 실행하며 01:00~06:59에는 중지합니다. 20분·40분에는 누락된 현재 시간만 보충합니다. 게시 실패 시 이전 데이터를 유지합니다.')
         pieces.append(code)
     pieces.append((ROOT/'albums/runtime.js').read_text())
