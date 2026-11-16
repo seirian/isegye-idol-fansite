@@ -9,7 +9,7 @@ require $argv[1].'/auth/Store.php';require $argv[1].'/auth/Session.php';require 
 $root=$argv[2];$case=json_decode($argv[3],true);$id=str_repeat('a',64);$admin=str_repeat('b',64);
 $accounts=$case['role']==='admin'?[$admin=>'admin']:($case['role']==='member'?[$id=>'member']:[]);
 $administrator=($case['role']==='admin'||($case['maintenance']??false))?$admin:null;
-if($administrator!==null)$accounts[$admin]='admin';
+if($administrator!==null)$accounts[$administrator]='admin';
 file_put_contents($root.'/.auth-private/accounts.json',json_encode(['schema'=>1,'administrator'=>$administrator,'accounts'=>(object)$accounts]));
 if($case['role']!=='guest'){
  Isegye\Access\Session::start($root.'/.auth-private/sessions');Isegye\Access\Session::login($case['role']==='admin'?$admin:$id);
@@ -69,6 +69,21 @@ class AdminVisibility(unittest.TestCase):
    if role=='admin':self.assertEqual(result.decode(),raw)
    else:self.assertNotIn('PRIVATE_',result.decode());self.assertEqual(parsed['tracks'],original['tracks']);self.assertEqual(parsed['assets'],original['assets'])
   self.assertEqual(original,untouched)
+ def test_public_projection_preserves_channel_videos_and_provenance(self):
+  source={'title':'Official video','url':'https://www.youtube.com/watch?v=y-klhPVFblg','consultedUrl':'https://www.youtube.com','documentUpdatedAt':'2026-11-16','basis':'official'}
+  video={'id':'y-klhPVFblg','title':'REBELS','publishedAt':'2026-11-03T09:00:00Z','durationSeconds':192}
+  original={'source':source,'channels':[{'key':'official','title':'이세계아이돌','videos':[video],'status':'stale','fullPages':4}], 'sources':[{'id':'collector','state':'ok','lastAttemptAt':'internal','lastSuccessAt':'2026-11-16T00:00:00Z'}]}
+  result=project(original)
+  self.assertEqual(result['source'],source);self.assertEqual(result['channels'][0]['videos'],[video]);self.assertEqual(result['channels'][0]['title'],'이세계아이돌')
+  self.assertNotIn('status',result['channels'][0]);self.assertNotIn('fullPages',result['channels'][0]);self.assertNotIn('state',result['sources'][0])
+  php="require $argv[1];echo \\Isegye\\Access\\Visibility::json(stream_get_contents(STDIN),null);"
+  actual=subprocess.check_output(['php','-r',php,str(ROOT/'auth/Visibility.php')],input=json.dumps(original,ensure_ascii=False).encode())
+  self.assertEqual(json.loads(actual),result)
+ def test_complete_channel_catalog_survives_public_projection(self):
+  original=json.loads((ROOT/'catalog/videos.json').read_text())
+  public=project(original)
+  self.assertEqual(len(public['channels']),len(original['channels']))
+  for before,after in zip(original['channels'],public['channels']):self.assertEqual(after['videos'],before['videos'])
  def test_projection_preserves_empty_objects_and_unchanged_bytes(self):
   php="require $argv[1];echo \\Isegye\\Access\\Visibility::json(stream_get_contents(STDIN),null);"
   raw='{ "providers": {}, "tracks": {}, "sources": [] }'
@@ -76,6 +91,31 @@ class AdminVisibility(unittest.TestCase):
  def test_script_projection_is_json_only(self):
   code='const CATALOG={"providers":{"youtube":{"state":"secret"}},"title":"<MV>"};\nconst X=()=>1;\n'
   result=javascript_projection(code);self.assertIn('const X=()=>1;',result);self.assertNotIn('secret',result);self.assertIn('\\u003cMV>',result)
+ def test_admin_module_uses_explicit_dependencies_and_live_feed(self):
+  from compose_admin_visibility import admin_module,function
+  private=admin_module(function((ROOT/'albums/flow-view.js').read_text(),'albumProviderPanel'),function((ROOT/'albums/runtime.js').read_text(),'albumFlowFreshness'))
+  js=r'''
+const vm=require('node:vm'),fs=require('node:fs');
+const factory=vm.runInNewContext(fs.readFileSync(0,'utf8').replace('export function createViews','function createViews')+';createViews;',Object.create(null));
+let insights={providers:{},domesticCharts:{melon_top100:{state:'ok'}}},apiState='first';
+const context={D:{sources:[{id:'official',label:'<private>',state:'ok',lastSuccessAt:'time',lastAttemptAt:'attempt',detail:'<detail>'}],scope:{videoCoverageComplete:22,videoChannelCount:22,historyCheckedAt:'time'}},
+ esc:s=>String(s??'').replaceAll('<','&lt;').replaceAll('>','&gt;'),stamp:s=>String(s),badge:s=>'BADGE:'+s,sourceNames:{},
+ FeedValidators:{scheduleCollectionMessage:()=>''},patch:()=> '#/song/test?demo=1',
+ aiData:()=>({melon:{state:'ok',checkedAt:'time'}}),albumFreeServiceStatus:()=>({state:'ok',label:'연결됨',detail:'API fixture'}),
+ albumFreshness:data=>({state:'current',missing:0,chartAt:null,collectedAt:null,publishedAt:null}),
+ get albumInsights(){return insights;},get albumApiState(){return apiState;}};
+const views=factory(context),results={};
+for(const name of Object.keys(views))results[name]=String(name==='providers'?views[name]({id:'rewind'}):name==='flow'?views[name]('melon_top100'):name==='demoLink'?views[name](false,'melon_top100'):views[name]());
+if(Object.values(results).some(value=>typeof value!=='string'))throw Error('Invalid view');
+if(!results.status.includes('&lt;private&gt;')||results.status.includes('<private>'))throw Error('Escaping lost');
+if(!results.providers.includes('곡 정보·멜론 차트 확인'))throw Error('Missing current feed');
+insights={providers:{},domesticCharts:{}};apiState='second';
+if(!views.providers({id:'rewind'}).includes('차트 재확인 필요')||!views.flow('melon_top100').includes('second'))throw Error('Stale captured feed');
+console.log(JSON.stringify({views:Object.keys(views).length,liveFeed:true,isolated:true}));
+'''
+  result=subprocess.run(['node','-e',js],input=private,text=True,capture_output=True,timeout=10)
+  self.assertEqual(result.returncode,0,result.stderr)
+  self.assertEqual(json.loads(result.stdout),{'views':10,'liveFeed':True,'isolated':True})
  def test_no_session_policy_change(self):
   text=(ROOT/'auth/Session.php').read_text();self.assertIn('>= 7200',text);self.assertIn('>= 43200',text)
  def test_bundle_and_feed_reuse_existing_access_role(self):

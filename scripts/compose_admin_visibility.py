@@ -8,11 +8,11 @@ POLICY=json.loads((ROOT/'auth/public-view-policy.json').read_text())
 
 def project(value,context=''):
     if isinstance(value,list):
-        child={'sources':'source','channels':'channel'}.get(context,'')
+        child={'sources':'collector_source','channels':'channel'}.get(context,'')
         return [project(item,child) for item in value]
     if not isinstance(value,dict):return value
     if context=='providers':return {}
-    allowed=POLICY.get({'source':'sourceKeys','channel':'channelKeys'}.get(context,''))
+    allowed=POLICY.get({'collector_source':'sourceKeys','channel':'channelKeys'}.get(context,''))
     return {key:project(item,key) for key,item in value.items()
             if key not in POLICY['removeKeys'] and (allowed is None or key in allowed)}
 
@@ -34,12 +34,22 @@ def javascript_projection(code):
         return 'const '+name+'='+first.script_json(project(value))+';'
     return re.sub(r'^const ([A-Z_]+)=(.*);$',transform,code,flags=re.M)
 
+def admin_module(provider,freshness):
+    # ES modules must not depend on the application's classic-script globals.
+    # Live getters keep diagnostics current when the runtime feed is replaced.
+    body=(ROOT/'site/admin-operations.js').read_text()+'\n'+provider+'\n'+freshness+'\n'
+    body=re.sub(r'\balbumInsights\b','context.albumInsights',body)
+    body=re.sub(r'\balbumApiState\b','context.albumApiState',body)
+    return ("export function createViews(context) {\n"
+            "const {D,esc,stamp,badge,sourceNames,FeedValidators,patch,aiData,albumFreeServiceStatus,albumFreshness}=context;\n"
+            +body+
+            'return Object.freeze({status,coverage,notice,schedule,history,demoLink,providers:albumProviderPanel,flow:albumFlowFreshness,project:()=>`<p><a href="https://github.com/seirian/isegye-idol-fansite" target="_blank" rel="noopener noreferrer">관리자 · 프로젝트 저장소</a></p>`,editHistory:()=>`<p><a href="https://github.com/seirian/isegye-idol-fansite/commits/main/src/data.js" target="_blank" rel="noopener noreferrer">관리자 · 공개 편집 이력</a></p>`});\n}\n')
+
 def compose(out):
     app=(out/'src/app.js').read_text();legacy=(out/'src/production-ui.js').read_text()
     if 'const IsegyeOps=' in app:raise ValueError('Visibility composition must run once')
     provider=function(app,'albumProviderPanel');freshness=function(app,'albumFlowFreshness')
-    private=(ROOT/'site/admin-operations.js').read_text()+'\n'+provider+'\n'+freshness+'\n'
-    private+='export const views=Object.freeze({status,coverage,notice,schedule,history,demoLink,providers:albumProviderPanel,flow:albumFlowFreshness,project:()=>`<p><a href="https://github.com/seirian/isegye-idol-fansite" target="_blank" rel="noopener noreferrer">관리자 · 프로젝트 저장소</a></p>`,editHistory:()=>`<p><a href="https://github.com/seirian/isegye-idol-fansite/commits/main/src/data.js" target="_blank" rel="noopener noreferrer">관리자 · 공개 편집 이력</a></p>`});\n'
+    private=admin_module(provider,freshness)
     public=(ROOT/'site/public-status.js').read_text()
     app=one(app,function(app,'statusView'),function(public,'statusView'))
     app=one(app,provider,"function albumProviderPanel(s) { return IsegyeOps.panel('providers',s); }")

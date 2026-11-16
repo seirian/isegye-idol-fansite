@@ -27,7 +27,10 @@ const IsegyeOps=(()=>{
    // The server checks administrator authority again on this request.
    const module=await import('/src/admin-operations.js');
    if(version!==epoch||document.hidden)return;
-   views=module.views;authorized=true;repaint();
+   views=module.createViews(Object.freeze({D,esc,stamp,badge,sourceNames,FeedValidators,patch,
+    aiData,albumFreeServiceStatus,albumFreshness,
+    get albumInsights(){return albumInsights;},get albumApiState(){return albumApiState;}}));
+   authorized=true;repaint();
   }catch{if(version===epoch)revoke();}
   finally{clearTimeout(timer);controller=null;checking=false;}
  }

@@ -26,12 +26,12 @@ final class Visibility
     {
         $policy = self::policy();
         if (is_array($value)) {
-            return array_map(fn($item) => self::project($item, $context === 'sources' ? 'source' : ($context === 'channels' ? 'channel' : '')), $value);
+            return array_map(fn($item) => self::project($item, $context === 'sources' ? 'collector_source' : ($context === 'channels' ? 'channel' : '')), $value);
         }
         if (!is_object($value)) return $value;
         // Provider availability, credentials setup hints and collector errors are operational.
         if ($context === 'providers') return new \stdClass();
-        $allowed = $context === 'source' ? $policy['sourceKeys'] : ($context === 'channel' ? $policy['channelKeys'] : null);
+        $allowed = $context === 'collector_source' ? $policy['sourceKeys'] : ($context === 'channel' ? $policy['channelKeys'] : null);
         $result = new \stdClass();
         foreach (get_object_vars($value) as $key => $item) {
             if (in_array($key, $policy['removeKeys'], true) || ($allowed !== null && !in_array($key, $allowed, true))) continue;

@@ -37,6 +37,7 @@ try:
   def mount(role,route='status'):
    state.update(role=role,fail=False)
    if not MEMORY:
+    page.goto('about:blank')  # Role fixtures must start a fresh document, not a hash-only navigation.
     page.goto(url+'#/'+route,wait_until='domcontentloaded')
    else:
     page.goto('about:blank');html=(ROOT/'dist/index.html').read_text()
@@ -45,14 +46,14 @@ try:
     page.set_content(html)
     page.add_style_tag(content=(ROOT/'dist/src/styles.css').read_text())
     page.evaluate("(s)=>{location.hash='#/'+s;window.__fixtureRole='"+role+"';window.__fixtureFail=false;window.fetch=async u=>new Response(String(u)==='/auth/status'?JSON.stringify({authenticated:__fixtureRole!=='guest',administrator:__fixtureRole==='admin',allowed:true}):'{}',{status:String(u)==='/auth/status'&&!__fixtureFail?200:503,headers:{'Content-Type':'application/json'}})}",route)
-    private=(ROOT/'dist/src/admin-operations.js').read_text().replace('export const views=','const views=')
-    page.add_script_tag(content='window.__adminFixtureViews=(()=>{'+private+';return views;})();')
+    private=(ROOT/'dist/src/admin-operations.js').read_text().replace('export function createViews','function createViews')
+    page.add_script_tag(content='window.__adminFixtureFactory=(()=>{'+private+';return createViews;})();')
     for relative in files:
      if not (ROOT/'dist'/relative).is_file():continue
      name=relative if role=='admin' else POLICY['publicFiles'].get(relative,relative)
      code=(ROOT/'dist'/name).read_text()
      if relative=='src/app.js':
-      code=code.replace("!/^https?:$/.test(location.protocol)",'false').replace("await import('/src/admin-operations.js')","await Promise.resolve({views:window.__adminFixtureViews})")
+      code=code.replace("!/^https?:$/.test(location.protocol)",'false').replace("await import('/src/admin-operations.js')","await Promise.resolve({createViews:window.__adminFixtureFactory})")
      page.add_script_tag(content=code)
    expect(page.locator('#main h1')).to_be_visible()
    if role=='admin':page.wait_for_function('IsegyeOps.allowed()===true')
