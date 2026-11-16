@@ -1,0 +1,26 @@
+name: All albums finite historical evidence
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/all-albums-evidence.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: python -m pip install beautifulsoup4==4.14.3
+      - name: Search each title and inspect bounded public historical pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/inspect_all_album_history.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: all-albums-history-evidence-${{ github.run_id }}
+          path: all-albums-evidence/
+          retention-days: 30
