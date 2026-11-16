@@ -1,0 +1,49 @@
+name: All album song identity evidence
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/all-albums-identities.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Read exact public song pages and search UI implementation
+        run: |
+          mkdir -p identities
+          python - <<'PY'
+          from urllib.request import Request, urlopen
+          from pathlib import Path
+          import json, hashlib, time, re, sys
+          sys.path.insert(0,'scripts')
+          from album_releases import load_catalog
+          seed=json.loads(Path('albums/release-seed/snapshot.json').read_text())
+          new={'love-cells':'603813507','rebels':'603813508','back-2-the-future':'603813509','anti-hero':'603813510','dream-residue':'603813511'}
+          catalog=load_catalog()['songs']; base='https://xn--o39an51b2re.com';report=[]
+          def get(path,name):
+            url=base+path
+            with urlopen(Request(url,headers={'User-Agent':'ISEGYE-Archive-Review/1.2 (one-time historical verification)'}),timeout=25) as r:
+              raw=r.read(4000001);final=r.url
+            if len(raw)>4000000 or not final.startswith(base+'/'):raise ValueError('Response rejected')
+            Path('identities',name).write_bytes(raw)
+            report.append({'url':url,'finalUrl':final,'file':name,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+            time.sleep(1)
+            return raw
+          script=get('/_next/static/chunks/pages/search/%5Bplatform%5D-fce809f51aaf57c85c17.js','search.js').decode()
+          print('SEARCH_UI_SCRIPT',script)
+          for s in catalog:
+            ident=new.get(s['id']) or seed['tracks'].get(s['id'],{}).get('melon',{}).get('trackId')
+            if not ident:report.append({'sid':s['id'],'state':'no_melon_identity'});continue
+            try:get('/song/melon/'+ident,s['id']+'.html')
+            except Exception as exc:report.append({'sid':s['id'],'trackId':ident,'error':type(exc).__name__})
+          Path('identities/report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: all-albums-identities-${{ github.run_id }}
+          path: identities/
+          retention-days: 30
