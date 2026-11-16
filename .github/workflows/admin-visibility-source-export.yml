@@ -1,0 +1,28 @@
+name: Export interrupted admin visibility source
+on:
+  push:
+    branches: [ops/admin-visibility-resume-source]
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.ref == 'refs/heads/ops/admin-visibility-resume-source'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ab39f61ffb43c549457885af97a664e43480c42e
+          persist-credentials: false
+      - run: |
+          test "$(git rev-parse HEAD)" = ab39f61ffb43c549457885af97a664e43480c42e
+          git archive HEAD -o admin-visibility-source.tar
+          git rev-parse HEAD HEAD^{tree} > admin-visibility-source.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: admin-visibility-source-ab39f61
+          path: |
+            admin-visibility-source.tar
+            admin-visibility-source.txt
+          retention-days: 3
+          if-no-files-found: error
