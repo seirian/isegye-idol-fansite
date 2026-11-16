@@ -48,6 +48,16 @@
  }
  function changeFilters(changes){const r=route(location.hash),p=new URLSearchParams(r.params);for(const [k,v] of Object.entries(changes))v===null||v==='all'||v==='curated'?p.delete(k):p.set(k,String(v));const next='#/'+(r.parts[0]==='saved'?'saved':'fanmade')+(p.size?'?'+p:'');if(location.hash===next)render(true);else location.hash=next;}
  function zoomContent(w){const n=frames.get(w.id)||0;$('#zoom-title').textContent=w.title+' · 예시';$('#zoom-content').innerHTML=`<div class="zoom-stage">${placeholder(w,n)}${controls(w)}<p class="caption">${E(w.frames[n])} · 실제 작품이 아닌 화면 검토용 자리표시자입니다.</p></div>`;$('#zoom').dataset.zoomWork=w.id;}
+ function syncDetailGallery(w){
+  const image=document.querySelector('[data-zoom="'+w.id+'"]');if(!image)return;
+  const n=frames.get(w.id)||0,section=image.closest('section');
+  image.innerHTML=placeholder(w,n);
+  const control=section.querySelector('.frame-controls');
+  control.querySelector('p').textContent=(n+1)+' / '+w.frames.length+' · '+w.frames[n];
+  control.querySelector('[data-delta="-1"]').disabled=n===0;
+  control.querySelector('[data-delta="1"]').disabled=n===w.frames.length-1;
+  section.querySelectorAll('[data-index]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.index)===n)));
+ }
  function setFrame(w,index){frames.set(w.id,Math.max(0,Math.min(w.frames.length-1,index)));if($('#zoom').open)zoomContent(w);else render(true);}
  function updateSavedButtons(){document.querySelectorAll('[data-save]').forEach(b=>{const w=W.get(b.dataset.save);if(!w)return;b.textContent=saved.has(w.id)?'✓ 담음':'＋ 담기';b.setAttribute('aria-pressed',String(saved.has(w.id)));b.setAttribute('aria-label',w.title+' '+(saved.has(w.id)?'담기 취소':'담기'));});$('#saved-count').textContent=String(saved.size);}
  document.addEventListener('click',e=>{
@@ -66,7 +76,7 @@
  document.addEventListener('change',e=>{if(e.target.id==='member')changeFilters({member:e.target.value});if(e.target.id==='sort')changeFilters({sort:e.target.value});});
  document.addEventListener('submit',e=>{if(e.target.id!=='search-form')return;e.preventDefault();changeFilters({q:$('#query').value.trim().slice(0,80)||null});});
  document.addEventListener('keydown',e=>{if(!$('#zoom').open||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const w=W.get($('#zoom').dataset.zoomWork);if(w)setFrame(w,(frames.get(w.id)||0)+(e.key==='ArrowLeft'?-1:1));});
- for(const id of ['zoom','share']){const d=document.getElementById(id);d.addEventListener('close',()=>{if(id==='zoom'){render(true);document.querySelector('[data-zoom]')?.focus({preventScroll:true});}else if(shareOpener?.isConnected)shareOpener.focus();});}
+ for(const id of ['zoom','share']){const d=document.getElementById(id);d.addEventListener('close',()=>{if(id==='zoom'){const w=W.get(d.dataset.zoomWork);if(w)syncDetailGallery(w);if(zoomOpener?.isConnected)zoomOpener.focus({preventScroll:true});}else if(shareOpener?.isConnected)shareOpener.focus();});}
  window.addEventListener('hashchange',()=>{if($('#share').open)$('#share').close();if($('#zoom').open)$('#zoom').close();render();});
  window.addEventListener('storage',e=>{if(e.key!==STORAGE_KEY)return;const v=loadSaved(storage,new Set(W.keys()));if(v.available){saved=new Set(v.ids);render(true);}});
  render();
