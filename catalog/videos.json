@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-11-16T01:57:36.634102+00:00",
+  "checkedAt": "2026-11-16T22:21:57.750667+00:00",
   "channels": [
     {
       "key": "ine-0",
       "channelId": "UCroM00J2ahCN6k-0-oAiDxg",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "BZWqXM0v-fM",
@@ -5117,15 +5117,15 @@
       "coverageMode": "official_api_full",
       "title": "아이네 INE",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCroM00J2ahCN6k-0-oAiDxg",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 13
     },
     {
       "key": "ine-1",
       "channelId": "UCmHltryGykfakS-JmaxrNBg",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "jebCY5VLfXQ",
@@ -14044,15 +14044,15 @@
       "coverageMode": "official_api_full",
       "title": "데친 숙주나물",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmHltryGykfakS-JmaxrNBg",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "ine-2",
       "channelId": "UCBF6nBTgFN_xzrLMF9eiRhw",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "T1aqeWlnhmI",
@@ -17907,16 +17907,24 @@
       "coverageMode": "official_api_full",
       "title": "아이네 다시보기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBF6nBTgFN_xzrLMF9eiRhw",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 10
     },
     {
       "key": "jingburger-0",
       "channelId": "UCHE7GBQVtdh-c1m3tjFdevQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
+        {
+          "id": "h69TqJODxA8",
+          "title": "와노쿠니까지 본 원피스 뉴비의 호감도 티어리스트",
+          "publishedAt": "2026-11-16T09:00:16+00:00",
+          "url": "https://www.youtube.com/watch?v=h69TqJODxA8",
+          "thumbnail": "https://i.ytimg.com/vi/h69TqJODxA8/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
         {
           "id": "Zarm1JbokzI",
           "title": "[Across Dimensions] 앨범에서 징버거 극락 파트는?",
@@ -26994,15 +27002,15 @@
       "coverageMode": "official_api_full",
       "title": "징버거 JINGBURGER",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCHE7GBQVtdh-c1m3tjFdevQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "jingburger-1",
       "channelId": "UC-S9NE-xzcBpxOFSvsmOzAA",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "3Dcew9Ypius",
@@ -55121,15 +55129,15 @@
       "coverageMode": "official_api_full",
       "title": "징버거가 짱이다",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-S9NE-xzcBpxOFSvsmOzAA",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 71
     },
     {
       "key": "jingburger-2",
       "channelId": "UCrN7Gb8xIZF_0ZYA1cmVNxQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "DIeJEx5Ayy8",
@@ -58528,15 +58536,15 @@
       "coverageMode": "official_api_full",
       "title": "징버거의 다시부기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrN7Gb8xIZF_0ZYA1cmVNxQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 9
     },
     {
       "key": "lilpa-0",
       "channelId": "UC-oCJP9t47v7-DmsnmXV38Q",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "q0GPDkmIspk",
@@ -67671,15 +67679,15 @@
       "coverageMode": "official_api_full",
       "title": "릴파 lilpa",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-oCJP9t47v7-DmsnmXV38Q",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 23
     },
     {
       "key": "lilpa-1",
       "channelId": "UC8dEJs2kpS5x2vI1X7aaUhA",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "rsCQHwY6Uio",
@@ -90310,15 +90318,15 @@
       "coverageMode": "official_api_full",
       "title": "릴파의 순간들",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8dEJs2kpS5x2vI1X7aaUhA",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 57
     },
     {
       "key": "lilpa-2",
       "channelId": "UCp_jHNjcoiXC7SlElrBmzBA",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "yZgBTiEN3rI",
@@ -93565,15 +93573,15 @@
       "coverageMode": "official_api_full",
       "title": "릴파의 종합게임",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCp_jHNjcoiXC7SlElrBmzBA",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 9
     },
     {
       "key": "lilpa-3",
       "channelId": "UCgAGT75UQWtTUpsG6Yq6LCw",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "Rgj3oHN7wmg",
@@ -94092,15 +94100,15 @@
       "coverageMode": "official_api_full",
       "title": "LILPA ARCHIVE [ISEGYE IDOL]",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgAGT75UQWtTUpsG6Yq6LCw",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 2
     },
     {
       "key": "lilpa-4",
       "channelId": "UC-CFlSjMSWaCjocMtXau8RQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "7rshqebt1HQ",
@@ -94291,15 +94299,15 @@
       "coverageMode": "official_api_full",
       "title": "과일박쥐Fruitbat",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-CFlSjMSWaCjocMtXau8RQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 1
     },
     {
       "key": "jururu-0",
       "channelId": "UCTifMx1ONpElK5x6B4ng8eg",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "W2c7W7sMPtE",
@@ -100994,15 +101002,15 @@
       "coverageMode": "official_api_full",
       "title": "주르르 JURURU",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCTifMx1ONpElK5x6B4ng8eg",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 17
     },
     {
       "key": "jururu-1",
       "channelId": "UCgGvSg2lscdNUx9ZJIBh9FQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "cLCcLnkSRH0",
@@ -134201,15 +134209,15 @@
       "coverageMode": "official_api_full",
       "title": "봉인 풀린 주르르",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgGvSg2lscdNUx9ZJIBh9FQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 84
     },
     {
       "key": "jururu-2",
       "channelId": "UCo28fS0LmlcyPcKItrZMPiQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "3c1Bk7cA0L0",
@@ -135520,15 +135528,15 @@
       "coverageMode": "official_api_full",
       "title": "주르르 다시보기",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCo28fS0LmlcyPcKItrZMPiQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 5
     },
     {
       "key": "gosegu-0",
       "channelId": "UCV9WL7sW6_KjanYkUUaIDfQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "y820E1MCzzM",
@@ -144871,15 +144879,15 @@
       "coverageMode": "official_api_full",
       "title": "고세구 GOSEGU",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCV9WL7sW6_KjanYkUUaIDfQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 24
     },
     {
       "key": "gosegu-1",
       "channelId": "UCEx_jGvD7ejBxeTsLvc62yQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "RuImwdsCD3M",
@@ -145102,15 +145110,15 @@
       "coverageMode": "official_api_full",
       "title": "GOSEGU Music",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCEx_jGvD7ejBxeTsLvc62yQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 1
     },
     {
       "key": "gosegu-2",
       "channelId": "UCSSPlgcyDA5eoN3hrkXpvHg",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "qGISOV916f4",
@@ -178205,15 +178213,15 @@
       "coverageMode": "official_api_full",
       "title": "고세구의 좀더",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSSPlgcyDA5eoN3hrkXpvHg",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 83
     },
     {
       "key": "gosegu-3",
       "channelId": "UCc4qGj6d8LBXW2qZ9GZQWqQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "LZ3kzhidFvs",
@@ -181580,16 +181588,24 @@
       "coverageMode": "official_api_full",
       "title": "밥친구 고세구",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCc4qGj6d8LBXW2qZ9GZQWqQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 10
     },
     {
       "key": "viichan-0",
       "channelId": "UCs6EwgxKLY9GG4QNUrP5hoQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
+        {
+          "id": "YFhwq2SkutY",
+          "title": "비챤 빤쓰 도둑 우왁굳 ㅋㅋㅋㅋ - [마인크래프트 챤능력 대전]",
+          "publishedAt": "2026-11-16T07:50:44+00:00",
+          "url": "https://www.youtube.com/watch?v=YFhwq2SkutY",
+          "thumbnail": "https://i.ytimg.com/vi/YFhwq2SkutY/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
         {
           "id": "k8XTtLJY480",
           "title": "유출 상습범 고세구",
@@ -190075,16 +190091,24 @@
       "coverageMode": "official_api_full",
       "title": "비챤 VIichan",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCs6EwgxKLY9GG4QNUrP5hoQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 22
     },
     {
       "key": "viichan-1",
       "channelId": "UCuJUfqThFp5-k-lrHcO1dFg",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
+        {
+          "id": "N4lC_5g6Kws",
+          "title": "신개념 유체이탈 격투술",
+          "publishedAt": "2026-11-16T10:57:08+00:00",
+          "url": "https://www.youtube.com/watch?v=N4lC_5g6Kws",
+          "thumbnail": "https://i.ytimg.com/vi/N4lC_5g6Kws/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
         {
           "id": "hkVxjIlQzPg",
           "title": "REBELS 티저 챠니랑 같이보기",
@@ -206274,15 +206298,15 @@
       "coverageMode": "official_api_full",
       "title": "비챤의 나랑놀아",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCuJUfqThFp5-k-lrHcO1dFg",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 42
     },
     {
       "key": "viichan-2",
       "channelId": "UCk2vPN7LATiMz_r8VUiA0KQ",
-      "checkedAt": "2026-11-15T22:48:40.933110+00:00",
-      "status": "stale",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "status": "ok",
       "videos": [
         {
           "id": "BincrXNSHtI",
@@ -210401,7 +210425,7 @@
       "coverageMode": "official_api_full",
       "title": "비챤의 무릉도원",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCk2vPN7LATiMz_r8VUiA0KQ",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "lastFullSyncAt": "2026-11-06T10:44:53.113365+00:00",
       "fullPages": 11
     },
@@ -210410,12 +210434,36 @@
       "channelId": "UCmblbE_WxTaFWcMEGFJ_97w",
       "title": "ISEGYE IDOL",
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmblbE_WxTaFWcMEGFJ_97w",
-      "checkedAt": "2026-11-16T01:57:32.704178+00:00",
-      "attemptedAt": "2026-11-16T01:57:32.704178+00:00",
+      "checkedAt": "2026-11-16T22:21:54.438899+00:00",
+      "attemptedAt": "2026-11-16T22:21:54.438899+00:00",
       "status": "ok",
       "coverageComplete": true,
       "coverageMode": "official_api_full",
       "videos": [
+        {
+          "id": "c9xdkq3NKJE",
+          "title": "😈 REBELS with #TakanashiKiara #고세구 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-16T12:00:30+00:00",
+          "url": "https://www.youtube.com/watch?v=c9xdkq3NKJE",
+          "thumbnail": "https://i.ytimg.com/vi/c9xdkq3NKJE/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
+        {
+          "id": "5jX3m_aNBAA",
+          "title": "#JURURU 덤비면 메롱 😛🩷 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #주르르 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-16T10:00:32+00:00",
+          "url": "https://www.youtube.com/watch?v=5jX3m_aNBAA",
+          "thumbnail": "https://i.ytimg.com/vi/5jX3m_aNBAA/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
+        {
+          "id": "feNLSU4-gUo",
+          "title": "#LILPA 덤비면 메롱 😛💙 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #릴파 #REBELS #REBELS_Challenge",
+          "publishedAt": "2026-11-16T08:00:06+00:00",
+          "url": "https://www.youtube.com/watch?v=feNLSU4-gUo",
+          "thumbnail": "https://i.ytimg.com/vi/feNLSU4-gUo/mqdefault.jpg",
+          "firstSeenAt": "2026-11-16T22:21:54.438899+00:00"
+        },
         {
           "id": "5AiFel_-OdY",
           "title": "😈 REBELS with #안경누나 #주르르 #이세계아이돌 #ISEGYEIDOL #AcrossDimensions #REBELS #REBELS_Challenge",
