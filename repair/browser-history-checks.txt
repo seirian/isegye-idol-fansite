@@ -17,6 +17,7 @@
   check('historical view does not claim current-hour freshness',page.locator('.ai-hourly-health').count()==0)
   form.locator('input').fill('2022-02-14');form.locator('button').click()
   expect(page).to_have_url(__import__('re').compile('historyEnd=2022-02-14'))
+  expect(page.locator('.ai-flow-dot')).to_have_count(1)
   check('selected historical window changes observations',page.locator('.ai-flow-dot').count()==1)
   for width in (320,390,768,1440):
    page.set_viewport_size({'width':width,'height':1000})
@@ -24,4 +25,5 @@
    if width in (390,1440):page.screenshot(path=str(OUT/f'history-{width}.png'),full_page=True)
   page.get_by_role('link',name='24시간',exact=True).click()
   expect(page.locator('[data-album-history-form]')).to_have_count(0)
+  expect(page.locator('.ai-hourly-health')).to_have_count(1)
   check('recent view restored after historical navigation',page.locator('.ai-hourly-health').count()==1)
