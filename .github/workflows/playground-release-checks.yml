@@ -37,6 +37,7 @@ jobs:
       - name: Test real HTTP production menu and real TLS authorization
         run: |
           /tmp/playground-release/bin/python tests/playground_production_browser.py
+          /tmp/playground-release/bin/python tests/playground_polish_browser.py
           /tmp/playground-release/bin/python tests/playground_bank_host_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

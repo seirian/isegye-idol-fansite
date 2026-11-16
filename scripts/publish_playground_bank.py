@@ -26,11 +26,11 @@ def preflight(remote):
 def restore(remote):
     preflight(remote);WORK.mkdir(exist_ok=True)
     raw=remote.read(path('current.json'));refs=remote.read(path('references.json'));music=remote.read(d.ROOT+'/.music-feed/current.json')
-    if raw:bank.validate_feed(json.loads(raw));(WORK/'previous.json').write_bytes(raw)
+    if raw:bank.validate_stored_feed(json.loads(raw));(WORK/'previous.json').write_bytes(raw)
     elif (WORK/'previous.json').exists():(WORK/'previous.json').unlink()
     if refs:(WORK/'references-before.json').write_bytes(refs)
     if music:(WORK/'music.json').write_bytes(music)
-    return {'status':'restored','existingQuestions':len(json.loads(raw)['catalog']['questions']) if raw else 32,'musicFeedAvailable':bool(music)}
+    return {'status':'restored','existingQuestions':len(json.loads(raw)['catalog']['questions']) if raw else len(bank.seed()['questions']),'musicFeedAvailable':bool(music)}
 
 def publish(remote,candidate,discovery,references):
     now=datetime.now(timezone.utc);bank.validate_feed(candidate)
@@ -42,7 +42,7 @@ def publish(remote,candidate,discovery,references):
     token=os.urandom(24);d.require(remote.info(path('.lock')) is None,'Bank publisher already active');remote.new(path('.lock'),token)
     previous=remote.read(path('current.json'));previous_refs=remote.read(path('references.json'));activated=False;rraw=None
     try:
-        old=bank.validate_feed(json.loads(previous)) if previous else None
+        old=bank.validate_stored_feed(json.loads(previous)) if previous else None
         d.require((old['sha256'] if old else None)==discovery.get('previousSha256'),'Bank changed after restore; rerun safely')
         if old:
             by={q['id']:q for q in candidate['catalog']['questions']}
@@ -56,7 +56,7 @@ def publish(remote,candidate,discovery,references):
         remote.replace(path('current.json'),raw,previous);activated=True;remote.s.chmod(path('current.json'),0o600)
         d.require(remote.read(path('current.json'))==raw and remote.read(path('references.json'))==rraw,'Bank readback failed')
         d.require(remote.read(d.ROOT+'/.htaccess')==router,'Production changed during bank publication')
-        return {'status':'published','generatedAt':candidate['generatedAt'],'publishedAt':now.isoformat(),'verifiedReadback':True,'readbackAt':datetime.now(timezone.utc).isoformat(),'bankVerified':True,'sha256':candidate['sha256'],'questionCount':len(candidate['catalog']['questions']),'added':discovery['automaticAdded'],'referenceCandidates':len(references),'referenceWarnings':discovery['referenceWarnings'],'release':rid,'siteUIChanged':False,'accountStoreAccessed':False,'communityAutoPublished':False}
+        return {'status':'published','generatedAt':candidate['generatedAt'],'publishedAt':now.isoformat(),'verifiedReadback':True,'readbackAt':datetime.now(timezone.utc).isoformat(),'bankVerified':True,'sha256':candidate['sha256'],'questionCount':len(candidate['catalog']['questions']),'added':discovery['automaticAdded'],'reviewedAdded':candidate.get('reviewedAdded',0),'referenceCandidates':len(references),'referenceWarnings':discovery['referenceWarnings'],'release':rid,'siteUIChanged':False,'accountStoreAccessed':False,'communityAutoPublished':False}
     except Exception:
         if activated and remote.read(path('current.json'))==raw:
             if previous is None:remote.remove_own(path('current.json'),raw)

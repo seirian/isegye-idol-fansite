@@ -2,6 +2,16 @@
 window.PlaygroundUI=(()=>{
   const seed=__SEED__, css=__CSS__, markup=__MARKUP__;
   let host=null, root=null, refresh=null, pending=null;
+  let adminReferenceView=null, adminRequest=null, adminFailed=false;
+  const adminAllowed=()=>typeof IsegyeOps!=='undefined'&&IsegyeOps.allowed();
+  function syncAdminAccess(){
+    if(!adminAllowed()){adminReferenceView=null;adminFailed=false;return;}
+    if(adminReferenceView||adminRequest||adminFailed)return;
+    // Gateway/Visibility checks the live session again on this module request.
+    adminRequest=import('/src/playground-admin.js').then(m=>{
+      if(adminAllowed())adminReferenceView=m.renderReferenceView;
+    }).catch(()=>{adminFailed=true;}).finally(()=>{adminRequest=null;if(host?.isConnected)refresh?.();});
+  }
   const styles=document.createElement('link');styles.rel='stylesheet';styles.href='src/playground.css';
   async function mount(target){
     if(!target)return;
