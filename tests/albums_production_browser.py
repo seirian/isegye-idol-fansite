@@ -17,28 +17,31 @@ try:
   browser=pw.chromium.launch(headless=True,executable_path=os.getenv("BROWSER_PATH") or None);ctx=browser.new_context(viewport={'width':1440,'height':1000});page=ctx.new_page();errors=[]
   page.on('pageerror',lambda e:errors.append(str(e)))
   ctx.route('**/*',lambda r:r.continue_() if r.request.url.startswith(url) else r.abort())
+  ctx.route('**/auth/status',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps({'authenticated':True,'administrator':True,'allowed':True})))
+  def navigate(*args,**kwargs):
+   response=page.goto(*args,**kwargs);page.wait_for_function('typeof IsegyeOps!=="undefined"&&IsegyeOps.allowed()');return response
   for path in ('schedule','music','history','albums'):ctx.route('**/api/'+path,lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
-  page.goto(url,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
+  navigate(url,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
   check('home remains default',page.url.endswith('#/home'))
-  page.goto(url+'#/music?tab=albums',wait_until='domcontentloaded');expect(page.locator('#main h1')).to_have_text('한 곡에서 시작되는 이야기')
+  navigate(url+'#/music?tab=albums',wait_until='domcontentloaded');expect(page.locator('#main h1')).to_have_text('한 곡에서 시작되는 이야기')
   check('existing fifteen plus new album',page.locator('.ai-card').count()==16)
   new_album=page.evaluate("D.albums.find(a=>a.title==='Across Dimensions')")
   check('new album has five registered tracks',len(new_album['songIds'])==5)
-  page.goto(url+'#/album/'+new_album['id'],wait_until='domcontentloaded')
+  navigate(url+'#/album/'+new_album['id'],wait_until='domcontentloaded')
   expect(page.locator('#main h1')).to_have_text('Across Dimensions')
   check('new album ordered track links',page.locator('.ai-track h3 a').count()==5)
   check('no preview banner',page.locator('.ai-review').count()==0)
   check('no removed filters or reset',page.locator('[data-filter=coverage]').count()==0 and '초기화' not in page.locator('#main').inner_text())
   snap=json.loads((ROOT/'dist/src/albums-insights.json').read_text());keys=['top100','hot100','realtime','hot100_30','daily','new_week','new_month']
   for sid in json.loads((ROOT/'albums/record-sources.json').read_text())['tracks']:
-   page.goto(url+'#/song/'+sid,wait_until='domcontentloaded');expect(page.locator('.ai-peaks')).to_be_visible();item=snap['tracks'].get(sid,{})
+   navigate(url+'#/song/'+sid,wait_until='domcontentloaded');expect(page.locator('.ai-peaks')).to_be_visible();item=snap['tracks'].get(sid,{})
    values=[]
    for key in keys:
     rank=item.get('melonPeaks',{}).get('dailyBestRank') if key=='daily' else None
     if type(rank) is not int:rank=item.get('melonPeakFallback',{}).get('records',{}).get(key,{}).get('rank')
     values.append(str(rank)+'위' if type(rank) is int else '—')
    check(sid+' seven peaks match snapshot',page.locator('.ai-peak strong').all_text_contents()==values)
-  page.goto(url+'#/song/cat-save-world',wait_until='domcontentloaded')
+  navigate(url+'#/song/cat-save-world',wait_until='domcontentloaded')
   check('Melon-only graph',page.locator('select[data-filter=metric] option').evaluate_all('(xs)=>xs.map(x=>x.value)')==['melon_top100','melon_hot100'])
   check('six service logos',page.locator('.ai-platform-logo').count()==6)
   expect(page.locator('.ai-hero .ai-cover img')).to_be_visible()
@@ -48,13 +51,13 @@ try:
   for width in (320,390,768,1440):
    page.set_viewport_size({'width':width,'height':1000})
    for name,route in [('list','music?tab=albums'),('detail','song/cat-save-world')]:
-    page.goto(url+'#/'+route,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
+    navigate(url+'#/'+route,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
     check(name+' no overflow '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
     if width in (390,1440):page.screenshot(path=str(OUT/f'{name}-{width}.png'),full_page=True)
-  page.goto(url+'#/song/cat-save-world?demo=1',wait_until='domcontentloaded')
+  navigate(url+'#/song/cat-save-world?demo=1',wait_until='domcontentloaded')
   check('approved curve and gradient',page.locator('.ai-flow-line').count()>0 and page.locator('.ai-flow-area').count()>0)
   check('explicit example label retained',page.locator('.ai-demo').count()==1)
-  page.goto(url+'#/music?tab=albums&view=list',wait_until='domcontentloaded');check('list view',page.locator('.ai-list-view').count()==1)
+  navigate(url+'#/music?tab=albums&view=list',wait_until='domcontentloaded');check('list view',page.locator('.ai-list-view').count()==1)
   meta=json.loads((ROOT/'dist/build-info.json').read_text())
   check('approved commit recorded',meta['albumPromotion']['acceptedCommit']=='f2c00e2bb1f4a762e8ff1578f540584652d8053b')
   check('existing feeds unchanged',meta['runtimeFeeds']==['/api/schedule','/api/music','/api/history'])
@@ -69,7 +72,7 @@ try:
   fresh['tracks']['rebels']={'match':'unmatched','artwork':{'asset':sha,'provider':'melon'},'melon':{'state':'ok','title':'REBELS','album':'Across Dimensions','trackId':'test-fixture','albumId':'15120216','checkedAt':fresh['generatedAt']}}
   ctx.route('**/api/albums',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps(fresh)))
   ctx.route('**/api/albums/assets/'+sha+'.webp',lambda r:r.fulfill(status=200,content_type='image/webp',body=image))
-  page.goto(url+'#/song/rebels');page.reload(wait_until='domcontentloaded')
+  navigate(url+'#/song/rebels');page.reload(wait_until='domcontentloaded')
   expect(page.locator('.ai-hero .ai-cover img')).to_be_visible()
   check('newer feed accepted',page.evaluate('albumInsights.generatedAt')==fresh['generatedAt'])
   expect(page.locator('.ai-hero .ai-cover img')).to_have_attribute('src','/api/albums/assets/'+sha+'.webp')
@@ -84,7 +87,7 @@ try:
       'charts':{kind:{'source':'https://xn--o39an51b2re.com/chart/melon/'+slug+'/trend/ranking/'+track,
           'through':cutoff,'points':[[first,None,0],[first+1,97,0],[first+2,91,0],[first+744,88,1]]}
           for kind,slug in [('melon_top100','top100'),('melon_hot100','hot100-d100')]}}
-  page.goto(url+'#/song/rewind?range=history&metric=melon_top100');page.reload(wait_until='domcontentloaded')
+  navigate(url+'#/song/rewind?range=history&metric=melon_top100');page.reload(wait_until='domcontentloaded')
   form=page.locator('[data-album-history-form]');expect(form).to_be_visible()
   expect(form.locator('input')).to_have_value('2022-01-15')
   check('history archive starts at verified release',form.locator('input').get_attribute('min')=='2021-12-17')

@@ -110,6 +110,8 @@ def build(directory=None):
     assert all(composed['scope'][k]==v for k,v in before['scope'].items())
     assert all(hashlib.sha256((out/p).read_bytes()).hexdigest()==digest for p,digest in preserved.items())
     for name in ('app.js','albums-data.js','data.js','production-ui.js'):subprocess.run(['node','--check',str(out/'src'/name)],check=True)
+    import compose_admin_visibility
+    meta=compose_admin_visibility.compose(out)
     if meta['mode']=='production':
         from inour_sftp import load_payload
         load_payload(out,meta['commit'])
