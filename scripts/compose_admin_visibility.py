@@ -70,6 +70,10 @@ def compose(out):
     schedule=function(app,'scheduleView');app=one(app,schedule,schedule.replace('</div>`;\n}',"</div>${IsegyeOps.panel('schedule')}`;\n}",1))
     app=app.replace('검토 시점 수집 스냅샷','마지막 확인 자료').replace('공개 API 확인 전','확인된 정보 없음').replace('공개 응답 확인 전','확인된 정보 없음').replace('음원 정보 우선순위 적용','음원 제공처 기준')
     app=app.replace('기존 검증 목록을 통합한 검토본입니다.','확인된 공개 자료를 모은 목록입니다.').replace('개를 바탕으로 한 검토용 목록입니다.','개의 공개 자료를 모은 목록입니다.').replace('공개 API 확인값','공개 조회수·좋아요 기준').replace('YouTube Data API.','YouTube 공개 정보.').replace('Apple iTunes Search API ·','Apple 음악 정보 ·').replace('이전 스냅샷','이전 확인 자료').replace("'수집 전'","'확인된 기록 없음'").replace('API 확인 전</span>','재생시간 확인 전</span>')
+    app=one(app,'로그인 계정과 동기화되지 않으며 운영 사이트의 기존 저장함은 변경하지 않습니다.','로그인 계정과 동기화되지 않습니다.')
+    app=one(app,'수집 상태와 공식 원문을 함께 확인해 주세요.','공식 원문에서 최신 안내를 확인해 주세요.')
+    legacy=one(legacy,'채널마다 수집 시점의 최근 공개 영상 3개를 보여줍니다.','채널마다 마지막으로 확인한 최근 공개 영상 3개를 보여줍니다.')
+    legacy=one(legacy,'공식 채널의 공개 영상 기준으로 일배치에서 등록했습니다. 영상 공개일과 음반 발매일은 다를 수 있습니다.','공식 채널의 공개 영상 정보입니다. 영상 공개일과 앨범 발매일은 다를 수 있습니다.')
     legacy=legacy.replace('발매곡·커버·음반·공식 음악 영상','발매곡·커버·앨범·공식 음악 영상')
     app=(ROOT/'site/admin-access.js').read_text()+'\n'+app
     app=one(app,'if(!location.hash)history.replaceState',function(public,'publicAlbumFreshness')+'\nif(!location.hash)history.replaceState')
