@@ -22,3 +22,9 @@ if (process.env.ISEGYE_BASELINE_ONLY !== 'true' && !['refs/heads/feature/albums'
   if(albums.error)throw albums.error;
   if(albums.status!==0)throw new Error('Approved album production packaging failed');
 }
+
+// Owner-approved Playground follows albums; baseline-only builds remain unchanged.
+if(process.env.ISEGYE_BASELINE_ONLY!=='true'&&!['refs/heads/feature/albums','refs/heads/feature/review-1st','refs/heads/feature/review-2nd'].includes(process.env.GITHUB_REF)){
+ const playground=spawnSync(process.env.PYTHON||'python3',['scripts/promote_playground.py'],{cwd:resolve(import.meta.dirname,'..'),env:process.env,stdio:'inherit'});
+ if(playground.error)throw playground.error;if(playground.status!==0)throw new Error('Approved Playground packaging failed');
+}

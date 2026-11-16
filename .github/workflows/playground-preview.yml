@@ -1,0 +1,69 @@
+name: Playground - isolated menu review
+# Preview approved for production; retained URL remains available.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+jobs:
+  preview:
+    if: false # Superseded by tested main-only production deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://isegye-idol.kr/review-playground/
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Respect existing deployment pause
+        env: {PRODUCTION_PAUSED: '${{ vars.PRODUCTION_PAUSED }}'}
+        run: test "$PRODUCTION_PAUSED" != true
+      - name: Build and validate isolated Playground menu
+        run: |
+          npm test
+          python scripts/build_playground.py
+          python -m unittest discover -s tests -p test_playground.py -v
+      - name: Build unchanged identity runtime with one preview route
+        run: |
+          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
+          composer audit --working-dir=auth --no-dev
+          php tests/auth/store_test.php
+          php tests/auth/jwt_test.php
+          python scripts/build_playground_host.py
+          php -l auth-bundle/Gateway.php
+          php -l auth-bundle/PlaygroundPreview.php
+      - name: Install isolated test and transfer tools
+        run: |
+          python -m venv /tmp/playground-tools
+          /tmp/playground-tools/bin/pip install playwright==1.56.0 cryptography==46.0.3 paramiko==5.0.0
+          bash scripts/ci_browser_install.sh /tmp/playground-tools/bin/python
+      - name: Test exact UI over HTTP and existing authorization over TLS
+        run: |
+          /tmp/playground-tools/bin/python tests/playground_browser.py
+          /tmp/playground-tools/bin/python tests/playground_host_browser.py
+      - name: Publish only the preview and verify unchanged operating site
+        run: /tmp/playground-tools/bin/python scripts/deploy_playground.py
+        env:
+          REVIEW_COMMIT: ${{ github.sha }}
+          REVIEW_DEPLOY_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Preserve exact reviewed source
+        if: always()
+        run: git archive --format=zip --output=playground-source.zip HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-review-${{ github.sha }}
+          path: |
+            review-playground-deployment.json
+            playground-source.zip
+            playground-dist/
+            test-results/playground/
+            test-results/playground-host/
+          retention-days: 30
