@@ -56,15 +56,20 @@ try:
   check('member cannot show sources by URL',page.locator('.source-grid').count()==0)
   page.evaluate("localStorage.setItem('role','admin');localStorage.setItem('administrator','true');window.dispatchEvent(new Event('focus'))")
   page.wait_for_timeout(200);check('local flags do not grant references',page.locator('.source-grid,.pg-admin-footer').count()==0)
-  role['value']='admin';go('playground');expect(page.locator('.pg-admin-footer')).to_be_visible()
+  role['value']='admin';go('playground');page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.pg-admin-footer')).to_be_visible()
   box=page.locator('.pg-admin-footer a').bounding_box();outer=page.locator('#playground-mount').bounding_box();panel=page.locator('.playground-component .panel').last.bounding_box()
   check('admin link right aligned',abs(box['x']+box['width']-outer['x']-outer['width'])<1)
   check('admin link below game panels',box['y']>panel['y']+panel['height'])
   page.screenshot(path=str(OUT/'admin-home-1440.png'),full_page=True)
   page.locator('.pg-admin-footer a').click();expect(page.locator('.source-grid')).to_be_visible();check('admin overview available',page.locator('.source-grid .panel').count()>30)
   role['value']='member';page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.playground-component h1')).to_have_text('관리자 전용 페이지입니다');check('revocation removes existing overview',page.locator('.source-grid,.pg-admin-footer').count()==0)
-  role['value']='admin';go('playground/sources');expect(page.locator('.source-grid')).to_be_visible();role['fail']=True;page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.source-grid')).to_have_count(0);check('role request failure fails closed',True)
+  role['value']='admin';go('playground/sources');page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.source-grid')).to_be_visible();role['fail']=True;page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.source-grid')).to_have_count(0);check('role request failure fails closed',True)
   check('no JavaScript errors',not errors);b.close()
+except Exception as error:
+ try:
+  (OUT/'failure.json').write_text(json.dumps({'error':str(error),'errors':errors,'requests':requests},ensure_ascii=False,indent=2))
+ except Exception:pass
+ raise
 finally:
  server.shutdown();(OUT/'report.json').write_text(json.dumps({'checks':checks},ensure_ascii=False,indent=2))
 print(json.dumps({'passed':len(checks),'mode':'real local HTTP'}))
