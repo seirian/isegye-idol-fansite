@@ -1,0 +1,32 @@
+name: Request verified album history publication
+on:
+  push:
+    branches: ['fix/all-albums-melon-backfill-20261116']
+    paths: ['.github/workflows/album-history-apply-dispatch.yml']
+permissions: {contents: read, actions: write}
+jobs:
+  request:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Require completed exact production deployment and avoid duplicate historical jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from urllib.request import Request,urlopen
+          import os,json
+          base='https://api.github.com/repos/seirian/isegye-idol-fansite';expected='20aede7ca2b821d155f528e6a9853e1903b28975';token=os.environ.pop('GH_TOKEN')
+          def call(path,body=None):
+            req=Request(base+path,data=json.dumps(body).encode() if body is not None else None,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'IsegyeVerifiedHistoryPublication/1.0'})
+            with urlopen(req,timeout=30) as r:
+              raw=r.read();return json.loads(raw) if raw else {'status':r.status}
+          if call('/git/ref/heads/main')['object']['sha']!=expected:raise ValueError('Main changed; refuse publication request')
+          deployed=call('/actions/runs/43793607537')
+          if deployed['head_sha']!=expected or deployed['head_branch']!='main' or deployed['path']!='.github/workflows/production.yml' or deployed.get('conclusion')!='success':raise ValueError('Exact production deployment not verified')
+          runs=call('/actions/runs?head_sha='+expected+'&per_page=100')['workflow_runs']
+          existing=[r for r in runs if r['path']=='.github/workflows/album-history-backfill.yml' and (r['status']!='completed' or r.get('conclusion')=='success')]
+          if existing:print(json.dumps({'status':'already_requested','runs':[{'id':r['id'],'status':r['status'],'conclusion':r.get('conclusion')} for r in existing]}))
+          else:print(json.dumps({'status':'requested_not_yet_verified','response':call('/actions/workflows/album-history-backfill.yml/dispatches',{'ref':'main'})}))
+          token=None
+          PY
