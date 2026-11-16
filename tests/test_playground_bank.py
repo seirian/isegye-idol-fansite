@@ -77,6 +77,20 @@ class Bank(unittest.TestCase):
   with self.assertRaises(ValueError):c.read('https://www.youtube.com/oembed',{'X-NCP-APIGW-API-KEY':'fake-key'})
  def test_reference_search_bad_schema_cannot_be_verified_zero(self):
   _,errors=c.discover_references(lambda *args:{'items':'wrong'}, {'ISEGYE_NAVER_CLIENT_ID':'fake-id','ISEGYE_NAVER_CLIENT_SECRET':'fake-key'});self.assertEqual(errors,['naver_search_ValueError']*2)
+ def test_wire_categories_survive_canonical_storage_round_trip(self):
+  feed,_=b.assemble(None,[proposal(1,self.now)],self.now)
+  canonical=json.loads(b.encoded(feed));before=copy.deepcopy(canonical)
+  self.assertNotEqual(list(canonical['catalog']['categories']),list(b.seed()['categories']))
+  served=json.loads(b.published_bytes(canonical))
+  self.assertEqual(list(served['catalog']['categories']),list(b.seed()['categories']))
+  self.assertEqual(served['catalog'],canonical['catalog']);self.assertEqual(served['sha256'],canonical['sha256'])
+  self.assertEqual(canonical,before);b.validate_feed(served)
+ def test_server_readback_uses_reviewed_category_order(self):
+  r=Remote();feed,added=b.assemble(None,[proposal(1,self.now)],self.now)
+  canonical=json.loads(b.encoded(feed));p.publish(r,canonical,self.report(canonical,added=1),{})
+  wire=json.loads(r.read(p.path('current.json')))
+  self.assertEqual(list(wire['catalog']['categories']),list(b.seed()['categories']))
+  self.assertEqual(wire['sha256'],feed['sha256']);self.assertEqual(len(wire['catalog']['questions']),33)
  def test_publish_only_owned_bank_paths(self):
   r=Remote();before=dict(r.files);f,a=b.assemble(None,[proposal(1,self.now)],self.now);res=p.publish(r,f,self.report(f,added=1),{})
   self.assertEqual(res['added'],1);self.assertTrue(res['verifiedReadback']);self.assertEqual(len(json.loads(r.read(p.path('current.json')))['catalog']['questions']),33)

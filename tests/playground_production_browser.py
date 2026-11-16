@@ -1,6 +1,6 @@
 """Real HTTP tests of the integrated operating app, not the standalone preview."""
 from pathlib import Path
-import http.server,socketserver,threading,json,os,sys
+import http.server,socketserver,threading,json,os,sys,subprocess
 from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
 import playground_bank as bank
@@ -14,13 +14,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
  def log_message(self,*a):pass
 server=socketserver.TCPServer(('127.0.0.1',0),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();url='http://127.0.0.1:'+str(server.server_address[1])
 feed,_=bank.assemble(None,[],datetime.now(timezone.utc))
+# Exercise the real canonical on-disk representation, then the served wire bytes.
+wire=bank.published_bytes(json.loads(bank.encoded(feed)))
+expected_daily=json.loads(subprocess.check_output(['node','--input-type=module','-e',"import fs from 'node:fs';import {chooseQuestions,kstDate} from './playground/core.js';const d=JSON.parse(fs.readFileSync('playground/catalog.json'));console.log(JSON.stringify(chooseQuestions(d,{mode:'daily',count:5,seed:d.version+':'+kstDate()})));"],cwd=ROOT,text=True))
 try:
  with sync_playwright() as p:
   opt={'headless':True}
   if os.getenv('CHROMIUM_PATH'):opt['executable_path']=os.environ['CHROMIUM_PATH']
   b=p.chromium.launch(**opt);ctx=b.new_context(viewport={'width':1440,'height':1000});page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   def apis(route):
-   if route.request.url.endswith('/api/playground'):route.fulfill(json=feed)
+   if route.request.url.endswith('/api/playground'):route.fulfill(body=wire,content_type='application/json')
    elif route.request.url.endswith('/auth/status'):route.fulfill(json={'authenticated':False,'administrator':False,'maintenance':False,'allowed':True})
    else:route.fulfill(status=503,json={'error':'fixture_offline'})
   page.route('**/api/**',apis);page.route('**/auth/status',apis);page.route('https://**',lambda r:r.abort())
@@ -35,6 +38,7 @@ try:
    page.locator('[data-start=daily]').click();expect(page.locator('[data-answer]')).to_have_count(4);check('production deep link',page.url.endswith('#/playground/play'))
    page.locator('[data-action=hint]').click();expect(page.locator('[data-action=hint]')).to_be_disabled()
    current=page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1'))")
+   check('canonical bank preserves reviewed daily question selection',current['session']['ids']==expected_daily)
    hint=next(q['hint'] for q in feed['catalog']['questions'] if q['id']==current['session']['ids'][0]);expect(page.get_by_text(hint,exact=False).last).to_be_visible()
    page.locator('[data-answer]').first.click();expect(page.locator('[data-action=next]')).to_be_visible()
    check('answered round persisted before reload',page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1')).session.answers.length===1"))

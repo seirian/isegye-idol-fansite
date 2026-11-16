@@ -38,6 +38,18 @@ def validate_feed(f,base=None):
     if f.get('sha256')!=digest(d):raise ValueError('Bank digest')
     return f
 
+def published_bytes(feed):
+    """Preserve reviewed category iteration order on the wire.
+
+    The digest remains canonical and order-independent. Daily seeded selection
+    iterates categories, so alphabetically sorting the served mapping would
+    reshuffle today's five even when no eligible questions were added.
+    """
+    validate_feed(feed)
+    wire=copy.deepcopy(feed)
+    wire['catalog']['categories']=copy.deepcopy(seed()['categories'])
+    return (json.dumps(wire,ensure_ascii=False,separators=(',',':'))+'\n').encode()
+
 def auto_question(row,verified,now):
     """Ask about channel identity, not unverified lyrics, dates or performer inference."""
     if row.get('type') not in ('cover','original','remake','official_track'):return None
