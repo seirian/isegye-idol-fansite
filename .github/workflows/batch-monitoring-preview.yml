@@ -7,20 +7,26 @@ on:
       - scripts/*batch_monitor*.py
       - tests/*batch_monitor*
       - .github/workflows/batch-monitoring-preview.yml
+      - .github/workflows/batch-monitoring.yml
+      - .github/workflows/production.yml
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
   validate:
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false}
+      - name: Preserve exact credential-free candidate source
+        run: git archive HEAD -o batch-monitor-source.tar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: batch-monitor-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: batch-monitor-source.tar
+          retention-days: 7
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '22'}
       - name: Install pinned validation tools without production credentials
@@ -50,61 +56,5 @@ jobs:
           path: test-results/batch-monitor/
           retention-days: 30
           if-no-files-found: warn
-  publish:
-    needs: validate
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
-    concurrency:
-      group: isegye-inour-production
-      cancel-in-progress: false
-      queue: max
-    environment:
-      name: production
-      url: https://isegye-idol.kr/ops/batches/
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: {persist-credentials: false}
-      - name: Require the latest review revision and respect existing pause
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
-        run: |
-          test "$PRODUCTION_PAUSED" != true
-          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/feature/batch-monitoring --jq .object.sha)" = "$GITHUB_SHA"
-      - name: Rebuild the same validated credential-free runtime
-        run: |
-          python -m venv /tmp/batch-monitor-tools
-          /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
-          composer install --working-dir=auth --no-dev --prefer-dist --no-interaction --no-progress --no-plugins --no-scripts
-          composer audit --working-dir=auth --no-dev
-          /tmp/batch-monitor-tools/bin/python scripts/build_batch_monitor_host.py
-          php -l auth-bundle/Gateway.php
-          php -l auth-bundle/BatchMonitor.php
-      - name: Read actual GitHub evidence without dispatch or collection
-        run: /tmp/batch-monitor-tools/bin/python scripts/batch_monitor_snapshot.py
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
-          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
-          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
-          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
-          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
-          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
-          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
-      - name: Recheck latest review revision before publication
-        env: {GH_TOKEN: '${{ github.token }}'}
-        run: test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/feature/batch-monitoring --jq .object.sha)" = "$GITHUB_SHA"
-      - name: Publish only private monitor and verified admin route
-        run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py
-        env:
-          MONITOR_PREVIEW_ENABLED: 'true'
-          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
-          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: batch-monitor-review-${{ github.run_id }}-${{ github.run_attempt }}
-          path: batch-monitor-deployment.json
-          retention-days: 30
-          if-no-files-found: warn
+# The user approved production promotion on 2026-11-17.
+# Feature branches now validate only. Only tested main may publish the monitor.
