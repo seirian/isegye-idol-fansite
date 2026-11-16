@@ -19,7 +19,7 @@ final class AlbumsFeed
         http_response_code($status); header('Content-Type: '.$type);
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') echo $body;
     }
-    public static function serve(string $root, string $path): void
+    public static function serve(string $root, string $path, ?string $role = null): void
     {
         $type = 'application/json; charset=utf-8';
         if ($path !== '/api/albums' && !preg_match('~\A/api/albums/assets/([a-f0-9]{64})\.webp\z~D', $path, $match)) {
@@ -33,7 +33,10 @@ final class AlbumsFeed
             if (($data['schemaVersion'] ?? null) !== 1 || ($data['feed'] ?? '') !== 'daily-albums'
                 || !is_array($data['tracks'] ?? null) || !is_array($data['providers'] ?? null)
                 || !is_string($data['generatedAt'] ?? null)) throw new \RuntimeException('Invalid album feed');
-            if ($path === '/api/albums') { self::respond(200, $raw, $type); return; }
+            if ($path === '/api/albums') {
+                require_once __DIR__.'/Visibility.php';
+                self::respond(200, Visibility::json($raw, $role), $type); return;
+            }
             $sha = $match[1]; $found = false;
             foreach (['covers', 'brands', 'badges'] as $group) {
                 foreach (($data['assets'][$group] ?? []) as $asset) {

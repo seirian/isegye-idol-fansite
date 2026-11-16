@@ -69,23 +69,34 @@ def status():
 
 
 def verify_public(payload, report):
+    # Compare the server's role-specific response, never expose raw diagnostics.
+    from compose_admin_visibility import POLICY
+    protected = set(POLICY['protectedPaths'])
     before = status()
     if not before['maintenance']:
         for rel, data in payload.items():
             if rel == '.nojekyll':
                 continue
             response = d.http(d.ORIGIN + '/' + rel)
+            if '/' + rel in protected:
+                d.require(response == (401, b'Administrator access required'), 'Admin diagnostics exposed: ' + rel)
+                continue
             if response[0] == 503 and status()['maintenance']:
                 break
-            expected = a.public_html(data) if rel == 'index.html' else data
+            public_rel = POLICY['publicFiles'].get(rel, rel)
+            d.require(public_rel in payload, 'Missing public projection: ' + rel)
+            expected = a.public_html(data) if rel == 'index.html' else payload[public_rel]
             d.require(response == (200, expected), 'Gated public file mismatch: ' + rel)
         report['publicBeforeAdministratorVerified'] = True
     now = status()
     if now['maintenance']:
-        for path in ('/', '/index.html', '/src/app.js', '/build-info.json'):
+        for path in ('/', '/index.html', '/src/app.js'):
             code, body = d.http(d.ORIGIN + path)
             d.require(code == 503 and '현재 사이트는'.encode() in body, 'Maintenance gate not enforced')
         report['anonymousMaintenanceVerified'] = True
+    for path in protected:
+        d.require(d.http(d.ORIGIN + path) == (401, b'Administrator access required'), 'Admin diagnostics exposed: ' + path)
+    report['anonymousAdminDiagnosticsBlocked'] = True
     return now
 
 

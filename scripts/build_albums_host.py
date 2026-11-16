@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[1]
 HOOK="""        // ISEGYE-ALBUMS-FEED: same access gate; no accounts or static release writes.
         if ($path === '/api/albums' || str_starts_with($path, '/api/albums/')) {
             require_once $this->runtime.'/AlbumsFeed.php';
-            AlbumsFeed::serve($this->root, $path); return;
+            AlbumsFeed::serve($this->root, $path, $access['role']); return;
         }
         // ISEGYE-ALBUMS-REVIEW: existing administrator gate; isolated files and API.
         if ($path === '/review-albums' || str_starts_with($path, '/review-albums/')) {

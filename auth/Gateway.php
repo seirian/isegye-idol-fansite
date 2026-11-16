@@ -75,6 +75,10 @@ final class Gateway
         }
         if (isset($_COOKIE['__Host-ISEGYE']) || in_array($path, ['/auth/login','/auth/google','/auth/logout'], true)) $this->session();
         $access = $this->store->access($this->hasSession ? Session::account() : null);
+        require_once $this->runtime.'/Visibility.php';
+        if (Visibility::administratorOnly($path) && ($access['role'] !== 'admin' || !$access['allowed'])) {
+            self::respond($access['role'] === null ? 401 : 403, 'Administrator access required', 'text/plain; charset=utf-8'); return;
+        }
         if ($path === '/auth/google') {
             $this->session();
             try {
@@ -142,7 +146,7 @@ final class Gateway
                     $raw = file_get_contents($file);
                     $feed = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
                     if (($feed['schemaVersion'] ?? null) === 1 && ($feed['feed'] ?? null) === 'monthly-history' && is_array($feed['events'] ?? null) && is_array($feed['sources'] ?? null)) {
-                        self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                        self::respond(200, Visibility::json($raw, $access['role']), 'application/json; charset=utf-8'); return;
                     }
                 } catch (\Throwable) { /* preserve the curated history */ }
             }
@@ -156,7 +160,7 @@ final class Gateway
                     $raw = file_get_contents($file);
                     $feed = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
                     if (($feed['schemaVersion'] ?? null) === 1 && ($feed['feed'] ?? null) === 'daily-music' && is_array($feed['rows'] ?? null)) {
-                        self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                        self::respond(200, Visibility::json($raw, $access['role']), 'application/json; charset=utf-8'); return;
                     }
                 } catch (\Throwable) { /* preserve the built-in music library */ }
             }
@@ -172,7 +176,7 @@ final class Gateway
                     $feed = json_decode($raw, true, 32, JSON_THROW_ON_ERROR);
                     if (($feed['schemaVersion'] ?? null) !== 1 || ($feed['timezone'] ?? '') !== 'Asia/Seoul') continue;
                     if (!isset($feed['events'], $feed['news'], $feed['forecasts'], $feed['sources'])) continue;
-                    self::respond(200, $raw, 'application/json; charset=utf-8'); return;
+                    self::respond(200, Visibility::json($raw, $access['role']), 'application/json; charset=utf-8'); return;
                 } catch (\Throwable) { continue; }
             }
             self::respond(503, '{"error":"schedule_unavailable"}', 'application/json; charset=utf-8'); return;
@@ -183,6 +187,7 @@ final class Gateway
         $allowed = in_array($relative, ['index.html','robots.txt','build-info.json'], true) ||
             preg_match('~\A(?:src|assets)/[A-Za-z0-9_/-]+\.(?:js|css|svg|png|webp|jpg|json)\z~D', $relative);
         if (!$allowed) { self::respond(404, 'Not found', 'text/plain'); return; }
+        $relative = Visibility::file($relative, $access['role']);
         $release = $this->release(); $file = $release . '/' . $relative;
         if (realpath($file) !== $file || is_link($file)) { self::respond(404, 'Not found', 'text/plain'); return; }
         if ($relative === 'index.html') {

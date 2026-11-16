@@ -19,12 +19,13 @@ try:
         check('dynamic document is not cacheable','no-store' in response.headers.get('cache-control',''))
         if not initial['maintenance']:
             page.locator('#main h1').wait_for()
-            meta=c.request.get(URL+'/build-info.json').json()
+            meta=json.loads(Path('dist/build-info.json').read_text())
             promoted=meta.get('acceptedReviewCommit')=='f09c755053fc23b777de695170a8160a48ebe43e'
             check('public home before administrator',response.status==200 and (page.locator('.desktop-nav>a').count()==7 if promoted else page.locator('.hm-page').count()==1))
             check('existing top LIVE preserved',page.locator('[data-operating-page=home-live] .live-home').count()==1 if promoted else page.locator('#main>section').first.get_attribute('class')=='live-home')
             check('login entry reachable',page.locator('.isegye-account-link').get_attribute('href')=='/auth/login')
-            meta=c.request.get(URL+'/build-info.json').json();check('deployed commit matches',meta['commit']==os.environ['GITHUB_SHA'])
+            check('public runtime matches the exact deployed candidate',c.request.get(URL+'/src/app.js').body()==Path('dist/src/app.js').read_bytes())
+            check('public build diagnostics are restricted',c.request.get(URL+'/build-info.json').status==401)
         else:
             check('maintenance for anonymous',response.status==503 and '현재 사이트는 공사중입니다.' in ' '.join(page.locator('h1').inner_text().split()))
         page.screenshot(path=str(OUT/'home-desktop.png'),full_page=True)
@@ -60,6 +61,8 @@ try:
         legal_before=c.request.get(URL+'/auth/status').json()
         if legal_before['maintenance']:
             check('anonymous schedule API remains protected',c.request.get(URL+'/api/schedule').status==503)
+        for diagnostic in ('/src/admin-operations.js','/build-info.json'):
+            check('anonymous admin diagnostics denied '+diagnostic,c.request.get(URL+diagnostic).status==401)
         check('private schedule store not public',c.request.get(URL+'/.schedule-feed/current.json').status in (403,404,503))
         for kind,count in [('terms',16),('privacy',13)]:
             response=page.goto(URL+'/auth/'+kind,wait_until='networkidle')

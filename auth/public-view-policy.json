@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "removeKeys": [
+    "lastAttemptAt",
+    "lastError",
+    "errorType",
+    "errors",
+    "diagnostics",
+    "collectionHealth",
+    "hourlyCoverage",
+    "publication",
+    "evidenceRun",
+    "baseCommit",
+    "builtAt",
+    "videoCoverageComplete",
+    "videoChannelCount",
+    "coverageComplete",
+    "coverageMode",
+    "sourceHashes",
+    "runtimeManifest",
+    "collectionReport"
+  ],
+  "sourceKeys": [
+    "id",
+    "label",
+    "kind",
+    "url",
+    "lastSuccessAt",
+    "checkedAt",
+    "title"
+  ],
+  "channelKeys": [
+    "key",
+    "name",
+    "kind",
+    "url",
+    "channelId",
+    "member",
+    "checkedAt",
+    "title",
+    "videos"
+  ],
+  "protectedPaths": [
+    "/src/admin-operations.js",
+    "/build-info.json"
+  ],
+  "publicFiles": {
+    "src/data.js": "src/public-data.js",
+    "src/albums-data.js": "src/public-albums-data.js",
+    "src/albums-insights.json": "src/public-albums-insights.json",
+    "src/production-ui.js": "src/public-production-ui.js",
+    "src/runtime-feeds.js": "src/public-runtime-feeds.js",
+    "src/schedule.json": "src/public-schedule.json"
+  }
+}
