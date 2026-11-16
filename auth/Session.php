@@ -14,7 +14,7 @@ final class Session
         session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
         if (!session_start()) throw new \RuntimeException('Session unavailable');
         $now = time();
-        if (isset($_SESSION['account']) && (($now - ($_SESSION['issued'] ?? 0)) >= 43200 || ($now - ($_SESSION['activity'] ?? 0)) >= 1800)) {
+        if (isset($_SESSION['account']) && (($now - ($_SESSION['issued'] ?? 0)) >= 43200 || ($now - ($_SESSION['activity'] ?? 0)) >= 7200)) {
             $_SESSION = []; session_regenerate_id(true);
         }
         if (!isset($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
