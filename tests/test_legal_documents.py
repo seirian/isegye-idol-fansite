@@ -19,7 +19,7 @@ class LegalTests(unittest.TestCase):
    self.assertNotIn(x,text)
  def test_precise_minimal_storage(self):
   text=(R/'auth/privacy.html').read_text()
-  for x in ('HMAC','12시간','30분','10분','원본 sub','회원 원장','세션','localStorage','Google Analytics','인아워넷'):
+  for x in ('HMAC','12시간','120분','10분','원본 sub','회원 원장','세션','localStorage','Google Analytics','인아워넷'):
    self.assertIn(x,text)
  def test_disclosure_before_account_lookup(self):
   text=(R/'auth/Gateway.php').read_text()

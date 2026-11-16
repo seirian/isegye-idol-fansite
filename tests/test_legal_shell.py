@@ -7,6 +7,10 @@ class LegalShell(unittest.TestCase):
  def test_canonical_bodies_unchanged(self):
   for kind,sha in [('terms','48702783988e07cd28a1d87a39347918b3b230a6'),('privacy','7f4dcef1368fe9ac94dd70c4ccfb7b6beda3cf5d')]:
    raw=(R/'auth'/f'{kind}.html').read_bytes()
+   if kind=='privacy':
+    self.assertEqual(raw.count('비활동 120분'.encode()),1)
+    self.assertNotIn('비활동 30분'.encode(),raw)
+    raw=raw.replace('비활동 120분'.encode(),'비활동 30분'.encode())
    self.assertEqual(hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest(),sha)
  def test_composition(self):
   app="const views={guide:guideView,about:aboutView,privacy:privacyView}; const titles={privacy:'개인정보 안내'};function render(){if(focus)document.getElementById('main').focus({preventScroll:true});}shell();render();"

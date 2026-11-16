@@ -24,7 +24,7 @@ Google Cloud / Google Auth Platform에서 웹 애플리케이션 OAuth Client ID
 
 Google 서명이 확인된 이메일을 일시적으로 승인 관리자 이메일의 keyed digest와 비교합니다. 그 뒤 Google sub를 변환한 키로 고정하여, 이메일 값만 바뀌거나 다른 계정이 같은 이메일을 주장해도 관리자 바인딩을 옮기지 않습니다. 사용자 지정 관리자 이메일의 평문은 설정 파일에도 저장하지 않습니다.
 
-PHP 임시 세션에는 변환된 계정 키, CSRF, 발급·활동 시각과 로그인 전 10분짜리 nonce만 남깁니다. Google token은 POST 메모리에서 검증 후 폐기합니다. 최대 12시간/비활동 30분 만료, 로그인 후 세션 ID 변경, Secure·HttpOnly·SameSite=Lax·Path=/·Domain 없는 `__Host-ISEGYE` 쿠키를 적용합니다. 앱은 토큰/개인정보를 로그로 출력하지 않습니다. 호스팅·Google의 자체 접속 로그까지 없다고 주장하지 않습니다.
+PHP 임시 세션에는 변환된 계정 키, CSRF, 발급·활동 시각과 로그인 전 10분짜리 nonce만 남깁니다. Google token은 POST 메모리에서 검증 후 폐기합니다. 최대 12시간/비활동 120분 만료, 로그인 후 세션 ID 변경, Secure·HttpOnly·SameSite=Lax·Path=/·Domain 없는 `__Host-ISEGYE` 쿠키를 적용합니다. 앱은 토큰/개인정보를 로그로 출력하지 않습니다. 호스팅·Google의 자체 접속 로그까지 없다고 주장하지 않습니다.
 
 ## 가입 및 공사중 전환
 
