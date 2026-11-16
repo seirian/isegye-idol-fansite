@@ -1,0 +1,10 @@
+/* Operating-shell integration only. The title uses the shared menu rules. */
+:host{display:block;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;letter-spacing:inherit}
+.pg-body{background:transparent;font:inherit;letter-spacing:inherit}
+.wrap{width:100%;max-width:none}
+#main{padding:0 0 32px;margin:0}
+.pg-admin-footer{display:flex;justify-content:flex-end;margin-top:32px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.pg-admin-footer a{padding:8px 0;min-height:40px}
+.pg-admin-footer a:hover{text-decoration:underline;color:var(--accent)}
+.pg-admin-footer span{font-size:12px}
+button[hidden],[hidden]{display:none!important}

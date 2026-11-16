@@ -21,8 +21,8 @@ export function safeLink(url) {
 export function questionPool(data, category='all') {
   return data.questions.filter(q => category==='all'||q.category===category);
 }
-export function chooseQuestions(data,{mode='quiz',category='all',count=5,seed='',ids=null}={}) {
-  const random=seeded(seed); const pool=ids?data.questions.filter(q=>ids.includes(q.id)):questionPool(data,category);
+export function chooseQuestions(data,{mode='quiz',category='all',count=5,seed='',ids=null,day=kstDate()}={}) {
+  const random=seeded(seed); const pool=(ids?data.questions.filter(q=>ids.includes(q.id)):questionPool(data,category)).filter(q=>mode!=='daily'||!q.eligibleFrom||q.eligibleFrom<=day);
   if(mode==='daily'){
     // Round-robin categories keeps the small daily set from becoming all dates.
     const groups=shuffle(Object.keys(data.categories),random).map(c=>shuffle(pool.filter(q=>q.category===c),random));
@@ -76,7 +76,7 @@ export function readState(storage,data) {
 export function saveState(storage,state) { try{storage.setItem(STORAGE_KEY,JSON.stringify(state));return true;}catch{return false;} }
 export function createSession(data,{mode='quiz',category='all',count=5,seed,day=kstDate(),ids=null}={}) {
   seed=seed||`${day}-${Math.random().toString(36).slice(2)}`;
-  const selected=mode==='order'?[]:chooseQuestions(data,{mode,category,count,seed,ids});
+  const selected=mode==='order'?[]:chooseQuestions(data,{mode,category,count,seed,ids,day});
   const pairs=mode==='order'?orderPairs(data.tracks,seed,count):[];
   if(!selected.length&&!pairs.length)throw new Error('No questions');
   const names={daily:'오늘의 5문제',order:'먼저일까, 나중일까?',retry:'다시 풀어보기',quiz:category==='all'?'골고루 퀴즈':(data.categories[category]||'퀴즈')};

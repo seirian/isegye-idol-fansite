@@ -64,7 +64,7 @@ jobs:
           import json,os
           from pathlib import Path
           p=Path('playground-publication.json');d=json.loads(p.read_text()) if p.exists() else {'status':'not_published'}
-          line=f"놀이터 문제은행: {d.get('status')}; 추가 {d.get('added','—')}, 전체 {d.get('questionCount','—')}; 서버 재확인 {d.get('verifiedReadback',False)}. 커뮤니티 후보는 자동 출제하지 않습니다."
+          line=f"놀이터 문제은행: {d.get('status')}; 자동 추가 {d.get('added','—')}, 승인 확장 {d.get('reviewedAdded',0)}, 전체 {d.get('questionCount','—')}; 서버 재확인 {d.get('verifiedReadback',False)}. 커뮤니티 후보는 자동 출제하지 않습니다."
           print(line);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(line+'\n')
           r=Path('playground-discovery.json')
           if r.exists():

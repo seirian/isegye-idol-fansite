@@ -11,6 +11,7 @@ MAX_DAILY=8;MAX_QUESTIONS=1000
 def encoded(v):return (json.dumps(v,ensure_ascii=False,separators=(',',':'),sort_keys=True)+'\n').encode()
 def digest(v):return hashlib.sha256(encoded(v)).hexdigest()
 def seed():return validate(json.loads((ROOT/'playground/catalog.json').read_text()))
+def legacy_seed():return validate(json.loads((ROOT/'playground/seed-v1.json').read_text()))
 def norm(s):return ''.join(c for c in unicodedata.normalize('NFKC',s).casefold() if c.isalnum())
 def clock(s):
     d=datetime.fromisoformat(s.replace('Z','+00:00'))
@@ -23,7 +24,8 @@ def validate_catalog(d,base=None):
     byid={q['id']:q for q in d['questions']}
     if any(byid.get(q['id'])!=q for q in base['questions']) or any(d['sources'].get(k)!=v for k,v in base['sources'].items()):raise ValueError('Reviewed facts changed')
     facts=[]
-    for q in d['questions'][len(base['questions']):]:
+    approved={q['id'] for q in base['questions']}
+    for q in (q for q in d['questions'] if q['id'] not in approved):
         p=q.get('provenance',{})
         if q['status']!='reviewed' or p.get('template')!='official-channel-v1' or not re.fullmatch('[0-9a-f]{64}',p.get('factKey','')):raise ValueError('Unverified automatic question')
         if p['factKey'] in facts:raise ValueError('Duplicate fact')
@@ -37,6 +39,28 @@ def validate_feed(f,base=None):
     clock(f['generatedAt']);d=validate_catalog(f['catalog'],base)
     if f.get('sha256')!=digest(d):raise ValueError('Bank digest')
     return f
+
+def validate_stored_feed(feed):
+    """Accept only the current reviewed seed or the exact former 32-question seed.
+
+    This explicit migration does not relax automatic-question evidence checks.
+    """
+    try:return validate_feed(feed)
+    except ValueError:return validate_feed(feed,legacy_seed())
+
+def merge_reviewed_seed(catalog):
+    """Append the approved expansion without replacing an answer or an auto item."""
+    base=seed();d=copy.deepcopy(catalog);byid={q['id']:q for q in d['questions']};added=[]
+    for sid,source in base['sources'].items():
+        if sid in d['sources'] and d['sources'][sid]!=source:raise ValueError('Existing source conflicts with reviewed expansion')
+        d['sources'][sid]=copy.deepcopy(source)
+    for q in base['questions']:
+        if q['id'] in byid:
+            if byid[q['id']]!=q:raise ValueError('Existing answer conflicts with reviewed expansion')
+        else:d['questions'].append(copy.deepcopy(q));added.append(q['id'])
+    d['categories']=copy.deepcopy(base['categories'])
+    validate_catalog(d)
+    return d,added
 
 def published_bytes(feed):
     """Preserve reviewed category iteration order on the wire.
@@ -70,7 +94,7 @@ def auto_question(row,verified,now):
     return q,sid,source
 
 def assemble(previous,proposals,now):
-    base=seed();old=validate_feed(previous,base) if previous else None;d=copy.deepcopy(old['catalog'] if old else base)
+    base=seed();old=validate_stored_feed(previous) if previous else None;d,reviewed_added=merge_reviewed_seed(old['catalog'] if old else base)
     today=now.astimezone(KST).date().isoformat();added_before=(old.get('addedToday',0) if old and old.get('batchDate')==today else 0)
     ids={q['id'] for q in d['questions']};facts={q.get('provenance',{}).get('factKey') for q in d['questions']};added=[]
     for q,sid,source in proposals:
@@ -78,5 +102,5 @@ def assemble(previous,proposals,now):
         if q['id'] in ids or q['provenance']['factKey'] in facts:continue
         d['questions'].append(q);d['sources'][sid]=source;ids.add(q['id']);facts.add(q['provenance']['factKey']);added.append(q['id'])
     validate_catalog(d,base)
-    f={'schemaVersion':1,'feed':'playground','baseVersion':base['version'],'generatedAt':now.isoformat(),'batchDate':today,'addedToday':added_before+len(added),'sha256':digest(d),'catalog':d}
+    f={'schemaVersion':1,'feed':'playground','baseVersion':base['version'],'generatedAt':now.isoformat(),'batchDate':today,'reviewedAdded':len(reviewed_added),'addedToday':added_before+len(added),'sha256':digest(d),'catalog':d}
     return validate_feed(f,base),added

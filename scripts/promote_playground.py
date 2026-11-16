@@ -21,18 +21,35 @@ def component():
     src=one(src,'function render(focus=true){const p=path();',"function render(focus=true){if(!host.isConnected)return;state.dark=realDocument.documentElement.dataset.theme==='dark';applyTheme();const p=path();")
     src=one(src,"window.addEventListener('hashchange',()=>render());",'refresh=()=>render(false);')
     core=re.sub(r'^export ','',(ROOT/'playground/core.js').read_text(),flags=re.M).replace('isegye:playground:review:v1','isegye:playground:v1').replace('검토본 기록','놀이터 기록')
-    core=one(core,"const pool=ids?data.questions.filter(q=>ids.includes(q.id)):questionPool(data,category);","const pool=(ids?data.questions.filter(q=>ids.includes(q.id)):questionPool(data,category)).filter(q=>mode!=='daily'||!q.eligibleFrom||q.eligibleFrom<=kstDate());")
-    # Keep the reviewed UI intact, remove only its duplicate site header and review text.
+    # Reference overview is a separately authorized module, not a hidden public page.
+    start=src.index('  function sources(){');end=src.index('  function render(',start)
+    src=src[:start]+"  function sources(){return adminAllowed()?(adminReferenceView?adminReferenceView(data,{heading,esc,kindNames,safeLink,orderPairs}):empty('참고 자료를 확인하고 있어요','관리자 권한을 확인한 후 자료를 불러옵니다.')):empty('관리자 전용 페이지입니다','놀이터에서 퀴즈를 즐겨주세요.');}\n"+src[end:]
+    src=one(src,"    document.title=(main.querySelector('h1')", "    if(adminAllowed())main.insertAdjacentHTML('beforeend','<div class=\"pg-admin-footer\" data-admin-only=\"playground-sources\"><a href=\"#/playground/sources\">문항과 참고 자료 <span>· 관리자</span></a></div>');\n    syncAdminAccess();\n    document.title=(main.querySelector('h1')")
+    # Preserve the main site shell. No duplicate navigation above the title.
     original=(ROOT/'playground/index.html').read_text()
     inner=original[original.index('<div id="storage-note"'):original.index('<!--SCRIPT-->')]
     inner=re.sub(r'<footer.*?</footer>','',inner,flags=re.S)
     inner=inner.replace('검토 링크','놀이터 링크')
-    markup='<div class="pg-body"><div class="pg-tools"><a href="#/playground">놀이터</a><a href="#/playground/records">내 기록</a><a href="#/playground/sources">문항과 참고 자료</a><button id="theme" hidden>테마</button></div><p id="bank-note" class="storage-note" hidden></p>'+inner+'</div>'
+    markup='<div class="pg-body"><button id="theme" hidden>테마</button>'+inner+'<p id="bank-note" class="storage-note" hidden></p></div>'
     css=(ROOT/'playground/styles.css').read_text().replace(':root{',':host{').replace('body.dark{','.pg-body.dark{').replace('body{','.pg-body{')
-    css+='\n:host{display:block;background:transparent}.pg-body{background:transparent}.wrap{width:100%;max-width:none}#main{padding-top:16px;padding-bottom:32px}.pg-tools{display:flex;flex-wrap:wrap;gap:20px;justify-content:flex-end;font-size:13px;padding-top:16px}.pg-tools a:hover{text-decoration:underline}button[hidden],[hidden]{display:none!important}\n'
+    css=re.sub(r':host\{[^}]*\}',":host{--paper:var(--panel);--soft:var(--accent-soft);--lavender:var(--panel2);--green:var(--good);--green-soft:var(--panel2);color:var(--ink);color-scheme:light}",css,count=1)
+    css=re.sub(r'\.pg-body\.dark\{[^}]*\}',".pg-body.dark{color-scheme:dark}",css,count=1)
+    css+='\n'+(ROOT/'site/playground-integration.css').read_text()
+    # Use the exact shared page-heading rules, including the mobile token values.
+    shared=(ROOT/'review-2nd/polish.css').read_text()
+    headings=shared.split('/* The exact operating footer CSS')[0].replace(':root',':host')
+    mobile=shared[shared.index('@media(max-width:640px)'):].replace(':root',':host')
+    mobile=mobile.replace(' .production-footer{padding-bottom:82px}','')
+    css+='\n'+headings+mobile
     runtime=(ROOT/'site/playground-runtime.js').read_text()
     for key,value in {'__SEED__':jsjson(seed),'__CSS__':"''",'__MARKUP__':jsjson(markup),'__CORE__':core,'__APP__':src,'__BANK__':re.sub(r'^export ','',(ROOT/'site/playground-bank.js').read_text(),flags=re.M)}.items():runtime=runtime.replace(key,value)
     return runtime,css,seed
+
+def reference_module():
+    app=(ROOT/'playground/app.js').read_text()
+    start=app.index('  function sources(){');end=app.index('  function render(',start)
+    body=app[start:end].strip().replace('function sources(){','export function renderReferenceView(data,{heading,esc,kindNames,safeLink,orderPairs}){',1)
+    return '// Server-authorized administrator reference overview.\n'+body+'\n'
 
 def build(out=None):
     out=out or ROOT/'dist';meta=json.loads((out/'build-info.json').read_text())
@@ -45,13 +62,14 @@ def build(out=None):
     app=one(app,"else if(root==='guide')", "else if(root==='playground')html='<div id=\"playground-mount\"></div>';else if(root==='guide')")
     app=one(app,'LegalDocuments.mount();',"LegalDocuments.mount();if(root==='playground')PlaygroundUI.mount(document.getElementById('playground-mount'));")
     (out/'src/app.js').write_text(app);(out/'src/playground.js').write_text(js);(out/'src/playground.css').write_text(css)
+    (out/'src/playground-admin.js').write_text(reference_module())
     (out/'src/playground-seed.json').write_text(json.dumps(seed,ensure_ascii=False,separators=(',',':'))+'\n')
     html=(out/'index.html').read_text();html=one(html,'<script src="src/app.js"></script>','<script src="src/playground.js"></script><script src="src/app.js"></script>');(out/'index.html').write_text(html)
     for name in ('production-ui.js','public-production-ui.js'):
         p=out/'src'/name;s=p.read_text();s=one(s,'<h2>검색과 개인 설정</h2>','<h2><a href="#/playground">놀이터</a></h2><p>오늘의 다섯 문제, 주제별 퀴즈와 발매 순서 게임을 즐길 수 있습니다. 플레이 기록은 이 브라우저에만 보관합니다.</p><h2>검색과 개인 설정</h2>');p.write_text(s)
     meta['playground']={'schemaVersion':1,'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'route':'/#/playground','readEndpoint':'/api/playground','seedVersion':seed['version'],'seedQuestions':len(seed['questions']),'storageKey':'isegye:playground:v1','dailySchedule':'매일 07:37 Asia/Seoul','seedSha256':hashlib.sha256((out/'src/playground-seed.json').read_bytes()).hexdigest()}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
-    for n in ('app.js','playground.js'):subprocess.run(['node','--check',str(out/'src'/n)],check=True)
+    for n in ('app.js','playground.js','playground-admin.js'):subprocess.run(['node','--check',str(out/'src'/n)],check=True)
     print(json.dumps({'status':'playground_composed','route':'/#/playground','seedQuestions':len(seed['questions'])}))
     return meta
 if __name__=='__main__':build()

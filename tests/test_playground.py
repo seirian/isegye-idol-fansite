@@ -6,7 +6,7 @@ import build_playground as b
 import build_playground_host as h
 class PlaygroundTests(unittest.TestCase):
  def setUp(self):self.data=json.loads((ROOT/'playground/catalog.json').read_text())
- def test_valid_real_bank(self):self.assertEqual(len(b.validate(self.data)['questions']),32)
+ def test_valid_real_bank(self):self.assertEqual(len(b.validate(self.data)['questions']),80)
  def test_duplicate_choices_refused(self):
   self.data['questions'][0]['choices']=['a']*4
   with self.assertRaises(ValueError):b.validate(self.data)
