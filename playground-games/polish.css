@@ -1,0 +1,2 @@
+/* Avoid orphaned Korean syllables in narrow cards without changing title metrics. */
+.card-body p,.page-heading p,.review-bar,.footer p,.footer small{word-break:keep-all;overflow-wrap:break-word}

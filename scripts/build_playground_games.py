@@ -35,8 +35,8 @@ def build():
     names=re.findall(r'^export (?:const|function) (\w+)',core,re.M)
     core=re.sub(r'^export ','',core,flags=re.M)
     serial=json.dumps(data,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026').replace('\u2028','\\u2028').replace('\u2029','\\u2029')
-    js='const ARCADE_DATA='+serial+';\nconst ARCADE_CORE=(()=>{\n'+core+'\nreturn {'+','.join(names)+'};\n})();\n'+(src/'app.js').read_text()
-    css=(src/'styles.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()
+    js='const ARCADE_DATA='+serial+';\nconst ARCADE_CORE=(()=>{\n'+core+'\nreturn {'+','.join(names)+'};\n})();\n'+(src/'app.js').read_text()+'\n'+(src/'accessibility.js').read_text()
+    css=(src/'styles.css').read_text()+'\n'+(ROOT/'review-2nd/polish.css').read_text()+'\n'+(src/'polish.css').read_text()
     if '</script' in js.lower() or '</style' in css.lower():raise ValueError('Closing tag')
     h64=lambda s:base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()
     csp="default-src 'none'; script-src 'sha256-"+h64(js)+"'; style-src 'sha256-"+h64(css)+"'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
@@ -45,7 +45,7 @@ def build():
     if out.is_symlink():raise ValueError('Symlink output')
     out.mkdir(exist_ok=True);raw=html.encode()
     for n in ('index.html','review.html'):(out/n).write_bytes(raw)
-    files=['playground-games/core.js','playground-games/app.js','playground-games/styles.css','playground-games/index.html','catalog/music.json','catalog/video-sources.json','catalog/video-sources.tsv','catalog/album-releases.json','review-2nd/polish.css']
+    files=['playground-games/core.js','playground-games/app.js','playground-games/accessibility.js','playground-games/polish.css','playground-games/styles.css','playground-games/index.html','catalog/music.json','catalog/video-sources.json','catalog/video-sources.tsv','catalog/album-releases.json','review-2nd/polish.css']
     meta={'review':'playground-games','branch':BRANCH,'baseCommit':BASE,'commit':os.getenv('GITHUB_SHA','local'),'builtAt':datetime.now(timezone.utc).isoformat(),'mode':'playground-games-preview','counts':{'games':3,'songs':len(data['songs'])},'htmlSha256':sha(raw),'htmlBytes':len(raw),'productionWrites':False,'liveFeedsConnected':False,'externalMediaUsed':False,'storageKey':'isegye:review:playground-games:v1','sourceHashes':{f:sha((ROOT/f).read_bytes()) for f in files}}
     (out/'build-info.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     (out/'catalog.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')

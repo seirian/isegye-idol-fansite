@@ -21,9 +21,10 @@ try:
   page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   page.on('request',lambda r:external.append(r.url) if not r.url.startswith(url) and not r.url.startswith('blob:') else None)
   page.goto(url);expect(page.get_by_role('heading',name='놀이터',exact=True)).to_be_visible();check('three complete game cards',page.locator('.cards .card').count()==3)
-  page.screenshot(path=str(OUT/'home-1440-dark.png'),full_page=True)
+  page.screenshot(path=str(OUT/'home-initial-1440-dark.png'),full_page=True)
   page.evaluate("localStorage.setItem('isegye:playground:v1','unchanged'); localStorage.setItem('bookmarks','untouched')")
   page.locator('[data-launch=link]').click();expect(page.locator('[data-cell]')).to_have_count(36)
+  skip_before=page.url;page.locator('.skip').focus();page.locator('.skip').press('Enter');check('skip link preserves active game route',page.url==skip_before);expect(page.locator('[data-cell]')).to_have_count(36);check('skip link focuses main',page.evaluate('document.activeElement.id')=='main')
   original=page.locator('[data-cell]').evaluate_all('(els)=>els.map(e=>Number(e.dataset.color))')
   path=page.evaluate('ARCADE_CORE.findLink(Array.from(document.querySelectorAll("[data-cell]"),b=>Number(b.dataset.color)))')
   for i in path:page.locator(f'[data-cell="{i}"]').press('Enter')
@@ -64,6 +65,7 @@ try:
   page.locator('#concert-edit').click();expect(page.locator('#dialog')).to_be_visible();page.locator('#dialog').get_by_role('button',name='취소',exact=True).click();check('import cancel keeps current draft',page.evaluate("localStorage.getItem('isegye:review:playground-games:v1')")==before)
   page.goto(url+'/#/concert/shared?set=not-a-valid-set');expect(page.get_by_role('heading',name='세트리스트 링크를 확인해 주세요')).to_be_visible();check('invalid share leaves draft unchanged',page.evaluate("localStorage.getItem('isegye:review:playground-games:v1')")==before)
   page.goto(url+'/#/home');page.locator('#reset-records').click();page.locator('#dialog').get_by_role('button',name='확인',exact=True).click();check('operating quiz records preserved',page.evaluate("localStorage.getItem('isegye:playground:v1')")=='unchanged');check('operating bookmarks preserved',page.evaluate("localStorage.getItem('bookmarks')")=='untouched')
+  page.clock.run_for(4000)
   for width in (320,390,768,1440):
    for mode in ('dark','light'):
     page.set_viewport_size({'width':width,'height':1000});page.goto(url+'/#/home');page.evaluate('(theme)=>document.documentElement.dataset.theme=theme',mode)
