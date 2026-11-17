@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "status": "published",
+  "verifiedReadback": true,
+  "checkedAtKst": "2026-11-18T01:58:53.615662+09:00",
+  "commit": "37fcb9490e40a337a473881d0dc24e7401956d59",
+  "release": "r9057cddbb8b8",
+  "productionRunId": 44124817454,
+  "ciRunId": 44124817435,
+  "publicationRunId": 44131656899,
+  "publicationArtifactId": 14349907500,
+  "publicationArtifactSha256": "1e797df244ee8735247dcebc40920d90f4f63c046d8a7c93d2a5f9fa5511a910",
+  "datasetSha256": "57a8e8d48d3cfa5b7311f2483ba08dab528f34780b2816739ec490cb63a7b776",
+  "beforeSha256": "bf80406727d9944aa21bca2f2b14e98220ef1a637f03e30a3d5bc4f5d2dc57b9",
+  "afterSha256": "56329d0b128e96ce67700f02de1ee60cdd060832f4e53c5805b8b9671817181d",
+  "registeredAlbumWorks": 16,
+  "registeredTracksChecked": 26,
+  "verifiedMelonTracks": 24,
+  "verifiedRankValues": 164,
+  "sourceAbsentRankValues": 4,
+  "ui": {
+    "cardSourceLabelsAndLinksRemoved": true,
+    "summaryRetained": "최고 성적 출처와 확인 시각",
+    "detailsSource": "가이섬",
+    "detailsConfirmationTimePreserved": true,
+    "explanatorySourceTextInsideDetailsOnly": true
+  },
+  "actualRankChanges": [
+    {"sid": "cat-save-world", "title": "고양이가 세상을 구한다!", "chart": "hot100_30", "before": 14, "after": 6},
+    {"sid": "your-turn", "title": "Your Turn", "chart": "hot100_30", "before": 15, "after": 7},
+    {"sid": "pump-jump-bump", "title": "PUMP JUMP BUMP", "chart": "hot100_30", "before": 16, "after": 8}
+  ],
+  "sourceCheckedFromKst": "2026-11-18T01:03:41.295102+09:00",
+  "sourceCheckedThroughKst": "2026-11-18T01:04:32.672342+09:00",
+  "excluded": [
+    {"sid": "but-you-want-more", "title": "But You Want More", "reason": "등록된 영상 전용 작품: 검증된 멜론 음원 연결 없음"},
+    {"sid": "isegye-cypher", "title": "이세돌 싸이퍼", "reason": "등록된 영상 전용 작품: 검증된 멜론 음원 연결 없음"}
+  ],
+  "missingSourceRanks": [
+    {"sid": "rewind", "title": "RE : WIND", "chart": "hot100"},
+    {"sid": "rewind", "title": "RE : WIND", "chart": "hot100_30"},
+    {"sid": "winter-spring", "title": "겨울봄", "chart": "hot100"},
+    {"sid": "winter-spring", "title": "겨울봄", "chart": "hot100_30"}
+  ],
+  "sourceDates": "최고 순위 요약에 달성일이 제공되지 않아 기록일 미제공으로 표시; 예전 출처 날짜 재사용 없음",
+  "legacyReferenceSourceRejected": true,
+  "referenceCacheHours": 6,
+  "batchSchedulesUnchanged": true,
+  "independentVerification": {
+    "rawSourcePagesReparsed": 24,
+    "rankDatasetMatchedOriginalPages": true,
+    "originalCollectionAndSourceClocksUnchanged": true,
+    "allHourlyAndHistoricalChartsUnchanged": true,
+    "allOtherFieldsUnchanged": true,
+    "excludedWorksUnchanged": true,
+    "noOpOnRepeatedApplication": true,
+    "originalArtifactHashesVerified": true
+  },
+  "tests": {
+    "javascriptPassed": 371,
+    "pythonPassed": 998,
+    "pythonExistingSkip": 1,
+    "albumBrowserAssertionsPassed": 97,
+    "allSongSourceAndLayoutAssertionsPassed": 150,
+    "resumeTargetedPythonPassed": 28,
+    "resumeTargetedJavaScriptPassed": 12
+  },
+  "exampleLoveCells": {"top100": 19, "hot100": 6, "realtime": 10, "hot100_30": 6, "daily": 260, "new_week": 2, "new_month": 9}
+}
