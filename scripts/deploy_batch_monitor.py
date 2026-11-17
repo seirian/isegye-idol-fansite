@@ -12,7 +12,7 @@ import auth_routing as a
 from albums_composer import preserved_root_metadata, runtime_id
 from deploy_google_access import upload_tree
 from deploy_verified_albums import VerifiedTransferRemote
-from build_batch_monitor_host import patched, baseline
+from build_batch_monitor_host import patched, previous_patched, baseline
 from batch_monitor_snapshot import merge_observations
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,13 +95,24 @@ def publish(remote, doc, commit, report):
         for name, value in list(files.items()):
             if name in ('Gateway.php','BatchMonitor.php'):
                 continue
+            if name == 'google-client.js':
+                old_value = remote.read(old_folder+'/'+name)
+                d.require(old_value == value or (old_value is not None and d.digest(old_value) ==
+                    'a496b5ab557505075e3db9c25f21f6c1460f6e2fb098b4e4a48baaedf5cd4600'),
+                    'Unknown active Google client')
+                continue
             old_value = remote.read(old_folder+'/'+name)
             if name == 'vendor/composer/installed.php':
                 files[name] = preserved_root_metadata(old_value, value)
             else:
                 d.require(old_value == value, 'Current authentication source differs: '+name)
         old_gateway = remote.read(old_folder+'/Gateway.php')
-        d.require(old_gateway in (baseline.patched(source).encode(), files['Gateway.php']), 'Unknown active gateway extension')
+        d.require(old_gateway in (baseline.patched(source).encode(), previous_patched(source).encode(), files['Gateway.php']), 'Unknown active gateway extension')
+        if old_gateway == previous_patched(source).encode():
+            old_handler = remote.read(old_folder+'/BatchMonitor.php')
+            d.require(old_handler is not None and d.digest(old_handler) ==
+                'd396e71764d6bd8fef52811f5980cf74e309b5f879f3eda0e119566af67c0cac',
+                'Unknown legacy monitor handler')
         runtime = runtime_id(files)
         # Existing feeds and previews remain untouched and are checked under the lock.
         unchanged = {}
@@ -137,9 +148,8 @@ def publish(remote, doc, commit, report):
         d.require(remote.read(entry_path) == new_entry and remote.read(FOLDER+'/active.json') == pointer, 'Activation readback failed')
         for name, value in payload.items():
             d.require(remote.read(FOLDER+'/releases/'+release+'/'+name) == value, 'Monitor file readback failed')
-        for path in ('/ops/batches','/ops/batches/','/ops/batches/monitor.js','/ops/batches/monitor.css','/ops/batches/data.json'):
-            code, body = d.http(d.ORIGIN+path)
-            d.require(code == 401 and body == b'Administrator access required', 'Anonymous monitoring path exposed')
+        from batch_monitor_storage import verify_anonymous
+        verify_anonymous()
         for path in ('/.batch-monitoring/active.json','/.batch-monitoring/releases/'+release+'/data.json','/.auth-runtime/'+runtime+'/BatchMonitor.php'):
             code, body = d.http(d.ORIGIN+path)
             d.require(code in (403,404,503) and body != payload['data.json'], 'Private monitor path exposed')
@@ -154,7 +164,7 @@ def publish(remote, doc, commit, report):
         report.update(status='gated_monitor_production_verified',url=d.ORIGIN+'/ops/batches/',commit=commit,
             release=release,runtime=runtime,sourceCheckedAt=doc['checkedAt'],productionUIUnchanged=True,
             existingRoutesUnchanged=True,sharedRouterUnchanged=True,feedsUnchanged=True,
-            anonymousUIAndAPIDenied=True,privatePathsBlocked=True,requiresExistingAdministrator=True,
+            anonymousUIAndAPIDenied=True,anonymousDocumentRedirectVerified=True,loginNoticeVerified=True,privatePathsBlocked=True,requiresExistingAdministrator=True,
             accountConfigOrSessionAccessed=False,realGoogleLoginPerformed=False,
             authorizedRenderingVerification='local TLS synthetic accounts; deployed bytes verified by SFTP',
             scheduledRefreshEnabled=True,refreshEverySeconds=600,readOnly=True,

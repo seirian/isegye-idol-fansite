@@ -24,15 +24,15 @@ once("    signing=base/'signing.pem';cert=base/'cert.pem'",'''    sys.path.inser
     signing=base/'signing.pem';cert=base/'cert.pem' ''')
 once("            check('public visit does not create member cookie',not guest.cookies())",'''            check('public visit does not create member cookie',not guest.cookies())
             for path in ('/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
-                check('monitor anonymous blocked '+path,guest.request.get(url+path).status==401)
+                check('monitor anonymous blocked '+path,guest.request.get(url+path,max_redirects=0).status==(303 if path=='/ops/batches/' else 401))
             check('monitor guest read does not create cookie',not guest.cookies())''')
 once("            check('member is not administrator',member.request.get(url+'/auth/status').json()['administrator'] is False)",'''            check('member is not administrator',member.request.get(url+'/auth/status').json()['administrator'] is False)
             for path in ('/ops/batches','/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
-                check('monitor ordinary member denied while public site open '+path,member.request.get(url+path).status==403)
-                check('monitor query role cannot grant access '+path,member.request.get(url+path+'?role=admin').status==403)
+                check('monitor ordinary member denied while public site open '+path,member.request.get(url+path,max_redirects=0).status==(303 if path in ('/ops/batches','/ops/batches/') else 403))
+                check('monitor query role cannot grant access '+path,member.request.get(url+path+'?role=admin',max_redirects=0).status==(303 if path in ('/ops/batches','/ops/batches/') else 403))
             check('monitor forged role header denied',member.request.get(url+'/ops/batches/data.json',headers={'X-Role':'admin','X-Admin':'true'}).status==403)''')
 once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()",'''            for path in ('/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
-                check('monitor member blocked '+path,member.request.get(url+path).status==403)
+                check('monitor member blocked '+path,member.request.get(url+path,max_redirects=0).status==(303 if path in ('/ops/batches','/ops/batches/') else 403))
                 check('monitor administrator allowed '+path,owner.request.get(url+path).status==200)
             response=owner.request.get(url+'/ops/batches/data.json')
             check('monitor no-store','no-store' in response.headers['cache-control'])
@@ -72,6 +72,8 @@ once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]')
             (monitor_directory/'data.json').write_text('broken');(base/'.batch-monitoring/active.json').write_bytes(release_payload(monitor_doc)[2])
             check('monitor corrupt snapshot fails closed',owner.request.get(url+'/ops/batches/data.json').status==503)
             install_monitor(monitor_doc)
+            import batch_monitor_ux_checks
+            batch_monitor_ux_checks.verify(check,owner,member,op,url,new,token,OUT)
             check('monitor no browser exceptions',not errors)
             check('monitor leaves production UI intact','PROTECTED_SITE_FIXTURE' in owner.request.get(url+'/').text())
             op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()''')

@@ -1,9 +1,10 @@
 name: Batch monitoring - protected read-only review
 on:
   push:
-    branches: [feature/batch-monitoring]
+    branches: [feature/batch-monitoring, feature/batch-monitoring-ux]
     paths:
       - monitoring/**
+      - auth/google-client.js
       - scripts/*batch_monitor*.py
       - tests/*batch_monitor*
       - .github/workflows/batch-monitoring-preview.yml
@@ -14,7 +15,7 @@ permissions:
   contents: read
 jobs:
   validate:
-    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/batch-monitoring'
+    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/feature/batch-monitoring' || github.ref == 'refs/heads/feature/batch-monitoring-ux')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -47,6 +48,12 @@ jobs:
         run: |
           /tmp/batch-monitor-tools/bin/python scripts/build_batch_monitor_host.py
           php -l auth-bundle/Gateway.php
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: batch-monitor-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: auth-bundle/
+          retention-days: 7
+          include-hidden-files: true
       - name: Verify guest member admin and desktop mobile UI using synthetic identities
         run: /tmp/batch-monitor-tools/bin/python tests/batch_monitor_host_browser.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

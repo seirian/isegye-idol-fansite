@@ -108,9 +108,12 @@ class MonitorPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):m.stamp('2026-11-17T01:00:00')
     def test_no_browser_token_or_mutation(self):
         source=(ROOT/'monitoring/monitor.js').read_text()
-        for forbidden in ('localStorage','innerHTML','Bearer','workflow_dispatch','method:'):
+        for forbidden in ('innerHTML','Bearer','workflow_dispatch','method:'):
             self.assertNotIn(forbidden,source)
         self.assertIn('AbortController',source);self.assertIn('textContent',source)
+        self.assertEqual(source.count('localStorage.setItem('),1)
+        self.assertIn('localStorage.setItem(themeKey, theme)',source)
+        self.assertIn("const themeKey = 'isegye:monitor-theme:v1'",source)
 
 
 class MonitorAccessTests(unittest.TestCase):
@@ -123,8 +126,8 @@ class MonitorAccessTests(unittest.TestCase):
         (self.root/'.batch-monitoring/active.json').write_bytes(self.pointer)
     def tearDown(self):self.tmp.cleanup()
     def request(self,role=None,allowed=False,path='/ops/batches/data.json',method='GET'):
-        code='require $argv[1]; $_SERVER["REQUEST_METHOD"]=$argv[5]; ob_start(); Isegye\\Access\\BatchMonitor::serve($argv[2],$argv[3],json_decode($argv[4],true)); $body=ob_get_clean(); echo json_encode([http_response_code(),$body]);'
-        out=subprocess.check_output(['php','-r',code,str(ROOT/'monitoring/BatchMonitor.php'),str(self.root),path,json.dumps({'role':role,'allowed':allowed}),method])
+        code='require $argv[1]; require $argv[6]; $_SERVER["REQUEST_METHOD"]=$argv[5]; ob_start(); Isegye\\Access\\BatchMonitor::serve($argv[2],$argv[3],json_decode($argv[4],true)); $body=ob_get_clean(); echo json_encode([http_response_code(),$body]);'
+        out=subprocess.check_output(['php','-r',code,str(ROOT/'monitoring/BatchMonitor.php'),str(self.root),path,json.dumps({'role':role,'allowed':allowed}),method,str(ROOT/'auth/View.php')])
         return json.loads(out)
     def test_guest_denied(self):self.assertEqual(self.request()[0],401)
     def test_member_denied(self):self.assertEqual(self.request('member',True)[0],403)
@@ -133,7 +136,7 @@ class MonitorAccessTests(unittest.TestCase):
         code,body=self.request('admin',True);self.assertEqual(code,200);self.assertTrue(json.loads(body)['readOnly'])
     def test_all_assets_protected(self):
         for name in ('','monitor.js','monitor.css','data.json'):
-            self.assertEqual(self.request(path='/ops/batches/'+name)[0],401)
+            self.assertEqual(self.request(path='/ops/batches/'+name)[0],303 if name=='' else 401)
     def test_post_denied(self):self.assertEqual(self.request('admin',True,method='POST')[0],405)
     def test_head_empty(self):self.assertEqual(self.request('admin',True,method='HEAD'),[200,''])
     def test_unknown_route(self):self.assertEqual(self.request('admin',True,path='/ops/batches/config.json')[0],404)

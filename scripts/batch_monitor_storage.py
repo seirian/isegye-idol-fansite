@@ -6,7 +6,7 @@ observation summaries live in every current snapshot, not in per-refresh files.
 """
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-import hashlib, json, re, stat
+import hashlib, json, re, stat, urllib.error, urllib.request
 import inour_sftp as d
 
 FOLDER = d.ROOT+'/.batch-monitoring'
@@ -37,10 +37,42 @@ def validate_snapshot(doc, commit, at=None):
               'Unknown monitor state')
 
 
+LOGIN = '/auth/login?notice=batch-admin'
+MESSAGE = '관리자 계정만 해당 사이트에 접근이 가능합니다.'
+DOCUMENT_ROUTES = ('/ops/batches','/ops/batches/')
+
+
+def access_http(path):
+    """Cookie-free, same-origin denial verification; never follow a redirect."""
+    d.require(path in ROUTES or path == LOGIN, 'Unexpected access verification route')
+    request = urllib.request.Request(d.ORIGIN+path, headers={'User-Agent':'IsegyeMonitorAccessCheck/1.0','Cache-Control':'no-cache'})
+    try:
+        response = urllib.request.build_opener(d.NoRedirect).open(request, timeout=20)
+    except urllib.error.HTTPError as exc:
+        response = exc
+    with response:
+        body = response.read(100001)
+        d.require(len(body) <= 100000, 'Oversized access response')
+        return response.status, body, {k.lower():v for k,v in response.headers.items()}
+
+
 def verify_anonymous():
     for path in ROUTES:
-        code,body=d.http(d.ORIGIN+path)
-        d.require(code==401 and body==b'Administrator access required', 'Monitor anonymous access boundary failed')
+        code, body, headers = access_http(path)
+        d.require('no-store' in headers.get('cache-control',''), 'Access response cached')
+        if path in DOCUMENT_ROUTES:
+            d.require(code == 303 and headers.get('location') == LOGIN and MESSAGE.encode() in body
+                      and b'/auth/style.css' in body and b'id="rows"' not in body,
+                      'Monitor document login redirect failed')
+        else:
+            d.require(code == 401 and body == b'Administrator access required'
+                      and not headers.get('location') and not headers.get('refresh'),
+                      'Monitor anonymous data boundary failed')
+    code, body, headers = access_http(LOGIN)
+    d.require(code == 200 and MESSAGE.encode() in body and b'data-batch-access="required"' in body
+              and b'/auth/style.css' in body and b'data-intent="batch-monitor"' in body
+              and 'no-store' in headers.get('cache-control','') and not headers.get('location'),
+              'Shared login notice unavailable')
 
 
 def current_runtime(remote, root):
@@ -157,7 +189,7 @@ def refresh(remote, doc, commit, report, root):
         report.update(status='monitor_snapshot_verified',url=d.ORIGIN+'/ops/batches/',commit=commit,
             runtime=runtime,release=name,sourceCheckedAt=doc['checkedAt'],verifiedAt=datetime.now(timezone.utc).isoformat(),
             snapshotSha256=d.digest(files['data.json']),readOnly=True,scheduledRefreshEnabled=True,
-            refreshEverySeconds=600,anonymousUIAndAPIDenied=True,privatePathsBlocked=True,
+            refreshEverySeconds=600,anonymousUIAndAPIDenied=True,anonymousDocumentRedirectVerified=True,loginNoticeVerified=True,privatePathsBlocked=True,
             requiresExistingAdministrator=True,authenticationRuntimeUnchanged=True,accountConfigOrSessionAccessed=False,
             observationCount=len(doc['observations']),realGoogleLoginPerformed=False,
             authorizedRenderingVerification='local TLS role tests and exact deployed code/data byte checks')
