@@ -52,6 +52,7 @@ with sync_playwright() as p:
     ok(page.locator("#q-overlay").is_hidden(),f"resume {width}")
     stage(page,f"quest-{width}")
     page.locator('a[href="#/escape"]').first.click()
+    page.locator(".puzzle-cell").first.wait_for(state="visible",timeout=5000)
     ok(page.locator(".puzzle-cell").count()==63,f"9x7 board {width}")
     ok(page.locator("[data-level]").count()==8,f"8 levels {width}")
     page.locator('[data-select="2"]').first.click()
