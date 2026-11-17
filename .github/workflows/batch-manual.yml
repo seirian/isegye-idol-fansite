@@ -1,0 +1,67 @@
+name: Batches - administrator manual request worker
+on:
+  schedule:
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/batch-manual.yml, scripts/batch_manual_worker.py]
+  workflow_run:
+    workflows:
+      - Albums - hourly verified metadata and chart refresh
+      - Music - daily verified catalog refresh
+      - Schedule - every 2 hours permitted-source refresh
+      - Content - verified channel video catalog
+      - Playground - daily verified question bank
+      - History - weekly verified activity refresh
+      - Production - isolated inour SFTP deployment
+      - Batches - verified outcome recovery watchdog
+      - Batch monitoring - administrator-only production status
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: isegye-administrator-manual-requests
+  cancel-in-progress: false
+jobs:
+  process:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Install fixed transport and verify manual request boundaries
+        run: |
+          python -m venv /tmp/batch-manual-tools
+          /tmp/batch-manual-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
+          /tmp/batch-manual-tools/bin/python -m unittest discover -s tests -p 'test_batch_manual*.py' -v
+          php -l monitoring/BatchManual.php
+      - name: Process only existing administrator-approved requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MANUAL_PAUSED: ${{ vars.ISEGYE_MANUAL_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+        run: /tmp/batch-manual-tools/bin/python scripts/batch_manual_worker.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-manual-worker-${{ github.run_id }}-${{ github.run_attempt }}
+          path: batch-manual-worker.json
+          retention-days: 30
+# No private requests, user identities, credentials or monitoring data in artifacts.
+# No self completion trigger. The worker never creates a request on behalf of a user.
+# Target workflows retain their original main gates, pause controls and writer locks.

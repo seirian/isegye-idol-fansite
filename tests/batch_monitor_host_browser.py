@@ -21,6 +21,9 @@ once("    signing=base/'signing.pem';cert=base/'cert.pem'",'''    sys.path.inser
         (base/'.batch-monitoring/active.json').write_bytes(point)
         return directory
     monitor_directory=install_monitor(monitor_doc)
+    control_folder=base/'.batch-monitoring/control';control_folder.mkdir()
+    (control_folder/'.owner').write_text('isegye-batch-manual:v1\\n')
+    (control_folder/'.htaccess').write_text('Require all denied\\n')
     signing=base/'signing.pem';cert=base/'cert.pem' ''')
 once("            check('public visit does not create member cookie',not guest.cookies())",'''            check('public visit does not create member cookie',not guest.cookies())
             for path in ('/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
@@ -77,6 +80,8 @@ once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]')
             batch_monitor_ux_checks.verify(check,owner,member,op,url,new,token,OUT)
             import batch_monitor_reliability_checks
             batch_monitor_reliability_checks.verify(check,op,install_monitor,fixture_snapshot,OUT)
+            import batch_manual_browser_checks
+            batch_manual_browser_checks.verify(check,owner,member,op,url,base,private,OUT)
             check('monitor no browser exceptions',not errors)
             check('monitor leaves production UI intact','PROTECTED_SITE_FIXTURE' in owner.request.get(url+'/').text())
             op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()''')

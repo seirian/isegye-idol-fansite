@@ -27,7 +27,7 @@ def previous_patched(source):
     return original.replace(ANCHOR, LEGACY_HOOK+ANCHOR, 1)
 
 
-def patched(source):
+def readonly_patched(source):
     original = baseline.patched(source)
     if original.count(ANCHOR) != 1 or 'ISEGYE-BATCH-MONITOR' in original:
         raise ValueError('Existing gateway anchor changed')
@@ -36,11 +36,31 @@ def patched(source):
     return original.replace(ANCHOR, HOOK+ANCHOR, 1)
 
 
+MANUAL_HOOK = """        // Separate capability worker and live-session administrator controls.
+        if ($path === '/ops/batches/_agent') {
+            require_once $this->runtime.'/BatchManual.php';
+            BatchManual::agent($this->root, fn($id) => $this->store->access($id)); return;
+        }
+        if (in_array($path, ['/ops/batches/control','/ops/batches/manual.js','/ops/batches/manual.css'], true)) {
+            require_once $this->runtime.'/BatchManual.php';
+            BatchManual::serve($this->root, $path, $access, $this->config['origin']); return;
+        }
+"""
+
+def patched(source):
+    original = readonly_patched(source)
+    if original.count(LEGACY_HOOK) != 1:
+        raise ValueError('Read-only monitor anchor changed')
+    return original.replace(LEGACY_HOOK, MANUAL_HOOK+LEGACY_HOOK, 1)
+
+
 def main():
     baseline.main()
     out = ROOT/'auth-bundle'
     (out/'Gateway.php').write_text(patched((ROOT/'auth/Gateway.php').read_text()))
     (out/'BatchMonitor.php').write_bytes((ROOT/'monitoring/BatchMonitor.php').read_bytes())
+    for name in ('BatchManual.php','manual.js','manual.css'):
+        (out/name).write_bytes((ROOT/'monitoring'/name).read_bytes())
     files = {p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
              for p in sorted(out.rglob('*')) if p.is_file() and p.name != 'manifest.json'}
     runtime = 'g'+hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:12]

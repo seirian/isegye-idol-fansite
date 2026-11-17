@@ -12,7 +12,7 @@ import auth_routing as a
 from albums_composer import preserved_root_metadata, runtime_id
 from deploy_google_access import upload_tree
 from deploy_verified_albums import VerifiedTransferRemote
-from build_batch_monitor_host import patched, previous_patched, baseline
+from build_batch_monitor_host import patched, readonly_patched, previous_patched, baseline
 from batch_monitor_snapshot import merge_observations
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +93,7 @@ def publish(remote, doc, commit, report):
         d.require(old_entry == a.entry(remote.read(old_folder+'/access.php.template'), old_runtime), 'Entry differs from managed template')
         # Reuse byte-identical current code and preserve composer root metadata.
         for name, value in list(files.items()):
-            if name in ('Gateway.php','BatchMonitor.php'):
+            if name in ('Gateway.php','BatchMonitor.php','BatchManual.php','manual.js','manual.css'):
                 continue
             if name == 'google-client.js':
                 old_value = remote.read(old_folder+'/'+name)
@@ -107,7 +107,7 @@ def publish(remote, doc, commit, report):
             else:
                 d.require(old_value == value, 'Current authentication source differs: '+name)
         old_gateway = remote.read(old_folder+'/Gateway.php')
-        d.require(old_gateway in (baseline.patched(source).encode(), previous_patched(source).encode(), files['Gateway.php']), 'Unknown active gateway extension')
+        d.require(old_gateway in (baseline.patched(source).encode(), previous_patched(source).encode(), readonly_patched(source).encode(), files['Gateway.php']), 'Unknown active gateway extension')
         if old_gateway == previous_patched(source).encode():
             old_handler = remote.read(old_folder+'/BatchMonitor.php')
             d.require(old_handler is not None and d.digest(old_handler) ==
@@ -149,7 +149,10 @@ def publish(remote, doc, commit, report):
         for name, value in payload.items():
             d.require(remote.read(FOLDER+'/releases/'+release+'/'+name) == value, 'Monitor file readback failed')
         from batch_monitor_storage import verify_anonymous
+        from batch_manual_worker import initialize, verify_boundary
+        initialize(remote)
         verify_anonymous()
+        verify_boundary()
         for path in ('/.batch-monitoring/active.json','/.batch-monitoring/releases/'+release+'/data.json','/.auth-runtime/'+runtime+'/BatchMonitor.php'):
             code, body = d.http(d.ORIGIN+path)
             d.require(code in (403,404,503) and body != payload['data.json'], 'Private monitor path exposed')
@@ -162,7 +165,7 @@ def publish(remote, doc, commit, report):
             raw = remote.read(d.ROOT+'/'+name)
             d.require((d.digest(raw) if raw is not None else None) == digest, 'Existing feed or preview changed')
         report.update(status='gated_monitor_production_verified',url=d.ORIGIN+'/ops/batches/',commit=commit,
-            release=release,runtime=runtime,sourceCheckedAt=doc['checkedAt'],productionUIUnchanged=True,
+            release=release,runtime=runtime,sourceCheckedAt=doc['checkedAt'],productionUIUnchanged=True,manualControlsInstalled=True,manualControlAnonymousDenied=True,
             existingRoutesUnchanged=True,sharedRouterUnchanged=True,feedsUnchanged=True,
             anonymousUIAndAPIDenied=True,anonymousDocumentRedirectVerified=True,loginNoticeVerified=True,privatePathsBlocked=True,requiresExistingAdministrator=True,
             accountConfigOrSessionAccessed=False,realGoogleLoginPerformed=False,
