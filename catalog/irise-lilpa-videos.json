@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "selection": "owner_requested_video_ids",
+  "source": "YouTube Data API v3 videos.list",
+  "evidenceRun": 44108855400,
+  "checkedAt": "2026-11-17T14:57:59.458338+00:00",
+  "channel": {
+    "key": "irise-collab-selected",
+    "name": "IRISÉ",
+    "channelId": "UCMmcz1ybSoAD-GUlDx_7H2A",
+    "url": "https://www.youtube.com/channel/UCMmcz1ybSoAD-GUlDx_7H2A"
+  },
+  "videos": [
+    {
+      "id": "P15VglxEkss",
+      "title": "[IRISÉ LIVE] 오늘은 릴파 선배님과 함께! 🩵💙",
+      "publishedAt": "2026-11-16T10:45:19Z",
+      "durationSeconds": 5731,
+      "privacyStatus": "public",
+      "embeddable": true,
+      "definition": "hd",
+      "regionRestriction": {
+        "blocked": [
+          "RU"
+        ]
+      },
+      "liveBroadcastContent": "none",
+      "liveStreamingDetails": {
+        "actualStartTime": "2026-11-16T09:04:24Z",
+        "actualEndTime": "2026-11-16T10:39:58Z",
+        "scheduledStartTime": "2026-11-16T09:00:00Z"
+      },
+      "type": "external_collaboration",
+      "recordingKind": "livestream_archive"
+    }
+  ]
+}

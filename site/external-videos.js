@@ -1,6 +1,13 @@
+/* Preserve short-video display and support hour-long collaboration replays. */
+function externalVideoDuration(seconds) {
+  if(!Number.isInteger(seconds)||seconds<0)return '';
+  const h=Math.floor(seconds/3600), m=Math.floor(seconds/60)%60, s=String(seconds%60).padStart(2,'0');
+  return h?`${h}:${String(m).padStart(2,'0')}:${s}`:`${m}:${s}`;
+}
 /* Explicit source-labelled related videos. No network or implicit channel discovery. */
 function externalPerformanceLinks(songId, excludeId='') {
-  const rows=D.videos.filter(v=>v.category==='external'&&v.relatedSong===songId&&v.id!==excludeId)
+  if(typeof songId!=='string'||!songId)return '';
+  const rows=D.videos.filter(v=>v.category==='external'&&['external_performance','external_teaser'].includes(v.type)&&v.relatedSong===songId&&v.id!==excludeId)
     .sort((a,b)=>(a.type==='external_performance'?-1:1)-(b.type==='external_performance'?-1:1)||b.publishedAt.localeCompare(a.publishedAt));
   if(!rows.length)return '';
   const channelNames=[...new Set(rows.map(v=>v.channelName))].join(' · ');
