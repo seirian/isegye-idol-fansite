@@ -130,6 +130,20 @@ console.log(JSON.stringify({views:Object.keys(views).length,liveFeed:true,isolat
   self.assertIn('Visibility::json($raw, $role)',(ROOT/'albums/hosting/AlbumsFeed.php').read_text())
 
 class DeploymentVisibility(unittest.TestCase):
+ def setUp(self):
+  # Monitor transport now verifies Location and cache headers separately.
+  # Keep these unit tests offline while executing the real boundary verifier.
+  from unittest.mock import patch
+  import batch_monitor_storage as monitor
+  def monitor_response(path):
+   headers={'cache-control':'private, no-store'}
+   if path in monitor.DOCUMENT_ROUTES:
+    return 303,(monitor.MESSAGE+' /auth/style.css').encode(),dict(headers,location=monitor.LOGIN)
+   if path==monitor.LOGIN:
+    return 200,(monitor.MESSAGE+' /auth/style.css data-batch-access="required" data-intent="batch-monitor"').encode(),headers
+   return 401,b'Administrator access required',headers
+  transport=patch.object(monitor,'access_http',side_effect=monitor_response)
+  self.monitor_transport=transport.start();self.addCleanup(transport.stop)
  def test_publisher_checks_role_specific_public_files(self):
   from unittest.mock import patch
   import deploy_google_access as deploy
@@ -140,7 +154,7 @@ class DeploymentVisibility(unittest.TestCase):
    key=path.lstrip('/')
    return (200,deploy.a.public_html(payload[key]) if key=='index.html' else payload[POLICY['publicFiles'].get(key,key)])
   with patch.object(deploy,'status',return_value={'maintenance':False}),patch.object(deploy.d,'http',side_effect=response):
-   report={};deploy.verify_public(payload,report);self.assertTrue(report['anonymousAdminDiagnosticsBlocked']);self.assertTrue(report['batchMonitorAnonymousUIAndAPIDenied'])
+   report={};deploy.verify_public(payload,report);self.assertTrue(report['anonymousAdminDiagnosticsBlocked']);self.assertTrue(report['batchMonitorAnonymousUIAndAPIDenied']);self.assertEqual(self.monitor_transport.call_count,6)
   with patch.object(deploy,'status',return_value={'maintenance':False}),patch.object(deploy.d,'http',return_value=(200,b'PRIVATE_DATA')):
    with self.assertRaises(deploy.d.Stop):deploy.verify_public(payload,{})
  def test_maintenance_and_admin_diagnostics_remain_distinct(self):
@@ -151,4 +165,4 @@ class DeploymentVisibility(unittest.TestCase):
    return (401,b'Administrator access required') if path in POLICY['protectedPaths'] or path in ('/ops/batches','/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css') else (503,'현재 사이트는 공사중입니다.'.encode())
   with patch.object(deploy,'status',return_value={'maintenance':True}),patch.object(deploy.d,'http',side_effect=response):
    report={};deploy.verify_public({},report)
-   self.assertTrue(report['anonymousMaintenanceVerified']);self.assertTrue(report['anonymousAdminDiagnosticsBlocked'])
+   self.assertTrue(report['anonymousMaintenanceVerified']);self.assertTrue(report['anonymousAdminDiagnosticsBlocked']);self.assertEqual(self.monitor_transport.call_count,6)
