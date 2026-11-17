@@ -54,7 +54,7 @@ def verify(check,owner,member,op,url,base,private,out):
     r=post(payload('history')).json()['request'];claimed=agent({'action':'claim'})
     check('manual agent claims only approved requests',len(claimed['pending'])==1 and claimed['pending'][0]['id']==r['id'])
     check('manual claim excludes identities','actor' not in json.dumps(claimed))
-    saved=(private/'accounts.json').read_text();db=json.loads(saved);db['accounts'][db['administrator']]='member';(private/'accounts.json').write_text(json.dumps(db))
+    saved=(private/'accounts.json').read_text();db=json.loads(saved);db['accounts'][db['administrator']]='member';db['administrator']=None;(private/'accounts.json').write_text(json.dumps(db))
     check('manual revoked admin cannot be dispatched',agent({'action':'begin','id':r['id']})['allowed'] is False)
     (private/'accounts.json').write_text(saved)
     r=post(payload('catalog')).json()['request'];agent({'action':'claim'});agent({'action':'begin','id':r['id']})
