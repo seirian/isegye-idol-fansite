@@ -1,0 +1,100 @@
+name: Fangames - three playable isolated reviews
+on:
+  push:
+    branches: [feature/isegye-fangames]
+    paths:
+      - 'fangames/**'
+      - 'scripts/build_fangames.py'
+      - 'scripts/deploy_fangames.py'
+      - 'tests/fangames_browser.py'
+      - 'tests/test_fangames.py'
+      - '.github/workflows/fangames-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/isegye-fangames'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      html_sha: ${{ steps.hash.outputs.html_sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Generate offline review; verify game logic and isolation
+        run: |
+          node --check fangames/base.js
+          node --check fangames/arcade.js
+          node --check fangames/quest.js
+          node --check fangames/escape.js
+          python scripts/build_fangames.py
+          python -m unittest discover -s tests -p test_fangames.py -v
+      - name: Install isolated browser tool
+        run: |
+          python -m venv /tmp/fangames-browser
+          /tmp/fangames-browser/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/fangames-browser/bin/python
+      - name: Play all games with desktop and mobile controls
+        run: /tmp/fangames-browser/bin/python tests/fangames_browser.py
+      - name: Pin browser-tested HTML hash
+        id: hash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,os,hashlib
+          p=Path('fangames-dist/review.html').read_bytes()
+          info=json.loads(Path('fangames-dist/build-info.json').read_text())
+          assert info['htmlSha256']==hashlib.sha256(p).hexdigest()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+            f.write('html_sha='+info['htmlSha256']+'\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: fangames-verified-${{ github.sha }}
+          path: |
+            fangames-dist/
+            test-results/fangames/
+          retention-days: 14
+  publish:
+    needs: verify
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/isegye-fangames'
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://isegye-idol.kr/review-playground/
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Rebuild byte-identical offline preview
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          python scripts/build_fangames.py
+          python -m venv /tmp/fangames-publish
+          /tmp/fangames-publish/bin/pip install paramiko==5.0.0
+      - name: Publish only owned administrator-gated review pointer
+        run: /tmp/fangames-publish/bin/python scripts/deploy_fangames.py
+        env:
+          REVIEW_COMMIT: ${{ github.sha }}
+          REVIEW_DEPLOY_ENABLED: 'true'
+          VERIFIED_HTML_SHA256: ${{ needs.verify.outputs.html_sha }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: fangames-publication-${{ github.sha }}
+          path: review-fangames-deployment.json
+          retention-days: 30
