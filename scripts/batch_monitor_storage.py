@@ -191,7 +191,10 @@ def refresh(remote, doc, commit, report, root):
             snapshotSha256=d.digest(files['data.json']),readOnly=True,scheduledRefreshEnabled=True,
             refreshEverySeconds=600,anonymousUIAndAPIDenied=True,anonymousDocumentRedirectVerified=True,loginNoticeVerified=True,privatePathsBlocked=True,
             requiresExistingAdministrator=True,authenticationRuntimeUnchanged=True,accountConfigOrSessionAccessed=False,
-            observationCount=len(doc['observations']),realGoogleLoginPerformed=False,
+            observationCount=len(doc['observations']),collectorHealth=doc.get('collectorHealth'),
+            lastCompleteInspectionAt=doc.get('lastCompleteInspectionAt'),
+            preservedVerifiedResults=sum(bool(r.get('lastVerifiedResult')) for r in doc['batches']),
+            realGoogleLoginPerformed=False,
             authorizedRenderingVerification='local TLS role tests and exact deployed code/data byte checks')
     except Exception:
         if changed:

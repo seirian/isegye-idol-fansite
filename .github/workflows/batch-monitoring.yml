@@ -11,7 +11,15 @@ on:
       - tests/*batch_monitor*
       - .github/workflows/batch-monitoring.yml
   workflow_run:
-    workflows: ['Production - isolated inour SFTP deployment']
+    workflows:
+      - Albums - hourly verified metadata and chart refresh
+      - Music - daily verified catalog refresh
+      - Schedule - every 2 hours permitted-source refresh
+      - Content - verified channel video catalog
+      - Playground - daily verified question bank
+      - History - weekly verified activity refresh
+      - Production - isolated inour SFTP deployment
+      - Batches - verified outcome recovery watchdog
     types: [completed]
     branches: [main]
 permissions:
@@ -27,8 +35,7 @@ jobs:
       github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
       (github.event_name != 'workflow_run' ||
        (github.event.workflow_run.head_branch == 'main' &&
-        github.event.workflow_run.head_repository.full_name == github.repository &&
-        github.event.workflow_run.conclusion == 'success'))
+        github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:
@@ -41,6 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {ref: main, persist-credentials: false}
+      - name: Validate authoritative main completion; include failed and cancelled outcomes
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python scripts/batch_monitor_trigger.py
       - name: Respect existing pause and bind exact current main
         id: source
         env:
@@ -63,6 +73,8 @@ jobs:
           php -l monitoring/BatchMonitor.php
           node --check monitoring/monitor.js
       - name: Read current execution and verified publication evidence
+        id: inspection
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           MONITOR_COMMIT: ${{ steps.source.outputs.commit }}
@@ -87,11 +99,17 @@ jobs:
           ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
         run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py --refresh-only
+      - name: Fail visibly when monitoring inspection is incomplete, even if diagnostics were published
+        env: {INSPECTION_OUTCOME: '${{ steps.inspection.outcome }}'}
+        run: |
+          python -c "import json,os; r=json.load(open('batch-monitor-inspection.json')); assert os.getenv('INSPECTION_OUTCOME')=='success' and r['collectorHealth']['state']=='ok', 'Monitoring inspection incomplete; historical verified outcomes were preserved'"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: batch-monitor-production-${{ github.run_id }}-${{ github.run_attempt }}
-          path: batch-monitor-deployment.json
+          path: |
+            batch-monitor-deployment.json
+            batch-monitor-inspection.json
           retention-days: 30
           if-no-files-found: warn
 # Never upload monitoring-dist/data.json: it is administrator-only operational data.

@@ -33,7 +33,24 @@
     // A fresh snapshot of the previous slot is not evidence for a new slot.
     return isStale() || (!!row.nextDueAt && Date.now() >= Date.parse(row.nextDueAt)+(row.key==='watchdog'?300000:0));
   }
-  function state(row) { return rowExpired(row) ? 'unknown' : row.state; }
+  function freshness(row) {
+    if (failed) return ['attention','상태 조회 실패'];
+    if (isStale()) return ['attention','최신 점검 지연'];
+    if (row.inspectionError) return ['attention',reason(row.inspectionError)];
+    if (rowExpired(row)) return ['running','새 회차 확인 대기'];
+    if (row.dataState === 'unknown') return ['unknown','게시 증거 미확인'];
+    return ['healthy','자료 기준 회차 확인'];
+  }
+  function reason(code) {
+    return ({execution_query_failed:'실행 이력 조회 실패',incomplete_execution_history:'실행 이력 조회 불완전',
+      publication_evidence_missing:'게시 증거 없음',publication_evidence_failed:'게시 증거 조회·검증 실패',
+      catalog_evidence_failed:'콘텐츠 게시 증거 미확인',main_identity_query_failed:'운영 커밋 조회 실패'})[code] || '점검 실패';
+  }
+  function resultLabel(row) {
+    if (row.dataState === 'healthy') return row.key === 'watchdog' ? '마지막 점검 정상' : '마지막 반영 완료';
+    return ({attention:'반영 확인 필요',running:'반영 확인 진행 중',paused:'예정·수동 중지',unknown:'반영 증거 미확인'})[row.dataState] || '반영 증거 미확인';
+  }
+  function state(row) { return rowExpired(row) || row.inspectionError ? 'unknown' : row.state; }
   function runBadge(run) {
     if (!run) return badge('unknown','실행 기록 없음');
     if (active.has(run.status)) return badge('running',run.status==='in_progress'?'실행 중':'대기 중');
@@ -45,11 +62,16 @@
     const a = node('a',text,'external'); a.href=url; a.target='_blank'; a.rel='noopener noreferrer'; return a;
   }
   function health() {
-    const el=$('health'); const slotChanged=!!data&&data.batches.some(rowExpired);
-    el.classList.toggle('warn',isStale()||slotChanged);
-    if (!data) { el.textContent=failed?'상태 조회에 실패했습니다. 정상 여부를 확인할 수 없습니다.':'모니터링 자료를 확인하고 있습니다.'; return; }
+    const el=$('health'); const quality=data?.collectorHealth;
+    const delayed=isStale(), error=quality?.state==='failed', partial=quality?.state==='degraded';
+    el.classList.toggle('warn',delayed||error||partial);
+    if (!data) { el.textContent=failed?'모니터링 상태 조회 실패 · 배치 장애 여부와 구분해 확인해 주세요.':'모니터링 자료를 확인하고 있습니다.'; return; }
     const age=Math.max(0,Math.floor((Date.now()-Date.parse(data.checkedAt))/60000));
-    el.textContent=((isStale()||slotChanged)?'⚠ 최신 상태 확인 필요 · ':'● 마지막 자료 확인 · ')+date(data.checkedAt)+` · ${age}분 전`+(failed?' · 조회 실패, 이전 자료를 참고용으로 표시합니다.':isStale()?' · 오래되었거나 시각이 유효하지 않은 자료입니다. 정상으로 판정하지 않습니다.':slotChanged?' · 새 예정 회차가 도래한 항목은 재확인 전까지 확인 불가로 표시합니다.':' · 실행 기록과 게시 증거를 대조했습니다.');
+    const title=failed?'모니터링 상태 조회 실패':delayed?'모니터링 갱신 지연':error?'모니터링 점검 실패':partial?'모니터링 일부 점검 미완료':'모니터링 자료 수집 완료';
+    el.textContent=(delayed||error||partial?'⚠ ':'● ')+title+' · 마지막 수집 '+date(data.checkedAt)+` · ${age}분 전`+
+      (failed?' · 조회 실패, 마지막 검증 결과는 참고용으로 유지합니다.':delayed?' · 배치 전체의 반영 실패를 뜻하지 않습니다. 마지막 검증 결과와 최신 확인 상태를 분리해 표시합니다.':error||partial?' · 확인한 배치 결과와 조회 실패 항목을 구분합니다.':' · 새 회차 대기 여부는 각 항목에서 확인해 주세요.');
+    const info=$('inspection-info');
+    if (info) info.textContent=(quality?`실행 이력 확인 ${quality.inspected}/${quality.total} · 조회 실패 ${quality.failed} · 반영 증거 미확인 ${quality.unresolved}`:'이전 형식 자료 · 점검 통계 미제공')+' · 마지막 전체 점검 완료 '+date(data.lastCompleteInspectionAt);
   }
   function render() {
     health();
@@ -60,7 +82,7 @@
     $('total').textContent=data.batches.length+'개'; $('summary').replaceChildren();
     for (const key of ['healthy','running','attention','paused','unknown']) {
       const el=node('div',undefined,'metric'); el.dataset.state=key;
-      el.append(node('span',labels[key],'label'),node('strong',data.batches.filter(r=>state(r)===key).length),node('small',key==='healthy'?'현재 회차 증거 기준':key==='unknown'?'새 회차·오래된 자료 포함':'실행·반영을 함께 확인'));
+      el.append(node('span',labels[key],'label'),node('strong',data.batches.filter(r=>state(r)===key).length),node('small',key==='healthy'?'자료 기준 회차 검증 완료':key==='unknown'?'점검 지연·증거 미확인':'실행·반영을 함께 확인'));
       $('summary').append(el);
     }
     const total=node('div',undefined,'metric'); total.append(node('span','전체 모니터링','label'),node('strong',data.batches.length),node('small','수집 6 · 배포 1 · 복구 1')); $('summary').append(total);
@@ -70,7 +92,14 @@
     for (const row of rows) {
       const tr=node('tr'); tr.setAttribute('role','row'); const name=node('td'); name.append(node('strong',row.name),node('small',row.schedule));
       const run=node('td'); run.append(runBadge(row.run)); if(rowExpired(row))run.append(node('small','마지막 조회 당시 상태'));
-      const pub=node('td'); pub.append(badge(rowExpired(row)?'unknown':row.dataState));
+      const pub=node('td');
+      const expired=rowExpired(row);
+      pub.append(badge(expired?'unknown':row.dataState,resultLabel(row)));
+      const [checkState,checkText]=freshness(row);pub.append(node('small',checkText,'freshness '+checkState));
+      const last=row.lastVerifiedResult;
+      if(last) pub.append(node('small',(last.kind==='inspection'?'정상 점검 확인 ':'정상 반영 확인 ')+date(last.observedAt),'last-verified'));
+      else if(row.dataState==='healthy') pub.append(node('small','검증 확인 '+date(row.checkedAt),'last-verified'));
+      else pub.append(node('small','보관된 정상 검증 기록 없음','last-verified'));
       if (row.historicalGapCount) pub.append(node('small',`과거 관측 공백 ${row.historicalGapCount}시간`));
       if (row.lastVerifiedAt) pub.append(node('small','재조회 '+date(row.lastVerifiedAt)));
       const due=node('td',row.dueAt?date(row.dueAt):'이벤트 기준'); due.append(node('small','다음 '+(row.nextDueAt?date(row.nextDueAt):'이벤트 발생 시')));
@@ -108,7 +137,10 @@
   function openDetail(row,button){
     opener=button;$('detail-title').textContent=row.name;const body=$('detail-body');body.replaceChildren();
     body.append(node('p',row.note||'실행 결과와 현재 회차의 반영 증거를 확인합니다.','detail-note'));
-    if(rowExpired(row))body.append(node('p','새 예정 회차가 도래했거나 오래되었거나 재조회에 실패한 자료입니다. 아래는 마지막 확인 당시의 기록입니다.','detail-note'));
+    if(rowExpired(row))body.append(node('p','최신 점검이 지연되었거나 새 회차를 기다리고 있습니다. 아래는 마지막 확인 당시의 기록이며 현재 회차 정상 판정이 아닙니다.','detail-note'));
+    const [freshState,freshText]=freshness(row);body.append(badge(freshState,freshText));
+    const last=row.lastVerifiedResult;
+    if(last){body.append(node('h3','마지막으로 검증된 정상 결과','subhead'),node('p','확인 '+date(last.observedAt)+' · 대상 회차 '+date(last.dueAt)+' · 현재 점검 결과와 별도로 보관합니다.','detail-note'));if(last.runId&&last.attempt)body.append(safeLink(`https://github.com/seirian/isegye-idol-fansite/actions/runs/${last.runId}/attempts/${last.attempt}`,'마지막 정상 검증 근거 ↗'));}
     const grid=node('dl',undefined,'detail-grid');
     const fields=[['예정 주기',row.schedule],['자료 기준 회차',date(row.dueAt)],['다음 예정',date(row.nextDueAt)],['마지막 자료 확인',date(row.checkedAt)],['실행 생성',date(row.run?.createdAt)],['실제 작업 시작',date(row.run?.jobStartedAt)],['수집 결과 생성',date(row.evidence?.generatedAt)],['게시 시각',date(row.evidence?.publishedAt)],['서버 재조회',date(row.evidence?.readbackAt)],['명시적 재조회 검증',row.evidence?.verifiedReadback===true?'검증됨':row.evidence?.verifiedReadback===false?'실패':'증거 없음'],['전체 실행 이력 조회',row.listingComplete?'완료':'불완전 · 최신 여부 확정 불가'],['대기 / 실행 소요',seconds(row.run?.queueSeconds)+' / '+seconds(row.run?.durationSeconds)]];
     for(const [key,value] of fields){const div=node('div');div.append(node('dt',key),node('dd',value));grid.append(div);}body.append(grid);

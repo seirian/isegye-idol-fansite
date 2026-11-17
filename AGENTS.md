@@ -22,3 +22,6 @@
 
 운영 구성: `docs/BATCH_MONITORING.md`
 접근 안내·가독성·테마 구성: `docs/BATCH_MONITORING_UX.md`
+
+모니터링 갱신 신뢰성 보완: `docs/BATCH_MONITORING_RELIABILITY.md`.
+마지막 검증 결과와 최신 점검 상태를 분리하고, 수집기 실패를 배치 실패와 혼동하지 않는다.

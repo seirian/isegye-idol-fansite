@@ -74,6 +74,8 @@ once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]')
             install_monitor(monitor_doc)
             import batch_monitor_ux_checks
             batch_monitor_ux_checks.verify(check,owner,member,op,url,new,token,OUT)
+            import batch_monitor_reliability_checks
+            batch_monitor_reliability_checks.verify(check,op,install_monitor,fixture_snapshot,OUT)
             check('monitor no browser exceptions',not errors)
             check('monitor leaves production UI intact','PROTECTED_SITE_FIXTURE' in owner.request.get(url+'/').text())
             op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()''')
