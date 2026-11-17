@@ -5,12 +5,27 @@ import hashlib, json, shutil
 import build_playground_production_host as baseline
 ROOT = Path(__file__).resolve().parents[1]
 ANCHOR = "        if ($path === '/auth/google') {"
-HOOK = """        // ISEGYE-BATCH-MONITOR: every asset and JSON uses the existing admin role.
+LEGACY_HOOK = """        // ISEGYE-BATCH-MONITOR: every asset and JSON uses the existing admin role.
         if ($path === '/ops/batches' || str_starts_with($path, '/ops/batches/')) {
             require_once $this->runtime.'/BatchMonitor.php';
             BatchMonitor::serve($this->root, $path, $access); return;
         }
 """
+HOOK = LEGACY_HOOK + """        // Fixed login context: shared UI, existing CSRF, no arbitrary next URL.
+        if (in_array($path, ['/auth/login','/auth/logout'], true) && ($_GET['notice'] ?? null) === 'batch-admin') {
+            require_once $this->runtime.'/BatchMonitor.php';
+            if ($path === '/auth/logout') { BatchMonitor::switchAccount($this->config['origin']); return; }
+            if (!in_array($method, ['GET','HEAD'], true)) { self::respond(405, 'Method not allowed', 'text/plain'); return; }
+            BatchMonitor::login($access, $this->config['clientId'], $access['role'] === null ? Session::issueNonce() : '', Session::csrf()); return;
+        }
+"""
+
+def previous_patched(source):
+    original = baseline.patched(source)
+    if original.count(ANCHOR) != 1:
+        raise ValueError('Existing gateway anchor changed')
+    return original.replace(ANCHOR, LEGACY_HOOK+ANCHOR, 1)
+
 
 def patched(source):
     original = baseline.patched(source)

@@ -91,10 +91,20 @@ class ProductionPolicy(unittest.TestCase):
         self.assertNotIn("read(d.ROOT+'/.auth-private",text)
         self.assertNotIn('auth_password',text)
         self.assertIn('Unknown object in monitoring releases',text)
-    def test_anonymous_denial_requires_status_and_body(self):
-        with patch.object(store.d,'http',return_value=(401,b'Administrator access required')):store.verify_anonymous()
-        for response in [(200,b'Administrator access required'),(403,b'Forbidden'),(401,b'dashboard')]:
-            with patch.object(store.d,'http',return_value=response),self.assertRaises(store.d.Stop):store.verify_anonymous()
+    def test_anonymous_denial_requires_status_body_and_destination(self):
+        def response(path):
+            headers={'cache-control':'private, no-store'}
+            if path in store.DOCUMENT_ROUTES:
+                return 303, (store.MESSAGE+' /auth/style.css').encode(),dict(headers,location=store.LOGIN)
+            if path == store.LOGIN:
+                return 200, (store.MESSAGE+' /auth/style.css data-batch-access="required" data-intent="batch-monitor"').encode(),headers
+            return 401,b'Administrator access required',headers
+        with patch.object(store,'access_http',side_effect=response):store.verify_anonymous()
+        for bad in [(200,b'Administrator access required',{}),(303,b'notice',{'location':'https://evil.test/'}),(401,b'dashboard',{})]:
+            with patch.object(store,'access_http',return_value=bad),self.assertRaises(store.d.Stop):store.verify_anonymous()
+        def data_redirect(path):
+            return response(path) if path in store.DOCUMENT_ROUTES else (303,b'',{'cache-control':'no-store','location':store.LOGIN})
+        with patch.object(store,'access_http',side_effect=data_redirect),self.assertRaises(store.d.Stop):store.verify_anonymous()
 
 
 class StorageTransactions(unittest.TestCase):

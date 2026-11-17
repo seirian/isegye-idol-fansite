@@ -1,0 +1,84 @@
+"""Additional UX/access regressions using the existing TLS fixture identities only."""
+from playwright.sync_api import expect
+
+LOGIN='/auth/login?notice=batch-admin'
+MESSAGE='관리자 계정만 해당 사이트에 접근이 가능합니다.'
+
+
+def verify(check, owner, member, op, url, new, token, out):
+    visitor, page = new()
+    response=visitor.request.get(url+'/ops/batches/?next=https://evil.test/&role=admin',max_redirects=0)
+    check('monitor document fixed login redirect',response.status==303 and response.headers.get('location')==LOGIN)
+    check('monitor redirect uses shared UI and Korean message',MESSAGE in response.text() and '/auth/style.css' in response.text())
+    check('monitor redirect never creates account cookie',not visitor.cookies())
+    for path in ('/ops/batches','/ops/batches/'):
+        response=member.request.get(url+path,max_redirects=0)
+        check('monitor member document redirects '+path,response.status==303 and response.headers.get('location')==LOGIN)
+    for name in ('data.json','monitor.js','monitor.css'):
+        for context,status in ((visitor,401),(member,403)):
+            response=context.request.get(url+'/ops/batches/'+name,max_redirects=0)
+            check('monitor protected asset never redirects '+name+str(status),response.status==status and 'location' not in response.headers)
+    response=visitor.request.head(url+'/ops/batches/',max_redirects=0)
+    check('monitor document HEAD redirect without body',response.status==303 and response.body()==b'' and response.headers['location']==LOGIN)
+    page.goto(url+'/ops/batches/');page.wait_for_url(url+LOGIN)
+    expect(page.locator('[data-batch-access]')).to_contain_text(MESSAGE)
+    check('monitor notice uses original login card',page.locator('.access-card #google-signin[data-intent="batch-monitor"]').count()==1)
+    check('monitor shared styles actually loaded',page.locator('.access-card').evaluate('(e)=>getComputedStyle(e).borderRadius')=='28px')
+    check('monitor login has no timed redirect',page.locator('meta[http-equiv="refresh"]').count()==0)
+    page.screenshot(path=str(out/'access-login-desktop.png'),full_page=True)
+    page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(out/'access-login-mobile.png'),full_page=True)
+    check('monitor login mobile no horizontal overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+    page.set_viewport_size({'width':1440,'height':1000})
+    def sign_in(subject,email):
+        page.locator('#fixture-signin').wait_for()
+        nonce=page.locator('#google-signin').get_attribute('data-nonce')
+        page.evaluate('(value)=>window.__credential=value',token(nonce,subject,email))
+        page.locator('#fixture-signin').click()
+    sign_in('member-subject','member.fixture@gmail.com')
+    expect(page.locator('h1')).to_have_text('일반회원 계정')
+    check('monitor member sign-in avoids redirect loop',page.url==url+LOGIN and MESSAGE in page.locator('[data-batch-access]').inner_text())
+    check('monitor notice does not elevate member',visitor.request.get(url+'/ops/batches/data.json').status==403)
+    page.screenshot(path=str(out/'access-member.png'),full_page=True)
+    response=visitor.request.get(url+'/auth/logout?notice=batch-admin',max_redirects=0)
+    check('monitor account switch GET forbidden',response.status==405 and visitor.request.get(url+'/auth/status').json()['authenticated'])
+    response=visitor.request.post(url+'/auth/logout?notice=batch-admin',form={'csrf':'forged'},headers={'Origin':url},max_redirects=0)
+    check('monitor account switch CSRF required',response.status==403 and visitor.request.get(url+'/auth/status').json()['authenticated'])
+    page.get_by_role('button',name='로그아웃 후 관리자 계정으로 로그인').click()
+    page.locator('#fixture-signin').wait_for()
+    check('monitor explicit logout returns to login notice',page.url==url+LOGIN and not visitor.request.get(url+'/auth/status').json()['authenticated'])
+    sign_in('owner-subject','owner.fixture@gmail.com');page.wait_for_url(url+'/ops/batches/')
+    expect(page.locator('#rows tr')).to_have_count(8)
+    check('monitor administrator sign-in reaches dashboard',visitor.request.get(url+'/ops/batches/data.json').status==200)
+    check('monitor context cannot redirect administrator externally',owner.request.get(url+LOGIN+'&next=https://evil.test/',max_redirects=0).headers.get('location')=='/ops/batches/')
+    visitor.close()
+
+    # Use the actual running administrator page, not a visual mock.
+    op.goto(url+'/ops/batches/');expect(op.locator('#rows tr')).to_have_count(8)
+    op.locator('#theme').select_option('light')
+    for mode in ('light','dark'):
+        op.locator('#theme').select_option(mode)
+        expect(op.locator('html')).to_have_attribute('data-theme',mode)
+        check('monitor theme control reflects '+mode,op.locator('#theme').input_value()==mode)
+        op.reload();expect(op.locator('#rows tr')).to_have_count(8)
+        check('monitor persisted theme '+mode,op.locator('html').get_attribute('data-theme')==mode)
+        check('monitor readable body '+mode,op.locator('body').evaluate('(e)=>parseFloat(getComputedStyle(e).fontSize)')>=16)
+        check('monitor readable status badges '+mode,op.locator('.badge').first.evaluate('(e)=>parseFloat(getComputedStyle(e).fontSize)')>=13)
+        op.screenshot(path=str(out/('readable-'+mode+'-desktop.png')),full_page=True)
+        op.locator('.detail-btn').first.click()
+        check('monitor detail themed '+mode,op.locator('#detail').evaluate('(e)=>getComputedStyle(e).backgroundColor')==op.locator('.metric').first.evaluate('(e)=>getComputedStyle(e).backgroundColor'))
+        op.screenshot(path=str(out/('readable-'+mode+'-detail.png')),full_page=True);op.keyboard.press('Escape')
+        for width in (320,390,768):
+            op.set_viewport_size({'width':width,'height':844})
+            check('monitor responsive no horizontal page overflow '+mode+str(width),op.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+            check('monitor mobile cards retain labels '+mode+str(width),op.locator('#rows tr').first.evaluate('(e)=>getComputedStyle(e).display')=='grid')
+            if width==390:op.screenshot(path=str(out/('readable-'+mode+'-mobile.png')),full_page=True)
+        op.set_viewport_size({'width':1440,'height':1000})
+    op.locator('#theme').select_option('system');op.emulate_media(color_scheme='dark')
+    expect(op.locator('html')).to_have_attribute('data-theme','dark')
+    op.emulate_media(color_scheme='light');expect(op.locator('html')).to_have_attribute('data-theme','light')
+    check('monitor system theme updates without reload',op.locator('#theme').input_value()=='system')
+    op.locator('#theme').select_option('dark');op.emulate_media(color_scheme='light')
+    check('monitor explicit mode overrides system',op.locator('html').get_attribute('data-theme')=='dark')
+    check('monitor storage contains preference only',op.evaluate("Object.keys(localStorage).filter(k=>k.startsWith('isegye:monitor')).join(',')")=='isegye:monitor-theme:v1')
+    check('monitor theme query cannot grant data access',member.request.get(url+'/ops/batches/data.json?theme=dark&role=admin').status==403)
+    op.locator('#theme').select_option('light')

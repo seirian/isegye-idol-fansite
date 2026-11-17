@@ -27,7 +27,8 @@
           credential = null;
           const result = await response.json();
           if (!response.ok || result.ok !== true) throw new Error('Login rejected');
-          window.location.replace('/');
+          // Fixed intent only; the server rechecks the role before entering monitoring.
+          window.location.replace(container.dataset.intent === 'batch-monitor' ? '/auth/login?notice=batch-admin' : '/');
         } catch { fail(); }
         finally { busy = false; }
       }

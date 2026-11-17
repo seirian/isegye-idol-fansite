@@ -1,10 +1,26 @@
 'use strict';
 (() => {
+  // Apply before first paint; a blocked storage backend never breaks the dashboard.
+  const themeKey = 'isegye:monitor-theme:v1';
+  const choices = new Set(['system','light','dark']);
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+  let theme = 'system';
+  try { const stored = localStorage.getItem(themeKey); if (choices.has(stored)) theme = stored; } catch {}
+  function applyTheme() {
+    document.documentElement.dataset.theme = theme === 'system' ? (systemTheme.matches ? 'dark' : 'light') : theme;
+    const select = document.getElementById('theme'); if (select) select.value = theme;
+  }
+  applyTheme();
+  systemTheme.addEventListener('change', applyTheme);
+  window.addEventListener('storage', event => {
+    if (event.key === themeKey || event.key === null) { theme = choices.has(event.newValue) ? event.newValue : 'system'; applyTheme(); }
+  });
+  function start() {
   const $ = id => document.getElementById(id);
   const labels = {healthy:'정상', attention:'확인 필요', running:'진행 중', paused:'예정·수동 중지', unknown:'확인 불가', missing:'관측 공백', partial:'일부 관측'};
   const execution = {success:['healthy','성공'], failure:['attention','실패'], timed_out:['attention','시간 초과'], cancelled:['unknown','취소'], skipped:['paused','건너뜀'], action_required:['attention','조치 필요'], neutral:['unknown','중립']};
   const active = new Set(['in_progress','queued','pending','waiting','requested']);
-  let data = null, filter = 'all', failed = false, loading = false, opener = null;
+  let data = null, filter = 'all', failed = false, loading = false, opener = null, leaving = false;
   const date = value => {
     if (!value || !Number.isFinite(Date.parse(value))) return '확인되지 않음';
     return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value));
@@ -52,7 +68,7 @@
     const rows=[...data.batches].sort((a,b)=>(priority[state(a)]??9)-(priority[state(b)]??9)).filter(r=>filter==='all'||(filter==='attention'?['attention','unknown'].includes(state(r)):state(r)==='running'));
     $('rows').replaceChildren();
     for (const row of rows) {
-      const tr=node('tr'); const name=node('td'); name.append(node('strong',row.name),node('small',row.schedule));
+      const tr=node('tr'); tr.setAttribute('role','row'); const name=node('td'); name.append(node('strong',row.name),node('small',row.schedule));
       const run=node('td'); run.append(runBadge(row.run)); if(rowExpired(row))run.append(node('small','마지막 조회 당시 상태'));
       const pub=node('td'); pub.append(badge(rowExpired(row)?'unknown':row.dataState));
       if (row.historicalGapCount) pub.append(node('small',`과거 관측 공백 ${row.historicalGapCount}시간`));
@@ -61,6 +77,7 @@
       const start=node('td',date(row.run?.jobStartedAt||row.run?.startedAt)); if(row.run)start.append(node('small',`#${row.run.id} · ${row.run.attempt}차 시도`));
       const duration=node('td',seconds(row.run?.durationSeconds)); duration.append(node('small','대기 '+seconds(row.run?.queueSeconds)));
       const action=node('td'); const button=node('button','상세 ↗','detail-btn'); button.type='button'; button.setAttribute('aria-label',row.name+' 상세'); button.addEventListener('click',()=>openDetail(row,button)); action.append(button);
+      [name,run,pub,due,start,duration,action].forEach((cell,i)=>{cell.dataset.label=['배치 / 예정 주기','실행 상태','데이터 반영','이번 회차 / 다음 예정','확인한 실행 시작','소요 / 대기','상세'][i];cell.setAttribute('role','cell');});
       tr.append(name,run,pub,due,start,duration,action); $('rows').append(tr);
     }
     if(!rows.length){const tr=node('tr');const td=node('td','조건에 맞는 배치가 없습니다.','empty');td.colSpan=7;tr.append(td);$('rows').append(tr);}
@@ -114,11 +131,19 @@
   async function load(){
     if(loading)return;loading=true;$('refresh').disabled=true;
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
-    try{const response=await fetch('/ops/batches/data.json',{credentials:'same-origin',cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error('unavailable');const value=await response.json();if(!valid(value))throw new Error('invalid');data=value;failed=false;}
+    try{const response=await fetch('/ops/batches/data.json',{credentials:'same-origin',cache:'no-store',signal:controller.signal});if([401,403].includes(response.status)){leaving=true;data=null;document.body.replaceChildren(node('p','관리자 계정만 해당 사이트에 접근이 가능합니다.'));window.location.replace('/auth/login?notice=batch-admin');return;}if(!response.ok)throw new Error('unavailable');const value=await response.json();if(!valid(value))throw new Error('invalid');data=value;failed=false;}
     catch{failed=true;}
-    finally{clearTimeout(timer);loading=false;$('refresh').disabled=false;render();}
+    finally{clearTimeout(timer);loading=false;if(!leaving){$('refresh').disabled=false;render();}}
   }
+  $('theme').value = theme;
+  $('theme').addEventListener('change', event => {
+    theme = choices.has(event.target.value) ? event.target.value : 'system'; applyTheme();
+    try { localStorage.setItem(themeKey, theme); } catch {}
+  });
   $('refresh').addEventListener('click',load);$('close').addEventListener('click',()=>$('detail').close());$('detail').addEventListener('close',()=>opener?.focus());
   document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});render();}));
-  setInterval(()=>{if(!document.hidden){render();if($('auto').checked)load();}},60000);load();
+  setInterval(()=>{if(!leaving&&!document.hidden){render();if($('auto').checked)load();}},60000);load();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
 })();
