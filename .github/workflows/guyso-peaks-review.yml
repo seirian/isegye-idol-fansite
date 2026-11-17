@@ -1,0 +1,98 @@
+name: Guyso peak migration isolated review
+on:
+  push:
+    branches: ['fix/guyso-peak-records-20261118']
+    paths: ['.github/workflows/guyso-peaks-review.yml']
+permissions: {contents: write, actions: read}
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: python -m pip install beautifulsoup4==4.14.3 pillow==11.3.0 tinycss2==1.4.0 playwright==1.56.0
+      - name: Restore pinned public evidence without requesting the source again
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import sys,os,hashlib
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from album_observation_archive import request,API
+          raw=request(API+'/actions/artifacts/14345621416/zip',os.environ.pop('GH_TOKEN'),binary=True)
+          if hashlib.sha256(raw).hexdigest()!='d5e96d12958d874d9fa5cf0263ffb46cd8724c638b46807a845f1d00bbab005a':raise ValueError('Source evidence changed')
+          Path('guyso-source-evidence.zip').write_bytes(raw)
+          PY
+      - name: Compose only the reviewed reference migration
+        run: python repair/compose_guyso.py
+      - name: Complete unit regression without production access
+        run: |
+          npm test > guyso-js-tests.log 2>&1
+          GITHUB_REF=refs/heads/feature/playground DEPLOY_ENV=preview python scripts/build_playground.py
+          GITHUB_REF=refs/heads/feature/fanmade DEPLOY_ENV=preview python scripts/build_fanmade.py
+          python -m unittest discover -s tests -p 'test_*.py' -v > guyso-python-tests.log 2>&1
+      - name: Build exact preview and preserve all existing album history
+        env:
+          DEPLOY_ENV: preview
+          ISEGYE_BASELINE_ONLY: true
+        run: |
+          python scripts/prepare_album_release.py
+          npm run build
+          python scripts/promote_review_2nd.py
+          python scripts/promote_albums.py
+      - run: bash scripts/ci_browser_install.sh python
+      - name: Check all source ranks, accordion and mobile desktop layout
+        run: |
+          python tests/albums_production_browser.py
+          python tests/guyso_peaks_browser.py
+      - name: Create detached reviewed tree only after all checks, never update branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json,os,hashlib,zipfile
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          token=os.environ.pop('GH_TOKEN');api='https://api.github.com/repos/seirian/isegye-idol-fansite'
+          def call(path,data=None):
+            req=Request(api+path,data=json.dumps(data).encode() if data is not None else None,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'Isegye-Reviewed-Guyso-Migration/1.0'})
+            with urlopen(req,timeout=30) as r:return json.load(r)
+          base='26887fbe0b7220288a61037217128459b8d3085b'
+          if call('/git/ref/heads/main')['object']['sha']!=base:raise ValueError('Main changed; reconciliation required')
+          tree=call('/git/commits/'+base)['tree']['sha']
+          names=['.github/workflows/ci.yml','.github/workflows/production.yml','.github/workflows/guyso-peaks-migration.yml','albums/accepted.json','albums/peak-fallback.js','albums/ui.js','albums/peak-reference/guyso-20261118.json','scripts/collect_album_peak_fallback.py','scripts/collect_album_records.py','scripts/prepare_album_release.py','scripts/migrate_guyso_peaks.py','tests/albums-peak-fallback.test.js','tests/albums_browser.py','tests/albums_production_browser.py','tests/test_albums_peak_fallback.py','tests/test_guyso_peak_migration.py','tests/guyso_peaks_browser.py','docs/GUYSO_PEAK_REFERENCE_20261118.md']
+          entries=[];hashes={}
+          for name in names:
+            raw=Path(name).read_bytes()
+            sha=call('/git/blobs',{'content':raw.decode(),'encoding':'utf-8'})['sha']
+            if sha!=hashlib.sha1(('blob '+str(len(raw))+'\0').encode()+raw).hexdigest():raise ValueError('Blob mismatch')
+            entries.append({'path':name,'mode':'100644','type':'blob','sha':sha});hashes[name]=hashlib.sha256(raw).hexdigest()
+          result=call('/git/trees',{'base_tree':tree,'tree':entries})['sha']
+          Path('guyso-reviewed-tree.json').write_text(json.dumps({'baseCommit':base,'tree':result,'entries':entries,'sha256':hashes},indent=2))
+          print(json.dumps({'baseCommit':base,'tree':result,'files':len(names)}))
+          PY
+      - name: Retain review output without secrets even on test failure
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile,hashlib,json
+          names=['.github/workflows/ci.yml','.github/workflows/production.yml','.github/workflows/guyso-peaks-migration.yml','albums/accepted.json','albums/peak-fallback.js','albums/ui.js','albums/peak-reference/guyso-20261118.json','scripts/collect_album_peak_fallback.py','scripts/collect_album_records.py','scripts/prepare_album_release.py','scripts/migrate_guyso_peaks.py','tests/albums-peak-fallback.test.js','tests/albums_browser.py','tests/albums_production_browser.py','tests/test_albums_peak_fallback.py','tests/test_guyso_peak_migration.py','tests/guyso_peaks_browser.py','docs/GUYSO_PEAK_REFERENCE_20261118.md']
+          with zipfile.ZipFile('guyso-reviewed-files.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for n in names:
+              if Path(n).is_file():z.write(n,n)
+          Path('guyso-reviewed-hashes.json').write_text(json.dumps({n:hashlib.sha256(Path(n).read_bytes()).hexdigest() for n in names if Path(n).is_file()},indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: guyso-peaks-review-${{ github.run_id }}
+          path: |
+            guyso-reviewed-*.json
+            guyso-reviewed-files.zip
+            guyso-*-tests.log
+            test-results/guyso-peaks/
+            test-results/albums-production/
+          retention-days: 30
