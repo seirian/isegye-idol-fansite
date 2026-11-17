@@ -121,7 +121,7 @@ def adapt_app(code):
     a = code.index('function videoView(id)'); b = code.index('function seriesView(id)', a)
     video = one(code[a:b], "${seq?`<section", "${externalPerformanceLinks(v.relatedSong,v.id)}${seq?`<section")
     video = one(video, '${esc(v.dateLabel||\'영상 공개일\')} ·',
-                '${esc(v.dateLabel||\'영상 공개일\')}${v.category===\'external\'?\' · \'+Math.floor(v.durationSeconds/60)+\':\'+String(v.durationSeconds%60).padStart(2,\'0\'):\'\'} ·')
+                '${esc(v.dateLabel||\'영상 공개일\')}${v.category===\'external\'?\' · \'+externalVideoDuration(v.durationSeconds):\'\'} ·')
     code = code[:a] + video + code[b:]
     code = one(code, '${aiPeaks(s)}${aiSongFacts(s)}', '${aiPeaks(s)}${aiSongFacts(s)}${externalPerformanceLinks(s.id)}')
     helper = (ROOT / 'site/external-videos.js').read_text()
