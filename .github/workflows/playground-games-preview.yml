@@ -1,0 +1,95 @@
+name: Playground games - isolated three-content review
+on:
+  push:
+    branches: [feature/playground-games]
+    paths:
+      - 'playground-games/**'
+      - 'scripts/build_playground_games.py'
+      - 'scripts/deploy_playground_games.py'
+      - 'tests/*playground*games*'
+      - 'docs/PLAYGROUND_GAMES_REVIEW.md'
+      - '.github/workflows/playground-games-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/playground-games'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      html_sha: ${{ steps.exact.outputs.html_sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22'}
+      - name: Test original mechanics, export, source bounds and existing admin gate
+        run: |
+          node --check playground-games/app.js
+          node --test tests/playground-games.test.js
+          python -m unittest discover -s tests -p test_playground_games.py -v
+          python scripts/build_playground_games.py
+      - name: Install isolated browser tools
+        run: |
+          python -m venv /tmp/playground-games-checks
+          /tmp/playground-games-checks/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/playground-games-checks/bin/python
+      - name: Exercise exact preview over HTTP with keyboard, mouse and touch
+        run: /tmp/playground-games-checks/bin/python tests/playground_games_browser.py
+      - name: Pin browser-tested HTML
+        id: exact
+        run: |
+          python - <<'PY'
+          import json,os,hashlib
+          from pathlib import Path
+          raw=Path('playground-games-dist/review.html').read_bytes()
+          meta=json.loads(Path('playground-games-dist/build-info.json').read_text())
+          assert meta['htmlSha256']==hashlib.sha256(raw).hexdigest()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('html_sha='+meta['htmlSha256']+'\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-games-checks-${{ github.sha }}
+          path: |
+            playground-games-dist/
+            test-results/playground-games/
+          retention-days: 14
+  publish:
+    needs: verify
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/playground-games'
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://isegye-idol.kr/review-playground/
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Rebuild identical offline preview and respect pause control
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          python scripts/build_playground_games.py
+          python -m venv /tmp/playground-games-publish
+          /tmp/playground-games-publish/bin/pip install paramiko==5.0.0
+      - name: Publish only existing private review pointer and verify unchanged operating site
+        run: /tmp/playground-games-publish/bin/python scripts/deploy_playground_games.py
+        env:
+          REVIEW_COMMIT: ${{ github.sha }}
+          REVIEW_DEPLOY_ENABLED: 'true'
+          VERIFIED_HTML_SHA256: ${{ needs.verify.outputs.html_sha }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-games-publication-${{ github.sha }}
+          path: review-playground-games-deployment.json
+          retention-days: 30
