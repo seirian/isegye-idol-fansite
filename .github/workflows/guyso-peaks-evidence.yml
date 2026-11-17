@@ -16,21 +16,23 @@ jobs:
           mkdir -p evidence
           git archive --format=zip --output=evidence/repository.zip HEAD
           python - <<'PY'
-          import json,hashlib,time,re
+          import json,hashlib,time,re,sys
           from pathlib import Path
           from datetime import datetime,timezone
           from urllib.request import Request,urlopen
+          sys.path.insert(0,'scripts')
+          from album_releases import load_catalog
           base='https://xn--o39an51b2re.com'
           root=Path('evidence')
-          snap=json.loads(Path('albums/snapshot.json').read_text())
-          catalog=json.loads(Path('albums/backfills/catalog-20261116.json').read_text())
-          tracks=snap['tracks']
-          print('catalog keys:',list(catalog))
+          registered={s['id']:s for s in load_catalog(Path.cwd())['songs']}
+          reviewed=json.loads(Path('albums/backfills/catalog-20261116.json').read_text())['tracks']
           targets={}
-          for sid,item in tracks.items():
-            m=item.get('melon',{})
-            if m.get('trackId') and m.get('albumId'):targets[sid]=m
-          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'baseCommit':'26887fbe0b7220288a61037217128459b8d3085b','tracks':{},'excluded':[]}
+          for sid,song in registered.items():
+            if sid in reviewed:
+              m=reviewed[sid]
+              targets[sid]={k:m[k] for k in ('trackId','albumId','title','album','releaseAt')}
+              targets[sid]['artist']='고세구' if song.get('members')==['gosegu'] else '이세계아이돌 (ISEGYE IDOL)'
+          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'baseCommit':'26887fbe0b7220288a61037217128459b8d3085b','tracks':{},'excluded':[],'registeredTitles':len(registered)}
           for sid,m in targets.items():
             if not re.fullmatch('[1-9][0-9]{0,11}',str(m['trackId'])):raise ValueError('Invalid registered ID')
             url=base+'/song/melon/'+str(m['trackId'])
@@ -45,11 +47,12 @@ jobs:
             except Exception as exc:entry.update(state='error',error=type(exc).__name__)
             report['tracks'][sid]=entry
             time.sleep(1)
-          report['excluded']=[sid for sid in tracks if sid not in targets]
+          report['excluded']=[{'sid':sid,'title':s['title'],'dateKind':s.get('dateKind')} for sid,s in registered.items() if sid not in targets]
           (root/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps({'linkedTracks':len(targets),'excluded':report['excluded'],'errors':[k for k,v in report['tracks'].items() if v['state']!='ok']}))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with:
           name: guyso-peaks-evidence-${{ github.run_id }}
           path: evidence/
