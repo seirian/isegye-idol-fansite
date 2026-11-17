@@ -1,0 +1,56 @@
+name: Guyso peak source inspection
+on:
+  push:
+    branches: ['fix/guyso-peak-records-20261118']
+    paths: ['.github/workflows/guyso-peaks-evidence.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Export source and inspect only linked song pages
+        run: |
+          mkdir -p evidence
+          git archive --format=zip --output=evidence/repository.zip HEAD
+          python - <<'PY'
+          import json,hashlib,time,re
+          from pathlib import Path
+          from datetime import datetime,timezone
+          from urllib.request import Request,urlopen
+          base='https://xn--o39an51b2re.com'
+          root=Path('evidence')
+          snap=json.loads(Path('albums/snapshot.json').read_text())
+          catalog=json.loads(Path('albums/backfills/catalog-20261116.json').read_text())
+          tracks=snap['tracks']
+          print('catalog keys:',list(catalog))
+          targets={}
+          for sid,item in tracks.items():
+            m=item.get('melon',{})
+            if m.get('trackId') and m.get('albumId'):targets[sid]=m
+          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'baseCommit':'26887fbe0b7220288a61037217128459b8d3085b','tracks':{},'excluded':[]}
+          for sid,m in targets.items():
+            if not re.fullmatch('[1-9][0-9]{0,11}',str(m['trackId'])):raise ValueError('Invalid registered ID')
+            url=base+'/song/melon/'+str(m['trackId'])
+            entry={'identity':m,'source':url}
+            try:
+              with urlopen(Request(url,headers={'User-Agent':'Mozilla/5.0 (compatible; Isegye-Owner-Requested-Review/1.0)'}),timeout=25) as r:
+                if r.url!=url:raise ValueError('Unexpected redirect')
+                raw=r.read(4000001)
+                if len(raw)>4000000:raise ValueError('Oversize response')
+              (root/(sid+'.html')).write_bytes(raw)
+              entry.update(sha256=hashlib.sha256(raw).hexdigest(),checkedAt=datetime.now(timezone.utc).isoformat(),state='ok')
+            except Exception as exc:entry.update(state='error',error=type(exc).__name__)
+            report['tracks'][sid]=entry
+            time.sleep(1)
+          report['excluded']=[sid for sid in tracks if sid not in targets]
+          (root/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps({'linkedTracks':len(targets),'excluded':report['excluded'],'errors':[k for k,v in report['tracks'].items() if v['state']!='ok']}))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: guyso-peaks-evidence-${{ github.run_id }}
+          path: evidence/
+          retention-days: 14
