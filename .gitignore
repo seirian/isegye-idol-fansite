@@ -33,3 +33,9 @@ fanmade-dist/
 *playground-publication.json
 playground-discovery.json
 playground-restore.json
+
+# Private live monitor snapshots are never versioned or uploaded as CI artifacts.
+/monitoring-dist/
+/batch-monitor-deployment.json
+/batch-monitor-source.tar
+/catalog-publication.json
