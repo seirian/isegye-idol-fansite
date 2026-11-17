@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Publish only the protected monitor and a narrowly extended auth runtime.
 
-No main/UI/feed/schedule writes; no account/config/session reads. Shared lock,
+No site UI/feed/schedule writes; no account/config/session reads. Shared lock,
 fixed owner/path/SSH fingerprint, byte readback and compare-before-rollback stay.
 """
 from pathlib import Path
 from datetime import datetime, timezone
-import base64, hashlib, json, os, re, socket, stat, sys
+import argparse, base64, hashlib, json, os, re, socket, stat, sys
 import inour_sftp as d
 import auth_routing as a
 from albums_composer import preserved_root_metadata, runtime_id
@@ -151,13 +151,14 @@ def publish(remote, doc, commit, report):
         for name, digest in unchanged.items():
             raw = remote.read(d.ROOT+'/'+name)
             d.require((d.digest(raw) if raw is not None else None) == digest, 'Existing feed or preview changed')
-        report.update(status='gated_monitor_preview_verified',url=d.ORIGIN+'/ops/batches/',commit=commit,
+        report.update(status='gated_monitor_production_verified',url=d.ORIGIN+'/ops/batches/',commit=commit,
             release=release,runtime=runtime,sourceCheckedAt=doc['checkedAt'],productionUIUnchanged=True,
             existingRoutesUnchanged=True,sharedRouterUnchanged=True,feedsUnchanged=True,
             anonymousUIAndAPIDenied=True,privatePathsBlocked=True,requiresExistingAdministrator=True,
             accountConfigOrSessionAccessed=False,realGoogleLoginPerformed=False,
             authorizedRenderingVerification='local TLS synthetic accounts; deployed bytes verified by SFTP',
-            scheduledRefreshEnabled=False,readOnly=True)
+            scheduledRefreshEnabled=True,refreshEverySeconds=600,readOnly=True,
+            verifiedAt=datetime.now(timezone.utc).isoformat(),snapshotSha256=d.digest(payload['data.json']))
     except Exception:
         try:
             if entry_changed:
@@ -182,17 +183,21 @@ def publish(remote, doc, commit, report):
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--refresh-only',action='store_true')
+    args=parser.parse_args()
     report = {'status':'failed','checkedAt':datetime.now(timezone.utc).isoformat()}
     resources = []
     password = os.environ.pop('ISEGYE_SFTP_PASSWORD','')
     try:
-        d.require(os.getenv('GITHUB_REPOSITORY') == 'seirian/isegye-idol-fansite' and os.getenv('GITHUB_REF') == 'refs/heads/feature/batch-monitoring', 'Monitor review branch only')
-        d.require(os.getenv('MONITOR_PREVIEW_ENABLED') == 'true' and os.getenv('PRODUCTION_PAUSED') != 'true', 'Preview disabled or paused')
+        d.require(os.getenv('GITHUB_REPOSITORY') == 'seirian/isegye-idol-fansite' and os.getenv('GITHUB_REF') == 'refs/heads/main', 'Monitor production main only')
+        d.require(os.getenv('MONITOR_PRODUCTION_ENABLED') == 'true' and os.getenv('PRODUCTION_PAUSED') != 'true' and os.getenv('ISEGYE_MONITOR_PAUSED') != 'true', 'Monitor disabled or paused')
         d.require(bool(password), 'Existing SFTP credential missing')
-        commit = os.getenv('GITHUB_SHA','')
+        commit = os.getenv('MONITOR_COMMIT') or os.getenv('GITHUB_SHA','')
         d.require(re.fullmatch('[0-9a-f]{40}',commit) is not None, 'Commit required')
         doc = json.loads((ROOT/'monitoring-dist/data.json').read_text())
-        d.require(doc.get('collectorCommit') == commit and doc.get('mode') == 'review-snapshot' and doc.get('repository') == 'seirian/isegye-idol-fansite', 'Snapshot source mismatch')
+        from batch_monitor_storage import validate_snapshot, refresh
+        validate_snapshot(doc,commit)
         import paramiko
         sock = socket.create_connection((d.HOST,d.PORT),timeout=15);resources.append(sock)
         transport = paramiko.Transport(sock);resources.append(transport)
@@ -204,7 +209,10 @@ def main():
         transport.auth_password(d.USER,password);password=None
         d.require(transport.is_authenticated(), 'SFTP authentication incomplete')
         client=paramiko.SFTPClient.from_transport(transport);resources.append(client);client.get_channel().settimeout(30)
-        publish(VerifiedTransferRemote(client),doc,commit,report)
+        if args.refresh_only:
+            refresh(VerifiedTransferRemote(client),doc,commit,report,ROOT)
+        else:
+            publish(VerifiedTransferRemote(client),doc,commit,report)
     except Exception as exc:
         report['errorType']=type(exc).__name__
         if isinstance(exc,d.Stop):report['reason']=str(exc)
@@ -215,7 +223,7 @@ def main():
             except Exception:pass
         (ROOT/'batch-monitor-deployment.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps(report,ensure_ascii=False))
-    return 0 if report['status']=='gated_monitor_preview_verified' else 1
+    return 0 if report['status'] in ('gated_monitor_production_verified','monitor_snapshot_verified') else 1
 
 if __name__ == '__main__':
     sys.exit(main())

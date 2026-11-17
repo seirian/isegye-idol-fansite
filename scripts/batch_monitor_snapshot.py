@@ -113,6 +113,8 @@ def listing(getter, filename):
                 run.get('head_repository', {}).get('full_name') != REPO or
                 type(run.get('run_attempt')) is not int or run['run_attempt'] < 1):
                 raise ValueError('Untrusted run')
+            if run.get('status') not in policy.ACTIVE | {'completed'}:
+                raise ValueError('Unknown execution status')
             run_start(run)
             runs.append(run)
         if len(entries) < 100 or len(seen) == total:
@@ -282,9 +284,12 @@ def inspect(kind, at, head, getter):
             report = extra_artifact(getter, success, 'batch-watchdog', 'batch-watchdog.json')
             row['evidence'] = {'checkedAt': iso(stamp(report['checkedAt'])), 'status': report.get('state')}
             row['dataState'] = watchdog_state(report, at)
+            row['recoveryStates'] = [{'batch': item.get('batch'), 'state': item.get('state'),
+                'dueAt': safe_time(item.get('dueAt')), 'dispatchedAt': safe_time(item.get('dispatchedAt'))}
+                for item in report.get('batches', []) if isinstance(item, dict) and item.get('batch') in policy.SPECS]
             row['note'] = '복구 점검 결과이며 개별 배치 게시 완료를 의미하지 않습니다.'
         elif kind == 'production':
-            report = extra_artifact(getter, success, 'isegye-production', 'auth-deployment.json')
+            report = extra_artifact(getter, success, 'isegye-production-evidence', 'auth-deployment.json')
             good = (report.get('status') == 'deployed_and_verified' and report.get('commit') == head == success['head_sha']
                     and report.get('browserVerified') is True and report.get('privatePathsBlocked') is True)
             row['dataState'] = 'healthy' if good else 'attention'
@@ -343,6 +348,8 @@ def inspect(kind, at, head, getter):
         row['note'] = '실행 또는 결과 증거를 확인하지 못했습니다. 정상으로 간주하지 않습니다.'
         row['errorCode'] = type(exc).__name__
     finally:
+        if row['paused']:
+            row['dataState'] = 'paused'
         row['state'] = row_state(row)
     return row
 
@@ -373,25 +380,71 @@ def merge_observations(previous, current):
     return current
 
 
+def attach_catalog_publication(doc, at, getter):
+    """Bind catalog freshness to the exact verified deployed build, not a green job."""
+    row=next(r for r in doc['batches'] if r['key']=='catalog')
+    production=next(r for r in doc['batches'] if r['key']=='production')
+    if row.get('paused') or not row.get('listingComplete') or production.get('dataState')!='healthy':
+        return
+    evidence=production.get('evidenceRun') or {}
+    try:
+        run={'id':evidence['id'],'run_attempt':evidence['attempt'],'head_sha':evidence['commit']}
+        pub=extra_artifact(getter,run,'isegye-production-evidence','auth-deployment.json')
+        catalog=extra_artifact(getter,run,'isegye-production-evidence','catalog-publication.json')
+        raw=(json.dumps(catalog,ensure_ascii=False,sort_keys=True)+'\n').encode()
+        if (pub.get('catalogBundleVerified') is not True or pub.get('catalogEvidenceSha256')!=hashlib.sha256(raw).hexdigest()
+            or catalog.get('schemaVersion')!=1 or catalog.get('mode')!='production'
+            or catalog.get('buildCommit')!=doc['mainCommit'] or catalog.get('publicationClaimed') is not False):
+            raise ValueError('Unverified deployed catalog')
+        from refresh_catalog_videos import channels
+        expected={c['key'] for c in channels()}
+        sources=catalog.get('sources',[])
+        if len(sources)!=len(expected) or {c.get('name') for c in sources}!=expected:
+            raise ValueError('Incomplete catalog source identity')
+        due=stamp(row['dueAt'])
+        good=policy.recent(catalog.get('sourceAt'),due,at) and all(c.get('state')=='ok' and
+            policy.recent(c.get('lastSuccessAt'),due,at) for c in sources)
+        verified=stamp(pub['verifiedAt'])
+        if verified>at+timedelta(minutes=2) or stamp(catalog['builtAt'])>verified:
+            raise ValueError('Invalid catalog publication order')
+        row['dataState']='healthy' if good else 'attention'
+        row['sources']=[{'name':c['name'],'state':c.get('state','unknown'),
+            'lastSuccessAt':safe_time(c.get('lastSuccessAt'))} for c in sources]
+        row['evidenceRun']=evidence
+        row['lastVerifiedAt']=iso(verified)
+        row['evidence']={'status':'deployed_and_verified','generatedAt':safe_time(catalog['sourceAt']),
+            'readbackAt':iso(verified),'verifiedReadback':True,'commit':catalog['buildCommit']}
+        row['counts']={k:catalog[k] for k in ('channelCount','videoCount') if type(catalog.get(k)) is int}
+        row['note']='콘텐츠 실행 기록과 별도로, 운영 배포의 실제 파일 해시 및 채널별 확인 시각을 대조했습니다.'
+        if not all(c.get('historicalComplete') is True for c in sources):
+            row['note']+=' 일부 채널의 전체 과거 영상 수집은 아직 완료되지 않았습니다.'
+    except Exception as exc:
+        row['dataState']='unknown'
+        row['note']='콘텐츠 게시 근거가 없거나 검증되지 않았습니다. 실행 성공을 반영 완료로 간주하지 않습니다.'
+        row['errorCode']=type(exc).__name__
+    row['state']=row_state(row)
+
+
 def collect(getter=None, at=None):
     getter = getter or ReadOnlyGitHub()
     at = at or datetime.now(UTC)
     head = getter('git/ref/heads/main')['object']['sha']
     if not re.fullmatch('[0-9a-f]{40}', head):
         raise ValueError('Invalid main identity')
-    doc = {'schemaVersion':1, 'mode':'review-snapshot', 'checkedAt':iso(at), 'timezone':'Asia/Seoul',
+    doc = {'schemaVersion':1, 'mode':'production', 'checkedAt':iso(at), 'timezone':'Asia/Seoul',
            'source':'GitHub Actions + verified artifacts', 'repository':REPO, 'mainCommit':head,
-           'staleAfterSeconds':2700, 'readOnly':True, 'scheduledRefreshEnabled':False,
-           'collectorRunId':os.getenv('GITHUB_RUN_ID'), 'collectorCommit':os.getenv('GITHUB_SHA'),
+           'staleAfterSeconds':2700, 'readOnly':True, 'scheduledRefreshEnabled':True, 'refreshEverySeconds':600,
+           'collectorRunId':os.getenv('GITHUB_RUN_ID'), 'collectorCommit':os.getenv('MONITOR_COMMIT') or os.getenv('GITHUB_SHA'),
            'batches':[inspect(kind, at, head, getter) for kind in META]}
+    attach_catalog_publication(doc, at, getter)
     doc['finishedAt'] = iso(datetime.now(UTC))
     doc['apiCalls'] = getattr(getter, 'calls', None)
     return merge_observations({}, doc)
 
 
 def main():
-    if os.getenv('GITHUB_REPOSITORY') != REPO or os.getenv('GITHUB_REF') != 'refs/heads/feature/batch-monitoring':
-        raise ValueError('Review branch required')
+    if os.getenv('GITHUB_REPOSITORY') != REPO or os.getenv('GITHUB_REF') != 'refs/heads/main':
+        raise ValueError('Main branch required')
     output = ROOT/'monitoring-dist'
     output.mkdir(exist_ok=True)
     doc = collect()

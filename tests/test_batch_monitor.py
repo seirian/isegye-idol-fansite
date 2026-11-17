@@ -72,7 +72,7 @@ class MonitorPolicyTests(unittest.TestCase):
     def test_paused_not_failure(self):
         self.assertEqual(m.row_state({'paused':True,'run':{'conclusion':'failure'}}),'paused')
     def test_latest_attempt_order(self):
-        def run(rid,started):return {'id':rid,'run_attempt':2,'created_at':'2026-01-01T00:00:00Z','run_started_at':started,'head_branch':'main','path':'.github/workflows/music-daily.yml','repository':{'full_name':m.REPO},'head_repository':{'full_name':m.REPO}}
+        def run(rid,started):return {'id':rid,'run_attempt':2,'status':'completed','created_at':'2026-01-01T00:00:00Z','run_started_at':started,'head_branch':'main','path':'.github/workflows/music-daily.yml','repository':{'full_name':m.REPO},'head_repository':{'full_name':m.REPO}}
         entries=[run(2,'2026-11-17T01:00:00Z'),run(1,'2026-11-17T02:00:00Z')]
         rows,complete=m.listing(lambda p:{'total_count':2,'workflow_runs':entries},'music-daily.yml')
         self.assertTrue(complete);self.assertEqual(rows[0]['id'],1)

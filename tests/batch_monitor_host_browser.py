@@ -26,6 +26,11 @@ once("            check('public visit does not create member cookie',not guest.c
             for path in ('/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
                 check('monitor anonymous blocked '+path,guest.request.get(url+path).status==401)
             check('monitor guest read does not create cookie',not guest.cookies())''')
+once("            check('member is not administrator',member.request.get(url+'/auth/status').json()['administrator'] is False)",'''            check('member is not administrator',member.request.get(url+'/auth/status').json()['administrator'] is False)
+            for path in ('/ops/batches','/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
+                check('monitor ordinary member denied while public site open '+path,member.request.get(url+path).status==403)
+                check('monitor query role cannot grant access '+path,member.request.get(url+path+'?role=admin').status==403)
+            check('monitor forged role header denied',member.request.get(url+'/ops/batches/data.json',headers={'X-Role':'admin','X-Admin':'true'}).status==403)''')
 once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]').input_value()",'''            for path in ('/ops/batches/','/ops/batches/data.json','/ops/batches/monitor.js','/ops/batches/monitor.css'):
                 check('monitor member blocked '+path,member.request.get(url+path).status==403)
                 check('monitor administrator allowed '+path,owner.request.get(url+path).status==200)
@@ -39,7 +44,7 @@ once("            op.goto(url+'/auth/login');csrf=op.locator('input[name=csrf]')
             errors=[];op.on('pageerror',lambda error:errors.append(str(error)))
             op.goto(url+'/ops/batches/');op.locator('#rows tr').nth(7).wait_for()
             check('monitor displays eight real categories',op.locator('#rows tr').count()==8)
-            check('monitor read-only review notice visible','검토판' in op.locator('.notice').inner_text())
+            check('monitor scheduled production notice visible','10분 간격' in op.locator('.notice').inner_text())
             check('monitor heatmap generated',op.locator('.cell').count()>=144)
             op.screenshot(path=str(OUT/'desktop.png'),full_page=True)
             op.locator('button[data-filter="attention"]').click()

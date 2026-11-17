@@ -52,3 +52,41 @@ class EvidenceDecisions(unittest.TestCase):
             self.assertEqual(row['dataState'],'unknown');proof.assert_not_called()
 
 if __name__=='__main__':unittest.main()
+
+class CatalogPublication(unittest.TestCase):
+    def setUp(self):
+        from test_batch_monitor import fixture_snapshot
+        from refresh_catalog_videos import channels
+        import hashlib,json
+        self.at=m.stamp('2026-11-17T03:30:00Z');self.doc=fixture_snapshot(self.at)
+        self.production=next(r for r in self.doc['batches'] if r['key']=='production')
+        self.production['dataState']='healthy';self.production['evidenceRun']['commit']='a'*40
+        self.catalog=next(r for r in self.doc['batches'] if r['key']=='catalog')
+        self.catalog['paused']=False
+        self.evidence={'schemaVersion':1,'mode':'production','buildCommit':'a'*40,'publicationClaimed':False,
+            'sourceAt':m.iso(self.at-m.timedelta(minutes=20)),'builtAt':m.iso(self.at-m.timedelta(minutes=10)),
+            'sources':[{'name':c['key'],'state':'ok','lastSuccessAt':m.iso(self.at-m.timedelta(minutes=20)),
+                        'historicalComplete':True} for c in channels()], 'channelCount':22,'videoCount':100}
+        self.publication={'catalogBundleVerified':True,'verifiedAt':m.iso(self.at-m.timedelta(minutes=5))}
+    def project(self):
+        import hashlib,json
+        self.publication.setdefault('catalogEvidenceSha256',hashlib.sha256((json.dumps(self.evidence,ensure_ascii=False,sort_keys=True)+'\n').encode()).hexdigest())
+        def artifact(getter,run,prefix,name):return self.publication if name=='auth-deployment.json' else self.evidence
+        with patch.object(m,'extra_artifact',side_effect=artifact):m.attach_catalog_publication(self.doc,self.at,None)
+        return self.catalog
+    def test_current_built_and_deployed_catalog_verified(self):
+        row=self.project();self.assertEqual(row['dataState'],'healthy');self.assertEqual(len(row['sources']),22)
+    def test_missing_channel_cannot_claim_complete(self):
+        self.evidence['sources'].pop();self.assertEqual(self.project()['dataState'],'unknown')
+    def test_old_source_not_concealed_by_new_deployment(self):
+        self.evidence['sources'][0]['lastSuccessAt']='2026-11-15T00:00:00Z'
+        self.assertEqual(self.project()['dataState'],'attention')
+    def test_modified_report_hash_not_trusted(self):
+        self.publication['catalogEvidenceSha256']='0'*64
+        self.assertEqual(self.project()['dataState'],'unknown')
+    def test_wrong_commit_not_trusted(self):
+        self.evidence['buildCommit']='b'*40;self.assertEqual(self.project()['dataState'],'unknown')
+    def test_built_after_deployed_not_trusted(self):
+        self.evidence['builtAt']=m.iso(self.at);self.assertEqual(self.project()['dataState'],'unknown')
+    def test_failed_deployment_does_not_claim_catalog_success(self):
+        self.production['dataState']='unknown';self.assertEqual(self.project()['dataState'],'unknown')
