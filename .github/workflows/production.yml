@@ -86,6 +86,7 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python scripts/promote_albums.py
           /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
+          /tmp/archive-browser-tests/bin/python tests/guyso_peaks_browser.py
           /tmp/archive-browser-tests/bin/python tests/external_videos_browser.py
           /tmp/archive-browser-tests/bin/python tests/music_beginning_browser.py
           /tmp/archive-browser-tests/bin/python tests/admin_visibility_browser.py

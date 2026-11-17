@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""User-approved secondary historical peaks; never relabel these as Melon originals.
-Only bounded factual peak fields are retained. No lyrics, UI, or time-series copying.
+"""Verified Guyso song-page peak summaries. No legacy-source relabeling.
+Only seven factual ranks, exact identities and provenance are retained. The
+summary does not provide achievement dates; old dates are never carried over.
 """
+from copy import deepcopy
 from datetime import datetime, timezone, timedelta
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlparse
 import hashlib
@@ -10,8 +13,9 @@ import json
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-TYPE = 'isegyechart_observed_peaks'
-SELECTOR = 'https://isegyechart.com/api/song-selector-list'
+TYPE = 'guyso_observed_peaks'
+BASE = 'https://xn--o39an51b2re.com'
+CACHE_SECONDS = 6 * 3600
 LABELS = {
     'TOP100': ('top100', 100), 'HOT100 (100일)': ('hot100', 100),
     '실시간차트': ('realtime', 100), 'HOT100 (30일)': ('hot100_30', 100),
@@ -19,179 +23,191 @@ LABELS = {
     '최신발매 (4주)': ('new_month', 100),
 }
 LIMITS = dict(LABELS.values())
+CHARTS = dict(zip(('MELON_TOP100_CHART', 'MELON_HOT100_D100_CHART',
+    'MELON_REALTIME_CHART', 'MELON_HOT100_D30_CHART', 'MELON_DAILY_CHART',
+    'MELON_NEWEST_W1_CHART', 'MELON_NEWEST_W4_CHART'), LIMITS))
+REVIEW_PATH = ROOT/'albums/peak-reference/guyso-20261118.json'
+REVIEW_SHA256 = '57a8e8d48d3cfa5b7311f2483ba08dab528f34780b2816739ec490cb63a7b776'
 
-def source_url(record_id):
-    if type(record_id) is not int or not 0 < record_id < 1000000:
-        raise ValueError('Invalid secondary page ID')
-    return f'https://isegyechart.com/song/{record_id}'
+
+def source_url(track_id):
+    if isinstance(track_id, bool) or not re.fullmatch(r'[1-9]\d{0,11}', str(track_id)):
+        raise ValueError('Invalid Melon song ID')
+    return BASE+'/song/melon/'+str(track_id)
+
 
 def allowed_source(url):
     try:
         u = urlparse(url)
-        return (u.scheme == 'https' and u.netloc == 'isegyechart.com'
-                and re.fullmatch(r'/song/[1-9]\d{0,5}', u.path) is not None
-                and not u.query and not u.fragment)
-    except (TypeError, ValueError):
+        return (u.scheme == 'https' and u.netloc == 'xn--o39an51b2re.com'
+            and re.fullmatch(r'/song/melon/[1-9]\d{0,11}', u.path) is not None
+            and not u.query and not u.fragment)
+    except (TypeError, ValueError, AttributeError):
         return False
 
-def unastro(value):
-    if isinstance(value, list) and len(value) == 2 and type(value[0]) is int:
-        return unastro(value[1])
-    if isinstance(value, list): return [unastro(v) for v in value]
-    if isinstance(value, dict): return {k: unastro(v) for k, v in value.items() if k != 'lyrics'}
-    return value
 
-def discover_ids(raw, tracks):
-    """One bounded public index request; candidate pages still require exact Melon IDs."""
-    from collect_album_domestic import norm
-    rows = json.loads(raw)
-    if not isinstance(rows, list) or len(rows) > 2000:
-        raise ValueError('Invalid public selector index')
-    index = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            raise ValueError('Invalid selector entry')
-        ident = row.get('id')
-        if type(ident) is not int or not 0 < ident < 1000000:
-            continue
-        key = (norm(row.get('name') or ''), norm(row.get('albumName') or ''),
-               norm(row.get('artistName') or ''))
-        index.setdefault(key, set()).add(ident)
-    found = {}
-    for sid, item in tracks.items():
-        melon = item.get('melon', {})
-        if melon.get('state') != 'ok':
-            continue
-        artist = norm(melon.get('artist') or '')
-        group = {'이세계아이돌', '이세계아이돌isegyeidol', 'isegyeidol'}
-        artists = group if artist in group else {artist}
-        candidates = set()
-        for name in {norm(melon.get('title') or '')}:
-            for candidate_artist in artists:
-                candidates.update(index.get((name, norm(melon.get('album') or ''), candidate_artist), set()))
-        if len(candidates) == 1:
-            found[sid] = next(iter(candidates))
-    return found
+def clock(value):
+    value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if value.tzinfo is None:
+        raise ValueError('Missing source confirmation timezone')
+    return value.astimezone(timezone.utc)
+
+
+def reusable(record, melon, record_id=None):
+    try:
+        if (not isinstance(record, dict) or record.get('schemaVersion') != 1
+                or record.get('state') != 'verified' or record.get('sourceType') != TYPE
+                or record.get('trackId') != melon.get('trackId')
+                or record.get('albumId') != melon.get('albumId')
+                or record.get('source') != source_url(melon.get('trackId'))
+                or not allowed_source(record.get('source'))
+                or (record_id is not None and str(record_id) != melon['trackId'])
+                or record.get('datePolicy') != 'summary_does_not_provide_dates'
+                or not re.fullmatch('[0-9a-f]{64}', record.get('responseSha256', ''))):
+            return False
+        if clock(record['checkedAt']) > datetime.now(timezone.utc)+timedelta(minutes=10):
+            return False
+        rows = record['records']
+        if not isinstance(rows, dict) or set(rows) != set(LIMITS):
+            return False
+        for key, limit in LIMITS.items():
+            row = rows[key]
+            if not isinstance(row, dict) or set(row) != {'rank', 'date'} or row['date'] is not None:
+                return False
+            rank = row['rank']
+            if rank is not None and (type(rank) is not int or not 1 <= rank <= limit):
+                return False
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return False
+    return True
 
 
 def parse_reference(html, melon, record_id, checked_at):
-    # Build-time validation uses only the standard library; parsing needs these.
     from bs4 import BeautifulSoup
-    from collect_album_domestic import norm, text
-    soup = BeautifulSoup(html, 'html.parser')
-    info = None
-    for el in soup.select('astro-island[props]'):
-        if 'FeaturedSongSelector' in el.get('component-url', ''):
-            candidate = unastro(json.loads(el['props'])).get('songInfo')
-            if info is not None: raise ValueError('Ambiguous song identity')
-            info = candidate
-    if not isinstance(info, dict) or str(info.get('id')) != str(record_id):
-        raise ValueError('Missing secondary song identity')
-    if (str(info.get('idMap', {}).get('melonId')) != melon['trackId']
-            or str(info.get('albumIdMap', {}).get('melonId')) != melon['albumId']):
-        raise ValueError('Secondary song/album ID mismatch')
-    if norm(info.get('name')) != norm(melon['title']): raise ValueError('Secondary title mismatch')
-    artist, expected = norm(info.get('artistName')), norm(melon['artist'])
+    from collect_album_domestic import norm
+    raw = html if isinstance(html, bytes) else html.encode('utf-8')
+    if len(raw) > 4*1024*1024:
+        raise ValueError('Oversize Guyso page')
+    soup = BeautifulSoup(raw, 'html.parser')
+    nodes = soup.select('script#__NEXT_DATA__')
+    if len(nodes) != 1:
+        raise ValueError('Missing or ambiguous Guyso page data')
+    props = json.loads(nodes[0].string)['props']['pageProps']
+    song = props['song']
+    if (song.get('platform') != 'melon' or song.get('id') != melon['trackId']
+            or str(record_id) != melon['trackId']
+            or song.get('album', {}).get('platform') != 'melon'
+            or song.get('album', {}).get('id') != melon['albumId']
+            or norm(song.get('name')) != norm(melon['title'])):
+        raise ValueError('Guyso song/album identity mismatch')
+    artists = song.get('artists', [])
+    if len(artists) != 1:
+        raise ValueError('Ambiguous Guyso artist')
+    artist, expected = norm(artists[0].get('name')), norm(melon['artist'])
     group = {'이세계아이돌', '이세계아이돌isegyeidol', 'isegyeidol'}
-    if artist != expected and not {artist, expected}.issubset(group):
-        raise ValueError('Secondary artist mismatch')
-    if '멜론 최고 성적' not in soup.get_text(' ', strip=True):
-        raise ValueError('Missing historical peak section')
-    records = {key: {'rank': None, 'date': None} for key in LIMITS}
+    solo = {'고세구', 'gosegu', '고세구gosegu'}
+    if artist != expected and not any({artist, expected}.issubset(g) for g in (group, solo)):
+        raise ValueError('Guyso artist mismatch')
+    entries = props.get('records')
+    if not isinstance(entries, list) or len(entries) > 100:
+        raise ValueError('Missing Guyso record summary')
+    rows = {key: {'rank': None, 'date': None} for key in LIMITS}
     seen = set()
-    for heading in soup.select('h3'):
-        label = text(heading)
-        if label not in LABELS: continue
-        key, limit = LABELS[label]
-        if key in seen: raise ValueError('Duplicate chart heading')
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError('Invalid Guyso record entry')
+        if entry.get('type') != 'PEAK_RANKING' or entry.get('chart') not in CHARTS:
+            continue
+        key = CHARTS[entry['chart']]
+        if key in seen:
+            raise ValueError('Duplicate peak category')
         seen.add(key)
-        content = text(heading.parent)
-        ranks = re.findall(r'(?<!\d)(\d+)\s*위', content)
-        if len(ranks) > 1: raise ValueError('Ambiguous historical rank')
-        if not ranks: continue
-        rank = int(ranks[0])
-        if not 1 <= rank <= limit: raise ValueError('Invalid historical rank')
-        dates = re.findall(r'(?<!\d)(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})(?!\d)', content)
-        if len(dates) > 1: raise ValueError('Ambiguous historical date')
-        date = None
-        if dates:
-            y, m, d = map(int, dates[0]); y = y + 2000 if y < 100 else y
-            date = datetime(y, m, d).date().isoformat()
-        records[key] = {'rank': rank, 'date': date}
-    if not seen: raise ValueError('No historical peak entries')
+        rank = entry.get('score')
+        if type(rank) is not int or not 1 <= rank <= LIMITS[key]:
+            raise ValueError('Invalid Guyso peak rank')
+        rows[key]['rank'] = rank
     result = {'schemaVersion': 1, 'state': 'verified', 'sourceType': TYPE,
-              'trackId': melon['trackId'], 'albumId': melon['albumId'],
-              'source': source_url(record_id), 'checkedAt': checked_at,
-              'fetchState': 'ok', 'records': records}
-    if not reusable(result, melon, record_id): raise ValueError('Invalid secondary record')
+        'trackId': melon['trackId'], 'albumId': melon['albumId'],
+        'source': source_url(melon['trackId']), 'checkedAt': checked_at,
+        'fetchState': 'ok', 'responseSha256': hashlib.sha256(raw).hexdigest(),
+        'datePolicy': 'summary_does_not_provide_dates', 'records': rows}
+    if not reusable(result, melon, record_id):
+        raise ValueError('Invalid Guyso peak provenance')
     return result
 
-def reusable(record, melon, record_id=None):
-    if not isinstance(record, dict) or record.get('schemaVersion') != 1: return False
-    if record.get('state') != 'verified' or record.get('sourceType') != TYPE: return False
-    if (record.get('trackId') != melon.get('trackId') or record.get('albumId') != melon.get('albumId')
-            or not allowed_source(record.get('source'))): return False
-    if record_id is not None and record['source'] != source_url(record_id): return False
-    try:
-        when = datetime.fromisoformat(record['checkedAt'].replace('Z', '+00:00'))
-        if when.tzinfo is None or when > datetime.now(timezone.utc) + timedelta(minutes=10): return False
-        day = when.astimezone(timezone(timedelta(hours=9))).date().isoformat()
-        rows = record['records']
-        if not isinstance(rows, dict) or set(rows) != set(LIMITS): return False
-        for key, limit in LIMITS.items():
-            row = rows[key]; rank, date = row['rank'], row['date']
-            if rank is None:
-                if date is not None: return False
-            elif type(rank) is not int or not 1 <= rank <= limit: return False
-            if date is not None:
-                parsed = datetime.strptime(date, '%Y-%m-%d').date().isoformat()
-                if parsed != date or not '2000-01-01' <= parsed <= day: return False
-    except (KeyError, TypeError, ValueError, AttributeError): return False
-    return True
+
+@lru_cache(maxsize=1)
+def reviewed_records():
+    raw = REVIEW_PATH.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != REVIEW_SHA256:
+        raise ValueError('Reviewed peak dataset changed')
+    data = json.loads(raw)
+    if data.get('schemaVersion') != 1 or data.get('sourceType') != TYPE:
+        raise ValueError('Wrong reviewed peak dataset')
+    for entry in data['tracks'].values():
+        if not reusable(entry['reference'], entry['identity']):
+            raise ValueError('Invalid reviewed source identity')
+    return data['tracks']
+
+
+def apply_reviewed(data, strict=False):
+    """Offline migration: touch only peak-reference fields, never charts or clocks."""
+    report = {'verifiedTracks': [], 'retainedNewer': [], 'excluded': [], 'rankChanges': []}
+    reviewed = reviewed_records()
+    if strict and not set(reviewed).issubset(data.get('tracks', {})):
+        raise ValueError('Incomplete live registered catalog')
+    for sid, item in data.get('tracks', {}).items():
+        entry = reviewed.get(sid)
+        melon = item.get('melon', {})
+        prior = item.get('melonPeakFallback')
+        if not entry or not reusable(entry['reference'], melon):
+            if strict and entry:
+                raise ValueError('Live peak identity mismatch: '+sid)
+            if prior is not None and not reusable(prior, melon):
+                item.pop('melonPeakFallback', None)
+            report['excluded'].append(sid)
+            continue
+        value = entry['reference']
+        if reusable(prior, melon) and clock(prior['checkedAt']) >= clock(value['checkedAt']):
+            report['retainedNewer'].append(sid)
+            report['verifiedTracks'].append(sid)
+            continue
+        for key in LIMITS:
+            before = (prior or {}).get('records', {}).get(key, {}).get('rank')
+            after = value['records'][key]['rank']
+            if before != after:
+                report['rankChanges'].append({'sid': sid, 'chart': key, 'before': before, 'after': after})
+        item['melonPeakFallback'] = deepcopy(value)
+        report['verifiedTracks'].append(sid)
+    return report
+
 
 def collect_reference_peaks(result, previous, fetch):
-    stamp = datetime.now(timezone.utc).isoformat()
-    mappings = json.loads((ROOT/'albums/record-sources.json').read_text())['tracks']
+    """Existing batch uses exact song IDs and a six-hour per-song evidence cache."""
+    now = datetime.now(timezone.utc)
     report = {}
-    # Discover every newly registered album track, not just the legacy allowlisted songs.
-    # Selector names only shortlist candidates: each page must match the actual Melon
-    # song ID, album ID, title and artist before any rank can be accepted.
-    missing = {sid: item for sid, item in result['tracks'].items()
-               if sid not in mappings and item.get('melon', {}).get('state') == 'ok'}
-    discovered = {}
-    discovery_error = None
-    if missing:
-        try:
-            discovered = discover_ids(fetch(SELECTOR), missing)
-        except Exception as exc:
-            discovery_error = type(exc).__name__
+    seeds = reviewed_records()
     for sid, item in result['tracks'].items():
         item.pop('melonPeakFallback', None)
         melon = item.get('melon', {})
-        entry = mappings.get(sid)
         if melon.get('state') != 'ok':
             continue
-        record_id = (entry['recordId'] if entry and melon.get('trackId') == entry['melonId']
-                     else discovered.get(sid) if not entry else None)
         old = previous.get('tracks', {}).get(sid, {}).get('melonPeakFallback')
-        if record_id is None:
-            retained = reusable(old, melon)
-            if retained:
-                item['melonPeakFallback'] = {**old, 'fetchState': 'error', 'lastAttemptAt': stamp}
-            report[sid] = {'state': 'unverified', 'reason': discovery_error or 'no_unique_selector_match',
-                           'retainedVerified': retained}
+        if not reusable(old, melon):
+            old = seeds.get(sid, {}).get('reference')
+        if reusable(old, melon) and 0 <= (now-clock(old['checkedAt'])).total_seconds() < CACHE_SECONDS:
+            item['melonPeakFallback'] = deepcopy(old)
+            report[sid] = {'state': 'cached', 'source': old['source'], 'checkedAt': old['checkedAt']}
             continue
-        url = source_url(record_id)
+        url = source_url(melon['trackId'])
         try:
             raw = fetch(url)
-            value = parse_reference(raw.decode('utf-8'), melon, record_id, stamp)
-            value['responseSha256'] = hashlib.sha256(raw).hexdigest()
+            value = parse_reference(raw, melon, melon['trackId'], now.isoformat())
             item['melonPeakFallback'] = value
             report[sid] = value
         except Exception as exc:
-            retained = reusable(old, melon, record_id)
+            retained = reusable(old, melon)
             if retained:
-                item['melonPeakFallback'] = {**old, 'fetchState': 'error', 'lastAttemptAt': stamp}
-            report[sid] = {'state': 'error', 'source': url, 'error': type(exc).__name__,
-                           'retainedVerified': retained}
+                item['melonPeakFallback'] = {**deepcopy(old), 'fetchState': 'error', 'lastAttemptAt': now.isoformat()}
+            report[sid] = {'state': 'error', 'source': url, 'error': type(exc).__name__, 'retainedVerified': retained}
     return report

@@ -19,6 +19,9 @@ def prepare(refresh=False):
     if refresh:
         # The existing collector preserves source identities, timestamps and last verified records.
         subprocess.run([sys.executable,str(ROOT/'scripts/refresh_album_review.py')],cwd=ROOT,check=True,timeout=480)
+    from collect_album_peak_fallback import apply_reviewed
+    data=json.loads(path.read_text());apply_reviewed(data)
+    path.write_text(json.dumps(data,ensure_ascii=False,separators=(',',':'))+'\n')
     return path
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--refresh',action='store_true');args=p.parse_args();prepare(args.refresh)

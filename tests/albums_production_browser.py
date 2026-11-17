@@ -43,10 +43,14 @@ try:
    navigate(url+'#/song/'+sid,wait_until='domcontentloaded');expect(page.locator('.ai-peaks')).to_be_visible();item=snap['tracks'].get(sid,{})
    values=[]
    for key in keys:
-    rank=item.get('melonPeaks',{}).get('dailyBestRank') if key=='daily' else None
-    if type(rank) is not int:rank=item.get('melonPeakFallback',{}).get('records',{}).get(key,{}).get('rank')
+    rank=item.get('melonPeakFallback',{}).get('records',{}).get(key,{}).get('rank')
     values.append(str(rank)+'위' if type(rank) is int else '—')
    check(sid+' seven peaks match snapshot',page.locator('.ai-peak strong').all_text_contents()==values)
+   check(sid+' no per-card source links',page.locator('.ai-peak a, .ai-peak-source').count()==0)
+   details=page.locator('.ai-peaks details');expect(details.locator('summary')).to_have_text('최고 성적 출처와 확인 시각')
+   details.locator('summary').click()
+   if item.get('melonPeakFallback'):
+    check(sid+' Guyso attribution only in details',details.locator('tbody a').count()==7 and '이세계차트' not in page.locator('.ai-peaks').inner_text())
   navigate(url+'#/song/cat-save-world',wait_until='domcontentloaded')
   check('Melon-only graph',page.locator('select[data-filter=metric] option').evaluate_all('(xs)=>xs.map(x=>x.value)')==['melon_top100','melon_hot100'])
   check('six service logos',page.locator('.ai-platform-logo').count()==6)
