@@ -7,7 +7,8 @@ code enter the UI. Original collection/publication policy remains authoritative.
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import hashlib, io, json, os, re, stat, subprocess, zipfile
+import hashlib, io, json, os, re, stat, subprocess, sys, zipfile
+from batch_monitor_health import inspection_health, preserve_verified
 import batch_watchdog as policy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -148,8 +149,10 @@ def extra_artifact(getter, run, prefix, filename):
             break
     else:
         raise ValueError('Artifact budget exceeded')
+    if not entries:
+        raise policy.EvidenceUnavailable('Current attempt evidence unavailable')
     if len(entries) != 1:
-        raise ValueError('Current attempt evidence unavailable')
+        raise ValueError('Ambiguous attempt evidence')
     artifact = entries[0]
     provenance = artifact.get('workflow_run', {})
     if (provenance.get('id') != run['id'] or provenance.get('head_sha') != run['head_sha'] or
@@ -240,6 +243,7 @@ def inspect(kind, at, head, getter):
            'evidence': {}, 'note': '', 'history': [], 'listingComplete': False,
            'paused': os.getenv('PRODUCTION_PAUSED') == 'true' or os.getenv(pause) == 'true' or
                      (kind == 'albums' and due is None)}
+    stage = 'execution_query'
     try:
         runs, complete = listing(getter, filename)
         row['listingComplete'] = complete
@@ -272,6 +276,7 @@ def inspect(kind, at, head, getter):
             except Exception:
                 row['jobEvidenceUnavailable'] = True
         if not complete:
+            row['inspectionError'] = 'incomplete_execution_history'
             row['note'] = '이력 조회가 불완전하여 최신 실행·정상 여부를 확정하지 않습니다.'
             return row
         success = next((r for r in runs if r.get('status') == 'completed' and r.get('conclusion') == 'success'), None)
@@ -280,6 +285,7 @@ def inspect(kind, at, head, getter):
             row['dataState'] = 'attention' if runs else 'unknown'
             return row
         row['evidenceRun'] = run_view(success)
+        stage = 'publication_evidence'
         if kind == 'watchdog':
             report = extra_artifact(getter, success, 'batch-watchdog', 'batch-watchdog.json')
             row['evidence'] = {'checkedAt': iso(stamp(report['checkedAt'])), 'status': report.get('state')}
@@ -344,6 +350,8 @@ def inspect(kind, at, head, getter):
                 row['dataState'] = 'running'
                 row['note'] = '예정 시각 직후 5분 유예 중입니다. 아직 누락으로 판정하지 않습니다.'
     except Exception as exc:
+        row['inspectionError'] = ('publication_evidence_missing' if isinstance(exc, policy.EvidenceUnavailable)
+                                  else stage+'_failed')
         row['dataState'] = 'unknown'
         row['note'] = '실행 또는 결과 증거를 확인하지 못했습니다. 정상으로 간주하지 않습니다.'
         row['errorCode'] = type(exc).__name__
@@ -373,11 +381,15 @@ def merge_observations(previous, current):
             observations[(item['batch'], iso(slot))] = {k:item.get(k) for k in ('batch','dueAt','checkedAt','state','runId')}
     for row in current['batches']:
         if row.get('dueAt'):
-            observations[(row['key'], row['dueAt'])] = {'batch':row['key'],'dueAt':row['dueAt'],
+            # A failed inspection cannot erase an already verified slot outcome.
+            key = (row['key'], row['dueAt'])
+            if row.get('dataState') == 'unknown' and key in observations:
+                continue
+            observations[key] = {'batch':row['key'],'dueAt':row['dueAt'],
                 'checkedAt':current['checkedAt'],'state':row['dataState'],
                 'runId':(row.get('evidenceRun') or {}).get('id')}
     current['observations'] = sorted(observations.values(), key=lambda v:v['dueAt'])[-30000:]
-    return current
+    return preserve_verified(previous, current)
 
 
 def attach_catalog_publication(doc, at, getter):
@@ -420,6 +432,7 @@ def attach_catalog_publication(doc, at, getter):
             row['note']+=' 일부 채널의 전체 과거 영상 수집은 아직 완료되지 않았습니다.'
     except Exception as exc:
         row['dataState']='unknown'
+        row['inspectionError']='catalog_evidence_failed'
         row['note']='콘텐츠 게시 근거가 없거나 검증되지 않았습니다. 실행 성공을 반영 완료로 간주하지 않습니다.'
         row['errorCode']=type(exc).__name__
     row['state']=row_state(row)
@@ -428,15 +441,29 @@ def attach_catalog_publication(doc, at, getter):
 def collect(getter=None, at=None):
     getter = getter or ReadOnlyGitHub()
     at = at or datetime.now(UTC)
-    head = getter('git/ref/heads/main')['object']['sha']
-    if not re.fullmatch('[0-9a-f]{40}', head):
-        raise ValueError('Invalid main identity')
+    head_error = False
+    try:
+        head = getter('git/ref/heads/main')['object']['sha']
+        if not re.fullmatch('[0-9a-f]{40}', head):
+            raise ValueError('Invalid main identity')
+    except Exception:
+        # Keep the exact checked-out identity; never pretend the remote lookup succeeded.
+        head = os.getenv('MONITOR_COMMIT') or os.getenv('GITHUB_SHA', '')
+        if not re.fullmatch('[0-9a-f]{40}', head):
+            raise ValueError('Main identity unavailable')
+        head_error = True
     doc = {'schemaVersion':1, 'mode':'production', 'checkedAt':iso(at), 'timezone':'Asia/Seoul',
            'source':'GitHub Actions + verified artifacts', 'repository':REPO, 'mainCommit':head,
            'staleAfterSeconds':2700, 'readOnly':True, 'scheduledRefreshEnabled':True, 'refreshEverySeconds':600,
            'collectorRunId':os.getenv('GITHUB_RUN_ID'), 'collectorCommit':os.getenv('MONITOR_COMMIT') or os.getenv('GITHUB_SHA'),
            'batches':[inspect(kind, at, head, getter) for kind in META]}
-    attach_catalog_publication(doc, at, getter)
+    if head_error:
+        for row in doc['batches']:
+            row.update(dataState='unknown', state='unknown', inspectionError='main_identity_query_failed',
+                       note='현재 운영 커밋을 확인하지 못했습니다. 이전 검증 결과와 구분합니다.')
+    else:
+        attach_catalog_publication(doc, at, getter)
+    doc['collectorHealth'] = inspection_health(doc)
     doc['finishedAt'] = iso(datetime.now(UTC))
     doc['apiCalls'] = getattr(getter, 'calls', None)
     return merge_observations({}, doc)
@@ -449,8 +476,12 @@ def main():
     output.mkdir(exist_ok=True)
     doc = collect()
     (output/'data.json').write_text(json.dumps(doc, ensure_ascii=False, separators=(',',':'))+'\n')
-    print(json.dumps({'checkedAt':doc['checkedAt'], 'apiCalls':doc['apiCalls'],
-                      'states':{r['key']:r['state'] for r in doc['batches']}}, ensure_ascii=False))
+    # Public Actions artifacts contain aggregate diagnostics only, never data.json.
+    report = {'checkedAt':doc['checkedAt'], 'commit':doc['collectorCommit'],
+              'apiCalls':doc['apiCalls'], 'collectorHealth':doc['collectorHealth']}
+    (ROOT/'batch-monitor-inspection.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps(report, ensure_ascii=False))
+    return 1 if doc['collectorHealth']['state'] == 'failed' else 0
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

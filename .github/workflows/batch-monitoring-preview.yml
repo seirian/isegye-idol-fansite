@@ -1,7 +1,7 @@
 name: Batch monitoring - protected read-only review
 on:
   push:
-    branches: [feature/batch-monitoring, feature/batch-monitoring-ux]
+    branches: [feature/batch-monitoring, feature/batch-monitoring-ux, fix/batch-monitoring-reliability]
     paths:
       - monitoring/**
       - auth/google-client.js
@@ -9,13 +9,14 @@ on:
       - tests/*batch_monitor*
       - .github/workflows/batch-monitoring-preview.yml
       - .github/workflows/batch-monitoring.yml
+      - .github/workflows/batch-monitoring-health.yml
       - .github/workflows/production.yml
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   validate:
-    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/feature/batch-monitoring' || github.ref == 'refs/heads/feature/batch-monitoring-ux')
+    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/feature/batch-monitoring' || github.ref == 'refs/heads/feature/batch-monitoring-ux' || github.ref == 'refs/heads/fix/batch-monitoring-reliability')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
