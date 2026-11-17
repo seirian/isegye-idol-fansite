@@ -1,0 +1,51 @@
+name: Batch monitoring - one-time scheduler verification
+on:
+  push:
+    branches: [fix/batch-monitoring-reliability]
+    paths: [.github/workflows/batch-monitoring-diagnostic-once.yml]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: isegye-monitoring-diagnostic-once
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/fix/batch-monitoring-reliability'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Read scheduler registration and dispatch only the approved main monitor-health workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import datetime,json,subprocess
+          repo='seirian/isegye-idol-fansite'
+          def read(path):
+              p=subprocess.run(['gh','api','--method','GET','repos/'+repo+path],capture_output=True,check=True,timeout=30)
+              return json.loads(p.stdout)
+          metadata=read('')
+          assert metadata['default_branch']=='main' and not metadata['archived'] and not metadata['disabled']
+          workflows=[]
+          for name in ('batch-monitoring.yml','batch-monitoring-health.yml'):
+              result=read('/actions/workflows/'+name)
+              workflows.append({k:result.get(k) for k in ('id','name','path','state','created_at','updated_at')})
+              assert result['path']=='.github/workflows/'+name and result['state']=='active'
+          main=read('/git/ref/heads/main')['object']['sha']
+          assert main=='101ce72b823a63c97fdd390f893bc88a40db9908', 'Main moved; do not dispatch an unreviewed revision'
+          report={'checkedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'defaultBranch':'main','mainCommit':main,'workflows':workflows,'collectionBatchesDispatched':False,'productionFilesAccessed':False}
+          subprocess.run(['gh','api','--method','POST','repos/'+repo+'/actions/workflows/batch-monitoring-health.yml/dispatches','--input','-'],input=json.dumps({'ref':'main'}).encode(),check=True,timeout=30)
+          report['mainMonitorHealthCheckRequested']=True
+          open('monitor-scheduler-registration.json','w').write(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: monitor-scheduler-registration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: monitor-scheduler-registration.json
+          retention-days: 14
+# Verification-only branch workflow. No SFTP secrets, server files, or identity access.
+# Never merge this one-time actuator into main. Main health checks respect pause,
+# active-run/cooldown/rate-limit policies before any monitor-only recovery.
