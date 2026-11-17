@@ -1,0 +1,75 @@
+"""Real loopback TLS/UI/queue tests; never sends a GitHub execution request."""
+import hashlib,json,secrets,time
+from playwright.sync_api import expect
+
+
+def verify(check,owner,member,op,url,base,private,out):
+    folder=base/'.batch-monitoring/control';folder.mkdir(exist_ok=True)
+    (folder/'.owner').write_text('isegye-batch-manual:v1\n');(folder/'.htaccess').write_text('Require all denied\n')
+    token=secrets.token_hex(32)
+    (folder/'agent.json').write_text(json.dumps({'tokenHash':hashlib.sha256(token.encode()).hexdigest(),'expires':int(time.time())+600,'worker':'123'}))
+    visitor=op.context.browser.new_context(ignore_https_errors=True)
+    for ctx,code in ((visitor,401),(member,403)):
+        for path in ('control','manual.js'):
+            r=ctx.request.get(url+'/ops/batches/'+path);check('manual role denial '+str(code)+path,r.status==code and 'csrf' not in r.text())
+        r=ctx.request.post(url+'/ops/batches/control',data={'action':'enqueue','role':'admin'},headers={'Origin':url})
+        check('manual forged body cannot grant role '+str(code),r.status==code)
+    r=owner.request.get(url+'/ops/batches/control');check('manual administrator csrf available',r.status==200 and len(r.json()['csrf'])==64)
+    csrf=r.json()['csrf'];headers={'Origin':url,'X-CSRF-Token':csrf}
+    def payload(batch,action='enqueue',ident=None):return {'action':action,'batch':batch,'confirm':batch,'id':ident or secrets.token_hex(16)}
+    def post(value,head=None):return owner.request.post(url+'/ops/batches/control',data=value,headers=head or headers)
+    for head in ({'Origin':url},{'Origin':'https://evil.test','X-CSRF-Token':csrf},{'Origin':url,'X-CSRF-Token':csrf,'Sec-Fetch-Site':'cross-site'}):
+        check('manual CSRF/origin denied',post(payload('music'),head).status==403)
+    check('manual extra workflow input denied',post({**payload('music'),'workflow':'production.yml'}).status==400)
+    check('manual unknown batch denied',post(payload('unknown')).status==400)
+    check('manual GET cannot queue',owner.request.get(url+'/ops/batches/control?action=enqueue&batch=music').json()['requests']==[])
+    check('manual unauthenticated agent denied',visitor.request.post(url+'/ops/batches/_agent',data={'action':'claim'}).status==404)
+    check('manual private queue not served',owner.request.get(url+'/.batch-monitoring/control/queue.json').status==404)
+    def agent(value):
+        return visitor.request.post(url+'/ops/batches/_agent',data=value,headers={'X-Isegye-Agent':token}).json()
+    op.goto(url+'/ops/batches/');op.locator('button[aria-label="음악 영상 수동 실행"]').wait_for()
+    expect(op.locator('button[aria-label="음악 영상 수동 실행"]')).to_be_enabled()
+    check('manual eight per-row buttons',op.locator('.manual-button').count()==8)
+    op.locator('button[aria-label="음악 영상 수동 실행"]').click()
+    expect(op.locator('#manual-dialog')).to_be_visible()
+    check('manual confirm initially disabled',op.locator('#manual-dialog .manual-primary').is_disabled())
+    op.keyboard.press('Escape')
+    check('manual closing dialog creates no request',owner.request.get(url+'/ops/batches/control').json()['requests']==[])
+    op.locator('button[aria-label="운영 배포 수동 실행"]').click()
+    check('manual production scope warning','전체' in op.locator('.manual-warning').inner_text())
+    op.keyboard.press('Escape');op.locator('button[aria-label="배치 복구 점검 수동 실행"]').click()
+    check('manual watchdog downstream warning','다른 배치' in op.locator('.manual-warning').inner_text())
+    op.keyboard.press('Escape');op.locator('button[aria-label="음악 영상 수동 실행"]').click()
+    op.locator('.manual-consent input').check();op.screenshot(path=str(out/'manual-confirm-light.png'),full_page=True)
+    op.locator('.manual-primary').click();expect(op.locator('.manual-result')).to_contain_text('아직 배치가 실행된 것은 아닙니다')
+    op.locator('button[aria-label="수동 실행 확인 닫기"]').click()
+    record=owner.request.get(url+'/ops/batches/control').json()['requests'][0]
+    check('manual browser queued only',record['state']=='queued' and 'runId' not in record)
+    check('manual no actor/token in response','actor' not in record and 'tokenHash' not in record)
+    check('manual idempotent retry',post(payload('music',ident=record['id'])).status==200)
+    check('manual double click duplicate prevented',post(payload('music')).status==409)
+    check('manual same batch button disabled',op.locator('button[aria-label="음악 영상 수동 실행"]').is_disabled())
+    check('manual cancel queue',post(payload('music','cancel',record['id'])).json()['request']['state']=='cancelled')
+    check('manual cancellation is not workflow cancellation',agent({'action':'claim'})['pending']==[])
+    r=post(payload('history')).json()['request'];claimed=agent({'action':'claim'})
+    check('manual agent claims only approved requests',len(claimed['pending'])==1 and claimed['pending'][0]['id']==r['id'])
+    check('manual claim excludes identities','actor' not in json.dumps(claimed))
+    saved=(private/'accounts.json').read_text();db=json.loads(saved);db['accounts'][db['administrator']]='member';db['administrator']=None;(private/'accounts.json').write_text(json.dumps(db))
+    check('manual revoked admin cannot be dispatched',agent({'action':'begin','id':r['id']})['allowed'] is False)
+    (private/'accounts.json').write_text(saved)
+    r=post(payload('catalog')).json()['request'];agent({'action':'claim'});agent({'action':'begin','id':r['id']})
+    check('manual uncertain result stored',agent({'action':'settle','id':r['id'],'state':'unknown','reason':'dispatch_unconfirmed'})['ok'])
+    check('manual uncertain request not automatically claimed',agent({'action':'claim'})['pending']==[])
+    r=post(payload('schedule')).json()['request'];agent({'action':'claim'});agent({'action':'begin','id':r['id']})
+    agent({'action':'settle','id':r['id'],'state':'accepted','reason':'accepted','runId':600001})
+    agent({'action':'status','id':r['id'],'runId':600001,'conclusion':'success'})
+    op.goto(url+'/ops/batches/');op.locator('#theme').select_option('dark');expect(op.locator('[data-batch="schedule"] .manual-state')).to_contain_text('성공')
+    check('manual exact verified run link',op.locator('[data-batch="schedule"] .manual-controls a').get_attribute('href')=='https://github.com/seirian/isegye-idol-fansite/actions/runs/600001')
+    op.screenshot(path=str(out/'manual-dark-desktop.png'),full_page=True)
+    for width in (320,390,768,1440):
+        op.set_viewport_size({'width':width,'height':900})
+        check('manual no horizontal overflow '+str(width),op.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+    op.set_viewport_size({'width':390,'height':844});op.screenshot(path=str(out/'manual-dark-mobile.png'),full_page=True)
+    op.set_viewport_size({'width':1440,'height':1000});op.locator('#theme').select_option('light')
+    op.screenshot(path=str(out/'manual-light-desktop.png'),full_page=True)
+    visitor.close()

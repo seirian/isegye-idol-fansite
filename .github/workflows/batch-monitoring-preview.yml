@@ -1,12 +1,15 @@
 name: Batch monitoring - protected read-only review
 on:
   push:
-    branches: [feature/batch-monitoring, feature/batch-monitoring-ux, fix/batch-monitoring-reliability]
+    branches: [feature/batch-monitoring, feature/batch-monitoring-ux, fix/batch-monitoring-reliability, feature/batch-manual-run]
     paths:
       - monitoring/**
       - auth/google-client.js
       - scripts/*batch_monitor*.py
       - tests/*batch_monitor*
+      - scripts/*batch_manual*.py
+      - tests/*batch_manual*
+      - .github/workflows/batch-manual.yml
       - .github/workflows/batch-monitoring-preview.yml
       - .github/workflows/batch-monitoring.yml
       - .github/workflows/batch-monitoring-health.yml
@@ -16,7 +19,7 @@ permissions:
   contents: read
 jobs:
   validate:
-    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/feature/batch-monitoring' || github.ref == 'refs/heads/feature/batch-monitoring-ux' || github.ref == 'refs/heads/fix/batch-monitoring-reliability')
+    if: github.repository == 'seirian/isegye-idol-fansite' && (github.ref == 'refs/heads/feature/batch-monitoring' || github.ref == 'refs/heads/feature/batch-monitoring-ux' || github.ref == 'refs/heads/fix/batch-monitoring-reliability' || github.ref == 'refs/heads/feature/batch-manual-run')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -44,6 +47,9 @@ jobs:
           /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_watchdog*.py' -v
           /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_monitor*.py' -v
           php -l monitoring/BatchMonitor.php
+          php -l monitoring/BatchManual.php
+          node --check monitoring/manual.js
+          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_manual*.py' -v
           node --check monitoring/monitor.js
       - name: Build protected monitor without changing operating source
         run: |
