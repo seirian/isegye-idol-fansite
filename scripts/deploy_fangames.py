@@ -11,6 +11,7 @@ import inour_sftp as d
 import auth_routing as a
 from deploy_verified_albums import VerifiedTransferRemote
 from deploy_google_access import upload_tree
+from build_fangames import SOURCES, CSS, REQUIRED_ART, OPTIONAL_ART, MAX_HTML_BYTES, STORAGE_KEY
 ROOT=Path(__file__).resolve().parents[1]
 FOLDER=d.ROOT+'/.review-playground'
 MARKER=b'isegye-playground:v1\n'
@@ -20,17 +21,28 @@ def payload(directory,commit):
     for name in ('review.html','build-info.json'):
         p=folder/name;d.require(p.is_file() and not p.is_symlink(),'Missing artifact')
     html=(folder/'review.html').read_bytes();meta=json.loads((folder/'build-info.json').read_text())
-    d.require(30000<len(html)<850000,'Artifact size')
+    d.require(30000<len(html)<=MAX_HTML_BYTES,'Artifact size')
     d.require(meta.get('branch')=='feature/isegye-fangames' and meta.get('commit')==commit and meta.get('mode')=='fangames-preview','Artifact identity')
-    d.require(meta.get('counts',{}).get('games')==3 and meta['counts'].get('missions')==12 and meta['counts'].get('characters')==6 and meta['counts'].get('puzzles')==8,'Three complete games required')
+    d.require(meta.get('counts')==dict(games=1,characters=6,stages=3) and meta.get('game')=='starlight-courier' and meta.get('version')==2,'One complete courier game required')
     d.require(meta.get('productionWrites') is False and meta.get('liveFeedsConnected') is False and meta.get('externalMediaUsed') is False,'Preview isolation')
-    d.require(meta.get('storageKey')=='isegye:review:fangames:v1','Storage namespace')
-    d.require(meta.get('portraitsPacked')==6 and 'review/portraits/ine.webp' in meta.get('sourceHashes',{}),'Member art missing')
+    d.require(meta.get('storageKey')==STORAGE_KEY,'Storage namespace')
+    d.require(meta.get('generatedArtwork') is True,'New generated artwork required')
     d.require('img-src data:' in html.decode(),'Offline images must have CSP data policy')
-    text=html.decode();d.require('이세돌 팬게임' in text and 'noindex,nofollow,noarchive' in text and "connect-src 'none'" in text and "media-src 'none'" in text and "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'CSP policy')
+    text=html.decode();d.require('별빛 배송부' in text and 'noindex,nofollow,noarchive' in text and "connect-src 'none'" in text and "media-src 'none'" in text and "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'CSP policy')
     for tag in ('script','style'):
         blocks=re.findall('<'+tag+'>([\s\S]*?)</'+tag+'>',text);d.require(len(blocks)==1,'Unexpected inline block')
         digest=base64.b64encode(hashlib.sha256(blocks[0].encode()).digest()).decode();d.require('sha256-'+digest in text,'CSP hash differs')
+    packed=re.search(r'const COURIER_ART=Object.freeze\((\{[^\n]*\})\);',text)
+    d.require(packed is not None,'Packed generated artwork missing')
+    art=json.loads(packed[1]);names=set(art)
+    d.require(set(REQUIRED_ART)<=names<=set((*REQUIRED_ART,*OPTIONAL_ART)) and meta.get('artworkPacked')==len(names),'Generated artwork inventory')
+    sources=meta.get('sourceHashes',{})
+    expected_sources={'fangames/index.html',*SOURCES,*CSS,*('fangames/assets/'+name+'.webp' for name in names)}
+    d.require(set(sources)==expected_sources and all(re.fullmatch('[0-9a-f]{64}',v) for v in sources.values()),'Source manifest')
+    for name,value in art.items():
+        d.require(isinstance(value,str) and value.startswith('data:image/webp;base64,'),'Offline generated WebP required')
+        raw=base64.b64decode(value.split(',',1)[1],validate=True)
+        d.require(raw[:4]==b'RIFF' and raw[8:12]==b'WEBP' and d.digest(raw)==sources['fangames/assets/'+name+'.webp'],'Generated artwork checksum')
     d.require(meta.get('htmlSha256')==d.digest(html) and meta.get('htmlBytes')==len(html),'Artifact checksum')
     expected=os.getenv('VERIFIED_HTML_SHA256','');d.require(not expected or expected==d.digest(html),'Browser-tested artifact differs')
     public=dict(meta,hosting='existing-admin-gate',url=d.ORIGIN+'/review-playground/',productionUIReplaced=False)
@@ -93,9 +105,9 @@ def publish(remote,commit,report):
         d.require(remote.read(FOLDER+'/active.json')==pointer and remote.read(FOLDER+'/releases/'+release+'/review.html')==html and remote.read(FOLDER+'/releases/'+release+'/build-info.json')==metadata,'Published readback mismatch')
         d.require(status()==before,'Access policy changed')
         for p in ('/review-playground/','/review-playground/index.html','/review-playground/build-info.json'):
-            code,body=d.http(d.ORIGIN+p);d.require(code==(503 if before['maintenance'] else 403) and b'const F=(()=>{' not in body,'Anonymous preview exposed')
+            code,body=d.http(d.ORIGIN+p);d.require(code==(503 if before['maintenance'] else 403) and b'const COURIER_ART=' not in body,'Anonymous preview exposed')
         for p in ('/.review-playground/active.json','/.review-playground/releases/'+release+'/review.html'):
-            code,body=d.http(d.ORIGIN+p);d.require(code in (403,404,503) and b'const F=(()=>{' not in body,'Private preview exposed')
+            code,body=d.http(d.ORIGIN+p);d.require(code in (403,404,503) and b'const COURIER_ART=' not in body,'Private preview exposed')
         for p,value in baseline.items():d.require(d.http(d.ORIGIN+p)==value,'Operating response changed: '+p)
         d.require(remote.read(d.ROOT+'/.htaccess')==router and remote.read(d.ROOT+'/access.php')==entry and remote.read(runtime_dir+'/Gateway.php')==gateway and remote.read(runtime_dir+'/PlaygroundPreview.php')==handler,'Routing or runtime changed')
         d.require(remote.snapshot()==protected,'Shared files changed')

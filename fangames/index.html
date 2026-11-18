@@ -1,32 +1,40 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow,noarchive">
-<title>이세돌 팬게임 — 놀이터 검토본</title>
-<!--CSP-->
-<!--STYLE-->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141b31"><meta name="robots" content="noindex,nofollow,noarchive">
+<title>이세돌 별빛 배송부 · 팬게임 검토본</title>
+<!--CSP--><!--STYLE-->
 </head>
 <body>
-<a class="skip" href="#main">본문으로 건너뛰기</a>
-<header class="site-head">
-  <div class="shell">
-    <div class="brand"><span class="brand-star">✧</span><div><strong>ISEGYE!</strong><small>팬 아카이브 · 검토본</small></div></div>
-    <nav class="nav" aria-label="팬게임 이동">
-      <a href="#/home" data-nav="home">게임 소개</a>
-      <a href="#/arcade" data-nav="arcade">우당탕 이세돌</a>
-      <a href="#/quest" data-nav="quest">세돌 원정대</a>
-      <a href="#/escape" data-nav="escape">합방 탈출</a>
-    </nav>
-  </div>
-</header>
-<main id="main" class="shell" tabindex="-1">
-  <div class="eyebrow">PLAYGROUND · FAN GAME PREVIEW</div>
-  <div class="page-head"><div><h1>놀이터 <span class="soft">/ 이세돌 팬게임</span></h1><p>멤버를 고르고, 직접 움직이고, 힘을 합치는 세 가지 작은 모험.</p></div><span class="preview-tag">검토 전용 · 비공식 팬게임</span></div>
-  <div id="app"></div>
+<a class="skip" href="#main">게임으로 건너뛰기</a>
+<div class="page-shell">
+<header class="masthead"><a class="wordmark" href="https://isegye-idol.kr/#/playground">ISEGYE<span>✦</span></a><span class="edition">PLAYGROUND ORIGINAL <i></i> 미니게임 검토본</span><button type="button" class="icon-button" id="sound-button" aria-pressed="false">소리 꺼짐</button></header>
+<main id="main" tabindex="-1">
+<section id="loading" class="loading" role="status"><span class="loading-star">✦</span><h1>별빛 배송부</h1><p>오늘의 배달을 준비하고 있어요.</p></section>
+<section id="lobby" hidden aria-label="캐릭터 선택과 게임 시작">
+<div class="hero">
+<canvas id="hero-background" aria-hidden="true"></canvas><div class="hero-shade"></div>
+<div class="hero-copy"><p class="eyebrow">ISEGYE STARRY POST</p><h1><small>이세돌</small>별빛<br><em>배송부</em><span class="title-star">✦</span></h1><p class="story">공연이 시작되기 전,<br>흩어진 마음을 모두 전해줘!</p><span class="round-badge">75초의 작은 모험 <span>·</span> 1인 플레이</span></div>
+<div class="hero-figure"><canvas id="hero-character" width="600" height="600" aria-label="새로 그린 아이네 별빛 배송부 캐릭터"></canvas><span class="postmark">SPECIAL DELIVERY<br><strong>✦ ISEGYE ✦</strong><br>EST. 2026</span></div>
+<div class="hero-bottom"><span>✉ 별빛 편지를 모아 중앙 우체통에 배달하세요</span><span class="hero-number">01 / 06</span></div>
+</div>
+<div class="lobby-bottom"><div class="selection"><div class="section-label"><h2>오늘의 배송부</h2><span>같은 모험, 여섯 가지 재능</span></div><div id="roster" class="roster" role="group" aria-label="멤버 선택"></div></div>
+<div class="departure"><div class="member-heading"><strong id="member-name">아이네</strong><span id="member-skill">별빛 자장가</span></div><p id="member-description"></p><button class="primary-button" id="start-button" type="button" disabled>이미지 준비 중…</button><div class="departure-meta"><button class="text-button" id="how-button">플레이 방법 ↗</button><span id="best-label">첫 배달을 기다리는 중</span></div></div></div>
+<div class="quick-guide"><span><b>01</b> 별빛 편지 줍기</span><span><b>02</b> 꼬마 유령 피하기</span><span><b>03</b> 중앙 우체통에 3번 배달!</span></div>
+</section>
+<section id="game" hidden aria-label="별빛 배달 게임">
+<div class="game-top"><button class="text-button" id="home-button">← 배송부 선택</button><strong>별빛 배송부 <span id="stage-label">첫 번째 배달</span></strong><button class="icon-button" id="pause-button">일시정지</button></div>
+<div class="hud"><div class="hud-time"><span>남은 시간</span><strong id="time-value">75<small>초</small></strong></div><div class="hud-delivery"><div><span id="cargo-label">별빛 편지</span><strong id="cargo-value">0 / 4</strong></div><div class="cargo-track"><div id="cargo-fill"></div></div><span id="objective">편지를 모아 주세요</span></div><div class="hud-score"><span>배달 점수</span><strong id="score-value">0</strong><span id="hearts-value" aria-label="남은 체력 3">♥ ♥ ♥</span></div></div>
+<div class="arena-wrap" id="arena-wrap"><canvas id="arena" width="960" height="640" tabindex="0" aria-label="별빛 배달 게임판. 방향키 또는 WASD로 이동, Space로 대시, E로 특기, Escape로 일시정지."></canvas><div class="delivery-banner" id="delivery-banner" role="status" hidden></div><div id="game-overlay" class="game-overlay" role="dialog" aria-modal="true" aria-label="배달 진행 안내" hidden></div><div class="field-caption"><span id="combo-label">마음을 모아, 별빛을 전해!</span><span id="field-skill"></span></div></div>
+<div class="control-deck"><div class="keyboard-hint"><span><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> 이동</span><span><kbd>SPACE</kbd> 대시</span><span><kbd>E</kbd> 특기</span></div><div class="touch-move" id="joystick" role="group" aria-label="터치 이동 조이스틱"><span class="joystick-ring"></span><span class="joystick-knob" id="joystick-knob"></span><span class="joystick-label">이동</span></div><div class="action-controls"><button id="dash-button" class="action-button" type="button"><b>↗</b><span>대시</span><small id="dash-label">SPACE</small></button><button id="skill-button" class="action-button skill-button" type="button"><b>✦</b><span id="skill-name">특기</span><small id="skill-label">E</small></button></div><div class="mobile-dpad" aria-label="방향 버튼"><button data-direction="up" aria-label="위로 이동">↑</button><button data-direction="left" aria-label="왼쪽으로 이동">←</button><button data-direction="down" aria-label="아래로 이동">↓</button><button data-direction="right" aria-label="오른쪽으로 이동">→</button></div></div>
+<p class="game-note">가방이 차면 중앙의 빛나는 우체통으로! 대시 중에는 유령을 통과할 수 있어요.</p>
+</section>
 </main>
-<footer class="shell footer"><span>공식 캐릭터 그림·목소리·음원·영상 없이 만든 자체 게임 화면입니다. 실제 방송에서 일어난 사건이나 공식 능력이 아닙니다.</span><a href="https://isegye-idol.kr/#/playground" target="_blank" rel="noopener noreferrer">운영 놀이터 ↗</a></footer>
-<div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+<footer><span>비공식 이세계아이돌 팬게임 · 검토 전용</span><span>이번 게임을 위해 새로 그린 캐릭터와 배경 <span class="footer-star">✦</span></span></footer>
+</div>
+<dialog id="how-dialog"><button class="dialog-close" id="close-how" aria-label="플레이 방법 닫기">×</button><p class="eyebrow">FIRST DELIVERY</p><h2>작은 마음을 모으면<br>무대에 별빛이 켜져요.</h2><ol><li><strong>편지를 모아요.</strong><p>방향키·WASD 또는 화면 아래 조이스틱으로 이동하세요.</p></li><li><strong>우체통에 전해요.</strong><p>가방을 채워 중앙 우체통에 다가가면 자동 배달! 총 3번, 75초 안에 완료하면 성공이에요.</p></li><li><strong>유령은 피하고, 특기는 쓰고.</strong><p>Space / 대시로 짧게 질주하며 유령을 통과하세요. E / 특기는 멤버마다 달라요. 부딪히면 하트와 편지 하나를 잃어요.</p></li></ol><p class="dialog-note">배달 사이에는 선물을 하나 골라요. 선택하는 동안 시간은 멈춰요. 기록은 이 브라우저에만 저장됩니다.</p><button class="primary-button" id="ready-button">좋아, 준비됐어!</button></dialog>
+<div class="sr-only" role="status" aria-live="polite" id="announcement"></div>
 <!--SCRIPT-->
 </body>
 </html>

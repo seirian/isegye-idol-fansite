@@ -1,4 +1,4 @@
-name: Fangames - three playable isolated reviews
+name: Fangames - Starlight Courier isolated review
 on:
   push:
     branches: [feature/isegye-fangames]
@@ -8,6 +8,7 @@ on:
       - 'scripts/deploy_fangames.py'
       - 'tests/fangames_browser.py'
       - 'tests/test_fangames.py'
+      - 'tests/courier-engine.test.js'
       - '.github/workflows/fangames-preview.yml'
   workflow_dispatch:
 permissions:
@@ -28,10 +29,9 @@ jobs:
           node-version: '22'
       - name: Generate offline review; verify game logic and isolation
         run: |
-          node --check fangames/base.js
-          node --check fangames/arcade.js
-          node --check fangames/quest.js
-          node --check fangames/escape.js
+          node --check fangames/engine.js
+          node --check fangames/app.js
+          node --test tests/courier-engine.test.js
           python scripts/build_fangames.py
           python -m unittest discover -s tests -p test_fangames.py -v
       - name: Install isolated browser tool
@@ -39,7 +39,7 @@ jobs:
           python -m venv /tmp/fangames-browser
           /tmp/fangames-browser/bin/pip install playwright==1.56.0
           bash scripts/ci_browser_install.sh /tmp/fangames-browser/bin/python
-      - name: Play all games with desktop and mobile controls
+      - name: Play the courier game with desktop and mobile controls
         run: /tmp/fangames-browser/bin/python tests/fangames_browser.py
       - name: Pin browser-tested HTML hash
         id: hash

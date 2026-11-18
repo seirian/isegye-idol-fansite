@@ -39,3 +39,7 @@ playground-restore.json
 /batch-monitor-deployment.json
 /batch-monitor-source.tar
 /catalog-publication.json
+
+# Deterministic fan-game HTML and live publication reports are build artifacts.
+/fangames-dist/
+/review-fangames-deployment.json
