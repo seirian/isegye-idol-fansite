@@ -151,7 +151,7 @@ def recover(current, report, token, deadline, getter, at=None):
         if len(entries) < 100:
             break
     for artifact in sorted(candidates, key=lambda row: row['created_at'], reverse=True)[:80]:
-        if not allowed() or time.monotonic() > deadline:
+        if not allowed(at) or time.monotonic() > deadline:
             report['errors'].append({'source': ARTIFACT, 'error': 'InspectionBudgetExceeded'})
             break
         if not any(wanted.values()):
