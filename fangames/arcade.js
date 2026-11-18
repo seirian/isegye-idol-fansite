@@ -1,7 +1,7 @@
 /* Six distinct original controls × two rounds. No borrowed mini-game assets. */
 (()=>{
 let run=null,stage=null,timer=null,nextTimer=null,closed=false;
-const names=['방송 장비 구출','마지막 한 획','박쥐단 집합','주폭도 신호','세균단 출동','챠니의 한 칼'];
+const names=['방송 장비 구출','마지막 한 획','박쥐단 집합','주폭도 신호','세균단 출동','비챤의 한 칼'];
 const desc=[
  '아이네의 EMP가 오기 전에 번쩍이는 장치를 모두 눌러 안전하게 만드세요.',
  '징버거의 그림이 완성되도록 표시된 점들을 번호 순서대로 이어보세요.',
@@ -10,15 +10,27 @@ const desc=[
  '고세구의 세균단에게 번호대로 자리를 지정하세요. 순서가 중요합니다.',
  '비챤의 타이밍! 움직이는 빛이 중앙 초록 칸에 왔을 때 베기를 누르세요.'
 ];
+function memberArt(m,i){
+ return '<div class="arcade-member-card"><img loading="eager" decoding="async" alt="'+m.name+' 캐릭터 이미지" src="'+FAN_GAME_ART[m.id]+'"><span class="arcade-member-caption"><b>'+m.name+'</b><small>'+names[i]+'</small></span></div>';
+}
+function bannerArt(){
+ return '<div class="arcade-cover"><div><div class="arcade-flag">ISEGYE FAN ARCADE · SIX STORIES</div><h3>여섯 멤버와 함께<br>우당탕 릴레이!</h3><p>직접 플레이하면서 만나는 여섯 가지 팬게임 속 상황. 스테이지마다 멤버와 배경이 바뀌어요.</p></div><div class="arcade-cover-art" aria-hidden="true">'+F.MEMBERS.map(m=>'<img alt="" src="'+FAN_GAME_ART[m.id]+'">').join('')+'</div></div>';
+}
+function timeline(){
+ return '<div class="arcade-timeline" aria-label="미션 진행 순서">'+Array.from({length:run.total},(_,i)=>{const m=F.MEMBERS[i%6];return '<div class="arcade-timeline-item '+(i===run.idx?'current':'')+'"><img src="'+FAN_GAME_ART[m.id]+'" alt=""><span><b>'+(i+1)+' · '+m.name+'</b>'+names[i%6]+'</span></div>'}).join('')+'</div>';
+}
+function refreshStageInput(){
+ const e=F.app.querySelector('#stage-input');if(e)e.innerHTML=stageHTML();
+}
 function mount(){
  closed=false;run=null;stage=null;
  F.app.innerHTML='<div class="game-top"><div><span class="eyebrow">01 · QUICK-RESPONSE FAN ARCADE</span><h2>우당탕 이세돌</h2><p>여섯 멤버, 여섯 가지 조작. 서로 다른 상황을 6초 안에 해결해 보세요.</p></div>'+F.metrics([['최고 점수',F.state.bestArcade],['게임 유형','6개'],['전체 미션','12개']])+'</div>'+
- '<div class="panel alt"><h3>한 판은 이렇게 진행돼요</h3><p class="subtle">멤버별 장면은 모두 비공식 각색이며 실제 방송·능력이 아닙니다. 각 미션마다 짧은 준비 설명과 6초 도전이 주어집니다.</p><div class="member-row">'+F.MEMBERS.map(m=>'<div class="member">'+F.memberCard(m)+'<span class="label">'+m.name+'</span><small>'+names[F.MEMBERS.indexOf(m)]+'</small></div>').join('')+'</div><div class="buttons">'+F.btn('12개 미션 이어달리기 →','full','primary')+F.btn('6개 미션 연습 →','practice')+'</div></div>'+
+ bannerArt()+'<div class="panel alt arcade-intro-panel"><h3>한 판은 이렇게 진행돼요</h3><p class="subtle">멤버별 장면은 비공식 팬게임용 각색입니다. 이세돌 캐릭터 이미지와 미션별 창작 배경이 함께 표시됩니다.</p><div class="arcade-member-grid">'+F.MEMBERS.map((m,i)=>memberArt(m,i)).join('')+'</div><div class="buttons">'+F.btn('12개 미션 이어달리기 →','full','primary')+F.btn('6개 미션 연습 →','practice')+'</div></div>'+
  '<div id="arcade-field"></div><div class="caution">조작은 마우스·터치·키보드로 가능합니다. 타이밍 미션은 스페이스키를 사용할 수 있고, 게임 도중 언제든 일시정지할 수 있습니다.</div>';
  const h=e=>{const el=e.target.closest('[data-action],[data-tile],[data-pad]');if(!el)return;
   const a=el.dataset.action;if(a==='full'||a==='practice')begin(a==='full'?12:6);
   if(a==='pause')pauseToggle();
-  if(a==='exit'){if(confirm('도전을 종료하고 게임 선택 화면으로 돌아갈까요?')){clear();mount()}}
+  if(a==='exit'){if(confirm('도전을 종료하고 게임 선택 화면으로 돌아갈까요?')){clear();F.navigate('arcade')}}
   if(a==='next'&&run?.ended)advance();
   if(el.dataset.tile!=null)interact(Number(el.dataset.tile));
   if(el.dataset.pad)pad(el.dataset.pad);
@@ -43,7 +55,25 @@ function draw(){
  if(!run||!stage)return;
  const m=F.MEMBERS[stage.kind],out=F.app.querySelector('#arcade-field');if(!out)return;
  const n=run.idx+1,rem=stage.deadline?Math.max(0,(stage.deadline-Date.now())/1000):6;
- out.innerHTML='<div class="panel"><div class="levelbar"><span><b style="color:'+m.color+'">'+m.name+'</b> · 미션 '+n+'/'+run.total+(stage.hard?' <span class="tag">LEVEL 2</span>':'')+'</span><div class="buttons"><span class="subtle" id="time-label">'+rem.toFixed(1)+'초</span>'+F.btn(run.paused?'계속하기':'일시정지','pause','ghost')+F.btn('나가기','exit','ghost')+'</div></div><div class="timer-track"><span id="time-progress" style="width:'+(rem/6*100)+'%"></span></div><section class="stage-card" aria-live="polite"><div class="mini-avatar" style="--avatar:'+m.color+';margin:0 auto">'+m.short+'</div><h3>'+names[stage.kind]+'</h3><p>'+desc[stage.kind]+'</p><div id="stage-input">'+stageHTML()+'</div><div class="game-status" id="stage-note">준비! 조작 방법을 확인하세요.</div></section></div>';
+
+ const portrait=FAN_GAME_ART[m.id],scene=FAN_GAME_SCENES[m.id];
+ const score=''+run.score;
+ out.innerHTML='<div class="panel"><div class="arcade-hud-row"><div><span class="tag">'+(stage.hard?'ROUND 2':'ROUND 1')+'</span> <strong>'+m.name+' · '+n+'/'+run.total+'</strong></div><div class="buttons"><span class="arcade-score">점수 <strong id="arcade-score-value">'+score+'</strong></span><span class="subtle" id="time-label">'+rem.toFixed(1)+'초</span>'+F.btn(run.paused?'계속하기':'일시정지','pause','ghost')+F.btn('나가기','exit','ghost')+'</div></div>'+
+ '<div class="timer-track"><span id="time-progress" style="width:'+(rem/6*100)+'%"></span></div>'+
+ timeline()+
+ '<section class="stage-card arcade-stage" aria-live="polite">'+
+   '<div class="arcade-stage-art">'+
+     '<img class="arcade-scene-bg" alt="" src="'+scene+'">'+
+     '<img class="arcade-stage-portrait" alt="'+m.name+' 캐릭터 이미지" src="'+portrait+'">'+
+     '<div class="arcade-stage-art-content"><span class="arcade-chapter">STAGE '+String(n).padStart(2,'0')+' / '+run.total+'</span><h3>'+m.name+'</h3><p>'+names[stage.kind]+'</p></div>'+
+   '</div>'+
+   '<div class="arcade-stage-controls">'+
+     '<div><span class="arcade-inline-label">MISSION · '+m.name+'</span><h3>'+names[stage.kind]+'</h3><p>'+desc[stage.kind]+'</p></div>'+
+     '<div id="stage-input">'+stageHTML()+'</div>'+
+     '<div><div class="arcade-progress-footer"><span>성공한 미션 '+run.success+' / '+run.total+'</span><span>남은 시간 <b id="time-compact">'+rem.toFixed(1)+'초</b></span></div>'+
+     '<div class="game-status" id="stage-note">준비! 조작 방법을 확인하세요.</div></div>'+
+   '</div>'+
+ '</section></div>'
 }
 function stageHTML(){
  const k=stage.kind;
@@ -54,11 +84,11 @@ function stageHTML(){
  if(k===4)return '<div class="stage-grid cols4">'+Array.from({length:16},(_,i)=>{let t=stage.ordered.indexOf(i);return '<button type="button" class="tile '+(t<stage.hits?'good':t===stage.hits?'target':'')+'" data-tile="'+i+'">'+(t>=0?'✦'+(t+1):'◦')+'</button>'}).join('')+'</div><span class="subtle">다음 번호: '+(stage.hits+1)+'</span>';
  return '<div class="moving-target" aria-label="타이밍 게이지"><span class="cursor" id="arcade-cursor"></span></div><div class="action-pads"><button class="pad" data-pad="H">⚔ 베기!</button></div><span class="subtle">명중 '+stage.hits+'/2 · '+(stage.hard?'타이밍이 조금 빨라져요':'초록 구간에서 누르기')+'</span>';
 }
-function note(t){const e=F.app.querySelector('#stage-note');if(e)e.textContent=t}
+function note(t){const e=F.app.querySelector('#stage-note');if(e)e.textContent=t;const s=F.app.querySelector('#arcade-score-value');if(s&&run)s.textContent=run.score;}
 function interact(i){
  if(!stage||!run||run.ended||run.paused||!stage.deadline)return;
- if(stage.kind===0){if(stage.flashes.includes(i)){stage.flashes=stage.flashes.filter(x=>x!==i);stage.hits++;if(!stage.flashes.length){resolve(true);return}draw();note('좋아요! '+stage.flashes.length+'개만 더!')}else {stage.deadline-=550;note('멀쩡한 장비였어요! 시간 -0.5초')}}
- if([1,4].includes(stage.kind)){if(stage.ordered[stage.hits]===i){stage.hits++;if(stage.hits>=stage.ordered.length){resolve(true);return}draw();note('정확해요! 다음 번호로!')}else{stage.deadline-=550;note('순서가 달라요. 시간 -0.5초')}}
+ if(stage.kind===0){if(stage.flashes.includes(i)){stage.flashes=stage.flashes.filter(x=>x!==i);stage.hits++;if(!stage.flashes.length){resolve(true);return}refreshStageInput();note('좋아요! '+stage.flashes.length+'개만 더!')}else {stage.deadline-=550;note('멀쩡한 장비였어요! 시간 -0.5초')}}
+ if([1,4].includes(stage.kind)){if(stage.ordered[stage.hits]===i){stage.hits++;if(stage.hits>=stage.ordered.length){resolve(true);return}refreshStageInput();note('정확해요! 다음 번호로!')}else{stage.deadline-=550;note('순서가 달라요. 시간 -0.5초')}}
 }
 function pad(dir){
  if(!stage||!run||run.ended||run.paused||!stage.deadline)return;
@@ -78,7 +108,7 @@ function pad(dir){
 function tick(){
  if(!run||!stage||run.ended||run.paused||!stage.deadline)return;
  const rem=Math.max(0,(stage.deadline-Date.now())/1000),pct=(rem/6*100);
- const time=F.app.querySelector('#time-label');if(time)time.textContent=rem.toFixed(1)+'초';
+ const time=F.app.querySelector('#time-label');if(time)time.textContent=rem.toFixed(1)+'초';const compact=F.app.querySelector('#time-compact');if(compact)compact.textContent=rem.toFixed(1)+'초';
  const bar=F.app.querySelector('#time-progress');if(bar)bar.style.width=pct+'%';
  if(stage.kind===5){stage.cursor=(Math.sin((6-rem)*(stage.hard?8:6))+1)/2;const cursor=F.app.querySelector('#arcade-cursor');if(cursor)cursor.style.left=(stage.cursor*100)+'%'}
  if(rem<=0)resolve(false);
