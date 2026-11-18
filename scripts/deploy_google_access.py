@@ -104,13 +104,31 @@ def verify_public(payload, report):
 
 
 def verify_browser(commit, client_id):
+    from auth_live_checks import sanitized_failure
     env = dict(os.environ, GITHUB_SHA=commit, ISEGYE_GOOGLE_CLIENT_ID=client_id)
-    result = subprocess.run([sys.executable, 'tests/auth/production_browser.py'], env=env,
-                            capture_output=True, text=True, timeout=240)
-    d.require(result.returncode == 0, 'Google access browser verification failed; see sanitized test report')
     out = Path('test-results/google-access-live/result.json')
-    data = json.loads(out.read_text())
-    d.require(data['status'] == 'verified' and data['commit'] == commit, 'Incomplete access verification')
+    out.unlink(missing_ok=True)  # Never report a previous attempt's diagnostics.
+    try:
+        result = subprocess.run([sys.executable, 'tests/auth/production_browser.py'], env=env,
+                                capture_output=True, text=True, timeout=240)
+    except subprocess.TimeoutExpired:
+        print(json.dumps({'googleAccessBrowser': {'status': 'failed', 'failure': {
+            'errorType': 'TimeoutError', 'stage': 'process_timeout', 'route': '[unlisted]', 'transport': 'not_transport'}}}), flush=True)
+        raise d.Stop('Google access browser verification timed out') from None
+    try:
+        data = json.loads(out.read_text())
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    if result.returncode != 0 or data.get('status') != 'verified' or data.get('commit') != commit:
+        summary = {'status': 'failed', 'failure': sanitized_failure(data.get('failure'))}
+        for key in ('passed', 'total'):
+            if type(data.get(key)) is int and 0 <= data[key] <= 1000:
+                summary[key] = data[key]
+        print(json.dumps({'googleAccessBrowser': summary}), flush=True)
+    d.require(result.returncode == 0, 'Google access browser verification failed; see sanitized test report')
+    d.require(data.get('status') == 'verified' and data.get('commit') == commit, 'Incomplete access verification')
     return data
 
 
