@@ -161,7 +161,7 @@ def recover(current, report, token, deadline, getter, at=None):
             run = getter(API + '/actions/runs/' + str(int(run_id)), token)
             if (run.get('id') != run_id or run.get('head_branch') != 'main'
                     or run.get('path') != WORKFLOW
-                    or run.get('event') not in ('schedule', 'workflow_dispatch')
+                    or run.get('event') not in ('schedule', 'workflow_dispatch', 'push')
                     or run.get('status') != 'completed'
                     or run.get('repository', {}).get('full_name') != REPO
                     or artifact['workflow_run'].get('head_sha') != run.get('head_sha')
