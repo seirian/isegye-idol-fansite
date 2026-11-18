@@ -20,6 +20,21 @@ expected_daily=json.loads(subprocess.check_output(['node','--input-type=module',
 COURIER_PATH='/games/starlight-courier/'
 COURIER_KEY='isegye:playground:courier:v2'
 PRESERVED_KEYS=('isegye:playground:v1','isegye:playground:review:v1','isegye:bookmarks:v1','isegye:review:courier:v2')
+courier_network={'attribution':'CDP request documentURL (request-time document), with loaderId','externalRequests':[]}
+def observe_courier_network(page):
+ # A Page/Frame changes URL during navigation; its current URL and a flag set
+ # before clicking cannot identify which document made a queued request. CDP
+ # keeps the originating document URL and loader on the request event itself.
+ cdp=page.context.new_cdp_session(page)
+ def request(event):
+  document=event.get('documentURL','').split('#',1)[0].split('?',1)[0]
+  if document not in (url+COURIER_PATH,url+COURIER_PATH+'index.html'):return
+  target=event.get('request',{}).get('url','')
+  if target.startswith(('http://','https://')) and not target.startswith(url+'/'):
+   courier_network['externalRequests'].append({'url':target,'documentURL':event['documentURL'],
+    'loaderId':event.get('loaderId'),'resourceType':event.get('type'),'initiatorType':event.get('initiator',{}).get('type')})
+ cdp.on('Network.requestWillBeSent',request);cdp.send('Network.enable')
+ return cdp
 def stored(page):
  return page.evaluate('(keys)=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))',PRESERVED_KEYS)
 def ready_courier(page):
@@ -42,15 +57,12 @@ def courier_touch(page):
  finally:cdp.detach()
 def courier_integration(browser,page,apis,errors):
  """Only operating-site integration; the game has its own full mechanics suite."""
- before=stored(page);feedback=page.locator('.feedback').text_content();external=[];watch=[False]
- def request(req):
-  if watch[0] and req.url.startswith(('http://','https://')) and not req.url.startswith(url+'/'):external.append(req.url)
- page.on('request',request)
+ before=stored(page);feedback=page.locator('.feedback').text_content();network=observe_courier_network(page)
  try:
   page.goto(url+'/#/playground',wait_until='networkidle')
   launch=page.locator('a[data-courier-launch]');expect(launch).to_be_visible()
   check('courier card opens same-tab operating game',launch.get_attribute('href')==COURIER_PATH and launch.get_attribute('target') in (None,'','_self'))
-  watch[0]=True;launch.click();page.wait_for_url(url+COURIER_PATH);ready_courier(page)
+  launch.click();page.wait_for_url(url+COURIER_PATH);ready_courier(page)
   check('courier has one document without iframe',len(page.context.pages)==1 and page.locator('iframe').count()==0)
   check('courier operating screen has no review wording','검토' not in page.locator('body').inner_text() and '검토' not in page.title())
   expect(page.locator('a.wordmark')).to_have_text('← 놀이터')
@@ -76,7 +88,7 @@ def courier_integration(browser,page,apis,errors):
   page.locator('#pause-button').click();expect(page.locator('#resume-button')).to_be_visible()
   paused=courier_position(page);page.wait_for_timeout(250)
   check('operating courier pause freezes motion and time',courier_position(page)==paused)
-  page.locator('#resume-button').click();watch[0]=False
+  page.locator('#resume-button').click()
   page.locator('a.wordmark').click();page.wait_for_url(url+'/#/playground')
   expect(page.locator('.playground-component h1')).to_have_text('놀이터')
   check('courier return restores operating shell',page.locator('header').count()==1 and page.locator('.desktop-nav a').count()==8 and page.evaluate('typeof CourierApp==="undefined"'))
@@ -86,21 +98,18 @@ def courier_integration(browser,page,apis,errors):
   check('courier return resumes the existing answered quiz',stored(page)==before)
   # Leaving this independent document ends the current round. Reentry starts at
   # member selection, preserving only the game's own selected member/records.
-  watch[0]=True;page.goto(url+COURIER_PATH);ready_courier(page);courier_start(page)
-  watch[0]=False;page.goto(url+'/#/music');expect(page.get_by_role('heading',name='한 곡에서 시작되는 이야기',exact=True)).to_be_visible()
-  watch[0]=True;page.goto(url+COURIER_PATH);ready_courier(page)
+  page.goto(url+COURIER_PATH);ready_courier(page);courier_start(page)
+  page.goto(url+'/#/music');expect(page.get_by_role('heading',name='한 곡에서 시작되는 이야기',exact=True)).to_be_visible()
+  page.goto(url+COURIER_PATH);ready_courier(page)
   check('leaving for another menu ends the courier round',page.evaluate('CourierApp.screen==="lobby"&&CourierApp.state===null') and page.locator('#member-name').inner_text()=='고세구')
-  watch[0]=False;page.goto(url+'/#/playground/play');expect(page.locator('.feedback')).to_have_text(feedback)
+  page.goto(url+'/#/playground/play');expect(page.locator('.feedback')).to_have_text(feedback)
   check('quiz survives repeated independent game visits',stored(page)==before)
- finally:page.remove_listener('request',request)
+ finally:network.detach()
  for width,height in ((320,720),(390,844),(768,1024)):
   ctx=browser.new_context(viewport={'width':width,'height':height},is_mobile=True,has_touch=True,device_scale_factor=1)
-  mobile=ctx.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
+  mobile=ctx.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)));network=observe_courier_network(mobile)
   mobile.route('**/api/**',apis);mobile.route('**/auth/status',apis)
-  def remote(route):
-   if route.request.frame.url.startswith(url+COURIER_PATH):external.append(route.request.url)
-   route.abort()
-  mobile.route('https://**',remote)
+  mobile.route('https://**',lambda route:route.abort())
   try:
    mobile.goto(url+'/#/playground');expect(mobile.locator('a[data-courier-launch]')).to_be_visible()
    check('operating game card fits '+str(width),mobile.evaluate('document.documentElement.scrollWidth')<=width+1)
@@ -119,8 +128,9 @@ def courier_integration(browser,page,apis,errors):
    check('mobile courier returns to operating playground '+str(width),mobile.url==url+'/#/playground' and mobile.locator('header').count()==1)
   except Exception:
    mobile.screenshot(path=str(OUT/f'courier-failure-{width}.png'),full_page=True);raise
-  finally:ctx.close()
- check('courier game requires no external network',not external)
+  finally:network.detach();ctx.close()
+ if courier_network['externalRequests']:print(json.dumps(courier_network,ensure_ascii=False),flush=True)
+ check('courier game requires no external network',not courier_network['externalRequests'])
 try:
  with sync_playwright() as p:
   opt={'headless':True}
@@ -174,9 +184,9 @@ try:
    ctx2=b.new_context();p2=ctx2.new_page();p2.route('**/api/**',lambda r:r.fulfill(status=503,json={'error':'offline'}));p2.route('https://**',lambda r:r.abort());p2.goto(url+'/#/playground');expect(p2.locator('[data-start=daily]')).to_be_visible();check('network failure uses seed','기본 문제' in p2.locator('#bank-note').inner_text());ctx2.close()
    ctx3=b.new_context();ctx3.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new DOMException('blocked','SecurityError')}})");p3=ctx3.new_page();p3.route('**/api/**',apis);p3.route('https://**',lambda r:r.abort());p3.goto(url+'/#/playground');p3.locator('[data-start=daily]').click();p3.locator('[data-answer]').first.click();p3.evaluate("location.hash='#/playground/records'");expect(p3.get_by_role('heading',name='내 플레이 기록')).to_be_visible();p3.evaluate("location.hash='#/playground'");p3.locator('a[href="#/playground/play"]').first.click();expect(p3.locator('.feedback')).to_be_visible();check('blocked storage preserves in-tab play across menu routes',True);ctx3.close()
   except Exception as e:
-   debug={'error':str(e),'url':page.url,'errors':errors,'state':page.evaluate("localStorage.getItem('isegye:playground:v1')"),'body':page.locator('body').inner_text(),'shadow':page.locator('.playground-component').evaluate('(e)=>e.shadowRoot.innerHTML') if page.locator('.playground-component').count() else None}
+   debug={'error':str(e),'url':page.url,'errors':errors,'courierNetwork':courier_network,'state':page.evaluate("localStorage.getItem('isegye:playground:v1')"),'body':page.locator('body').inner_text(),'shadow':page.locator('.playground-component').evaluate('(e)=>e.shadowRoot.innerHTML') if page.locator('.playground-component').count() else None}
    (OUT/'failure.json').write_text(json.dumps(debug,ensure_ascii=False,indent=2));page.screenshot(path=str(OUT/'failure.png'),full_page=True);raise
   finally:b.close()
 finally:
- server.shutdown();(OUT/'browser.json').write_text(json.dumps({'mode':'real HTTP operating SPA','checks':checks},ensure_ascii=False,indent=2))
+ server.shutdown();(OUT/'browser.json').write_text(json.dumps({'mode':'real HTTP operating SPA','checks':checks,'courierNetwork':courier_network},ensure_ascii=False,indent=2))
 print(json.dumps({'passed':len(checks),'mode':'HTTP production'}))
