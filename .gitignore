@@ -39,3 +39,8 @@ playground-restore.json
 /batch-monitor-deployment.json
 /batch-monitor-source.tar
 /catalog-publication.json
+
+# Generated peak-date migration evidence is retained in Actions artifacts.
+/guyso-peak-dates-before.json
+/guyso-peak-dates-after.json
+/guyso-peak-dates-report.json

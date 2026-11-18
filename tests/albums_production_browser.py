@@ -50,7 +50,7 @@ try:
    details=page.locator('.ai-peaks details');expect(details.locator('summary')).to_have_text('최고 성적 출처와 확인 시각')
    details.locator('summary').click()
    if item.get('melonPeakFallback'):
-    check(sid+' Guyso attribution only in details',details.locator('tbody a').count()==7 and '이세계차트' not in page.locator('.ai-peaks').inner_text())
+    check(sid+' seven Guyso summary links only in details',details.locator('[data-peak-rank-source]').evaluate_all('(xs)=>xs.map(a=>a.href)')==[item['melonPeakFallback']['source']]*7 and '이세계차트' not in page.locator('.ai-peaks').inner_text())
   navigate(url+'#/song/cat-save-world',wait_until='domcontentloaded')
   check('Melon-only graph',page.locator('select[data-filter=metric] option').evaluate_all('(xs)=>xs.map(x=>x.value)')==['melon_top100','melon_hot100'])
   check('six service logos',page.locator('.ai-platform-logo').count()==6)

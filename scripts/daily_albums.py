@@ -58,6 +58,14 @@ def validate(data, exact=False, fresh=False):
     if set(data.get('domesticCharts', {}))-KINDS:
         raise ValueError('Unapproved chart provider')
     asset_entries(data)
+    from collect_album_peak_dates import envelope_ok, verified_records
+    for sid, item in data['tracks'].items():
+        if 'melonPeakDates' not in item:
+            continue
+        value, melon = item['melonPeakDates'], item.get('melon', {})
+        if (not envelope_ok(value, melon)
+                or len(verified_records(value, melon, item.get('melonPeakFallback'))) != len(value['records'])):
+            raise ValueError('Invalid album peak-date evidence: '+sid)
     return data
 
 def preserve(previous, result):
@@ -85,6 +93,18 @@ def preserve(previous, result):
             prior = old.get(key)
             if key not in item and check(prior, melon):
                 item[key] = {**deepcopy(prior), 'fetchState': 'error', 'lastAttemptAt': result['generatedAt']}
+        # Peak dates remain independent of summary/source collection clocks.
+        from collect_album_peak_dates import verified_records, envelope, envelope_ok
+        rows = verified_records(old.get('melonPeakDates'), melon, item.get('melonPeakFallback'))
+        for key, row in verified_records(item.get('melonPeakDates'), melon, item.get('melonPeakFallback')).items():
+            if key not in rows or clock(row['observedAt']) < clock(rows[key]['observedAt']):
+                rows[key] = row
+        date_value = item.get('melonPeakDates') or old.get('melonPeakDates')
+        attempts = date_value.get('attempts') if envelope_ok(date_value, melon) else None
+        if rows or attempts:
+            item['melonPeakDates'] = envelope(melon, rows, attempts)
+        else:
+            item.pop('melonPeakDates', None)
         honor = old.get('melonHonor', {})
         if 'melonHonor' not in item and honor.get('albumId') == melon.get('albumId') and honor.get('state') == 'verified':
             item['melonHonor'] = {**deepcopy(honor), 'fetchState': 'error', 'lastAttemptAt': result['generatedAt']}
