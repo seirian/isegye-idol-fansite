@@ -1,0 +1,71 @@
+name: RPG - Ipari Chronicle review checks
+
+on:
+  push:
+    branches: [feature/ipari-rpg]
+    paths:
+      - 'rpg/**'
+      - 'scripts/build_rpg.py'
+      - 'scripts/serve_rpg.py'
+      - 'tests/rpg-engine.test.js'
+      - 'tests/test_rpg_build.py'
+      - 'tests/rpg_browser.py'
+      - 'visuals/history.json'
+      - 'catalog/album-releases.json'
+      - '.github/workflows/rpg-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/feature/ipari-rpg'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify logic and package the offline game
+        run: |
+          node --check rpg/content.js
+          node --check rpg/engine.js
+          node --check rpg/app.js
+          node --test tests/rpg-engine.test.js
+          python scripts/build_rpg.py
+          python -m unittest discover -s tests -p test_rpg_build.py -v
+      - name: Install isolated browser test tools
+        run: |
+          python -m venv /tmp/rpg-browser
+          /tmp/rpg-browser/bin/pip install playwright==1.56.0
+          bash scripts/ci_browser_install.sh /tmp/rpg-browser/bin/python
+      - name: Play every chapter with public controls and check layouts
+        run: /tmp/rpg-browser/bin/python tests/rpg_browser.py
+      - name: Verify tested artifact checksum
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          meta=json.loads(Path('rpg-dist/build-info.json').read_text())
+          report=json.loads(Path('test-results/rpg/report.json').read_text())
+          raw=Path('rpg-dist/index.html').read_bytes()
+          assert Path('rpg-dist/review.html').read_bytes()==raw
+          assert report['status']=='passed' and report['buildUnchanged']
+          assert meta['htmlSha256']==report['htmlSha256']==hashlib.sha256(raw).hexdigest()
+          run=Path(report['runDirectory'])
+          assert (run/'tested-game.html').read_bytes()==raw
+          assert json.loads((run/'report.json').read_text())==report
+          assert json.loads(Path('test-results/rpg/latest-passed.json').read_text())==report
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ipari-rpg-review-${{ github.sha }}
+          path: |
+            rpg-dist/
+            test-results/rpg/
+          retention-days: 14

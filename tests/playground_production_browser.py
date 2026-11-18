@@ -37,6 +37,33 @@ def observe_courier_network(page):
  return cdp
 def stored(page):
  return page.evaluate('(keys)=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))',PRESERVED_KEYS)
+def rpg_integration(page):
+ before=stored(page);courier_before=page.evaluate('(key)=>localStorage.getItem(key)',COURIER_KEY)
+ page.goto(url+'/#/playground')
+ expect(page.locator('a[data-rpg-launch]')).to_be_visible()
+ check('RPG and Courier both remain in playground',page.locator('a[data-courier-launch]').count()==1)
+ page.locator('a[data-rpg-launch]').click();page.wait_for_url(url+'/games/ipari-chronicle/')
+ page.locator('[data-action=start]').click()
+ for _ in range(4):page.locator('[data-action=dialogue-next]').click()
+ check('RPG production starts exploration',page.locator('#game-main').get_attribute('data-mode')=='explore')
+ page.keyboard.press('ArrowRight');position=page.evaluate('window.__IPARI_RPG__.snapshot().position')
+ page.reload();page.locator('[data-action=continue]').click()
+ check('RPG operating reload preserves progress',page.evaluate('window.__IPARI_RPG__.snapshot().position')==position)
+ page.locator('[data-rpg-return]').click();page.wait_for_url(url+'/#/playground')
+ check('RPG preserves quiz and other records',stored(page)==before)
+ check('RPG preserves Courier records',page.evaluate('(key)=>localStorage.getItem(key)',COURIER_KEY)==courier_before)
+ for width in (320,390,768,1440):
+  page.set_viewport_size({'width':width,'height':900})
+  check('RPG operating card fits '+str(width),page.evaluate('document.documentElement.scrollWidth')<=width+1)
+  page.locator('a[data-rpg-launch]').scroll_into_view_if_needed()
+  page.screenshot(path=str(OUT/f'rpg-card-{width}.png'),full_page=True)
+  page.locator('a[data-rpg-launch]').click();page.locator('[data-action=continue]').wait_for()
+  check('RPG operating document fits '+str(width),page.evaluate('document.documentElement.scrollWidth')<=width+1)
+  page.locator('[data-rpg-return]').click();page.wait_for_url(url+'/#/playground')
+ page.set_viewport_size({'width':1440,'height':1000})
+ page.goto(url+'/#/playground/play')
+ expect(page.locator('[data-action=next]')).to_be_visible()
+
 def ready_courier(page):
  page.wait_for_function('()=>window.CourierApp?.ready===true',timeout=20000)
  expect(page.locator('#start-button')).to_be_enabled()
@@ -159,6 +186,7 @@ try:
    check('answered round persisted before reload',page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1')).session.answers.length===1"))
    page.reload(wait_until='networkidle');expect(page.locator('[data-action=next]')).to_be_visible();check('production resume survives reload',page.locator('.feedback').count()==1)
    courier_integration(b,page,apis,errors)
+   rpg_integration(page)
    for i in range(5):
     if i:page.locator('[data-action=skip]').click()
     page.locator('[data-action=next]').click()

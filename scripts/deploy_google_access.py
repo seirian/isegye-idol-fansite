@@ -85,6 +85,27 @@ def courier_artifact(payload):
     return game
 
 
+def rpg_artifact(payload):
+    from build_rpg_production import HTML_PATH, ROUTE, APPROVAL, STORAGE_KEY, render, CARD_ASSETS
+    try: metadata=json.loads(payload.get('build-info.json',b'{}'))
+    except (ValueError,TypeError): metadata={}
+    game=metadata.get('rpgGame') if isinstance(metadata,dict) else None
+    if game is None and HTML_PATH not in payload:return None
+    d.require(isinstance(game,dict) and HTML_PATH in payload,'RPG metadata/document missing')
+    raw=payload[HTML_PATH]
+    expected,source=render()
+    d.require(game.get('game')=='ipari-chronicle' and game.get('version')==1 and game.get('approval')==APPROVAL and
+              game.get('route')==ROUTE and game.get('htmlPath')==HTML_PATH and game.get('storageKey')==STORAGE_KEY and
+              game.get('counts')=={'chapters':6,'rooms':19,'members':6} and game.get('generatedArtwork') is True,'RPG identity mismatch')
+    d.require(raw==expected and game.get('htmlSha256')==d.digest(raw) and game.get('htmlBytes')==len(raw),'RPG artifact mismatch')
+    d.require(game.get('sourceHashes')==source['sourceHashes'],'RPG source manifest mismatch')
+    cards=game.get('cardAssets',{})
+    d.require(set(cards)=={f'assets/rpg/{name}.webp' for name in CARD_ASSETS},'RPG card inventory mismatch')
+    d.require(all(path in payload and d.digest(payload[path])==value and
+                  value==source['sourceHashes'][path.replace('assets/rpg/','rpg/assets/')] for path,value in cards.items()),'RPG card image mismatch')
+    return game
+
+
 def private_file(remote, path):
     info = remote.info(path)
     d.require(info is not None and stat.S_IMODE(info.st_mode) == 0o600, 'Private file permissions unsafe')
@@ -136,6 +157,7 @@ def verify_public(payload, report):
     from compose_admin_visibility import POLICY
     protected = set(POLICY['protectedPaths'])
     courier=courier_artifact(payload)
+    rpg=rpg_artifact(payload)
     before = status()
     if not before['maintenance']:
         for rel, data in payload.items():
@@ -156,12 +178,16 @@ def verify_public(payload, report):
     if now['maintenance']:
         paths=['/', '/index.html', '/src/app.js']
         if courier:paths += [COURIER_ROUTE,'/'+COURIER_HTML,*('/'+p for p in courier['cardAssets'])]
+        if rpg:paths += [rpg['route'],'/'+rpg['htmlPath'],*('/'+p for p in rpg['cardAssets'])]
         for path in paths:
             code, body = d.http(d.ORIGIN + path)
-            d.require(code == 503 and '현재 사이트는'.encode() in body and b'const COURIER_ART=' not in body, 'Maintenance gate not enforced')
+            d.require(code == 503 and '현재 사이트는'.encode() in body and b'const COURIER_ART=' not in body and b'const RPG_ART' not in body, 'Maintenance gate not enforced')
         report['anonymousMaintenanceVerified'] = True
     elif courier:
         d.require(d.http(d.ORIGIN+COURIER_ROUTE)==(200,payload[COURIER_HTML]),'Canonical Courier route differs')
+    if rpg:
+        if not now['maintenance']:d.require(d.http(d.ORIGIN+rpg['route'])==(200,payload[rpg['htmlPath']]),'Canonical RPG route differs')
+        report['rpgExistingAccessPolicyVerified']=True
     if courier:report['courierExistingAccessPolicyVerified']=True
     for path in protected:
         d.require(d.http(d.ORIGIN + path) == (401, b'Administrator access required'), 'Admin diagnostics exposed: ' + path)
@@ -203,6 +229,7 @@ def verify_browser(commit, client_id):
 
 def deploy(remote, payload, commit, client_id, report):
     courier=courier_artifact(payload)
+    rpg=rpg_artifact(payload)
     runtime, files = a.bundle(Path('auth-bundle'))
     remote.directory('/web')
     remote.directory(d.ROOT)
@@ -286,15 +313,22 @@ def deploy(remote, payload, commit, client_id, report):
                      '/.auth-runtime/'+runtime+'/Store.php', '/_isegye_releases/'+old_release+'/index.html',
                      '/_isegye_releases/'+release+'/src/app.js', '/_mir_site/index.html', '/access.php']
         if courier:private_paths.append('/_isegye_releases/'+release+'/'+COURIER_HTML)
+        if rpg:private_paths.append('/_isegye_releases/'+release+'/'+rpg['htmlPath'])
         for path in private_paths:
             code, body = d.http(d.ORIGIN + path)
-            d.require(code in (403,404,503) and body != payload['index.html'] and body != payload['src/app.js'] and b'const COURIER_ART=' not in body, 'Direct path exposure')
+            d.require(code in (403,404,503) and body != payload['index.html'] and body != payload['src/app.js'] and b'const COURIER_ART=' not in body and b'const RPG_ART' not in body, 'Direct path exposure')
         if courier:
             for name in (COURIER_HTML,*courier['cardAssets']):
                 d.require(remote.read(release_parent+'/'+release+'/'+name)==payload[name],'Published Courier readback mismatch')
             report['courierGame']={'url':d.ORIGIN+COURIER_ROUTE,'acceptedCommit':courier['acceptedCommit'],'htmlSha256':courier['htmlSha256'],
                 'htmlBytes':courier['htmlBytes'],'counts':courier['counts'],'publishedBytesVerified':True,
                 'cardImagesVerified':True,'existingAccessPolicyPreserved':True,'previewStorageUnchanged':True}
+        if rpg:
+            for name in (rpg['htmlPath'],*rpg['cardAssets']):
+                d.require(remote.read(release_parent+'/'+release+'/'+name)==payload[name],'Published RPG readback mismatch')
+            report['rpgGame']={'url':d.ORIGIN+rpg['route'],'htmlSha256':rpg['htmlSha256'],
+                'htmlBytes':rpg['htmlBytes'],'counts':rpg['counts'],'publishedBytesVerified':True,
+                'cardImagesVerified':True,'existingAccessPolicyPreserved':True,'storageKey':rpg['storageKey']}
         report['membershipAfter'] = a.account_state(private_file(remote, a.PRIVATE + '/accounts.json'))
         report['maintenanceActive'] = status()['maintenance']
         d.require(report['maintenanceActive'] == report['membershipAfter']['administratorRegistered'], 'Maintenance condition mismatch')

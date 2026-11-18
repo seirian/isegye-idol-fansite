@@ -21,9 +21,13 @@ def patched(s):
         if ($path === '/games/starlight-courier') {
             header('Location: /games/starlight-courier/', true, 308); return;
         }
+        if ($path === '/games/ipari-chronicle') {
+            header('Location: /games/ipari-chronicle/', true, 308); return;
+        }
+        if ($path === '/games/ipari-chronicle/') $path = '/games/ipari-chronicle/index.html';
         $relative = $path === '/games/starlight-courier/'
             ? 'games/starlight-courier/index.html' : ltrim($path, '/');""",
-        "['index.html','robots.txt','build-info.json']": "['index.html','robots.txt','build-info.json','games/starlight-courier/index.html']",
+        "['index.html','robots.txt','build-info.json']": "['index.html','robots.txt','build-info.json','games/starlight-courier/index.html','games/ipari-chronicle/index.html']",
         "$mime = ['js'=>": "$mime = ['html'=>'text/html; charset=utf-8','js'=>",
     }
     for old,new in changes.items():
