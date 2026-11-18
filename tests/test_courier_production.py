@@ -140,7 +140,7 @@ class CourierProduction(unittest.TestCase):
         self.assertIn("$path === '/games/starlight-courier/'",patched)
         self.assertIn("header('X-Frame-Options: DENY')",patched)
         self.assertIn("'html'=>'text/html; charset=utf-8'",patched)
-        self.assertIn("['index.html','robots.txt','build-info.json','games/starlight-courier/index.html']",patched)
+        self.assertIn("['index.html','robots.txt','build-info.json','games/starlight-courier/index.html','games/ipari-chronicle/index.html']",patched)
         self.assertIn("(?:js|css|svg|png|webp|jpg|json)",patched)
         for preview in ('/review-playground','/review-fanmade','/review-albums'):
             self.assertIn(preview,patched)

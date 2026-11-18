@@ -98,6 +98,8 @@ jobs:
           /tmp/archive-browser-tests/bin/python tests/playground_polish_browser.py
           python scripts/build_playground_production_host.py
           /tmp/archive-browser-tests/bin/python tests/courier_host_browser.py
+          /tmp/archive-browser-tests/bin/python tests/rpg_host_browser.py
+          RPG_TEST_DIST=dist/games/ipari-chronicle /tmp/archive-browser-tests/bin/python tests/rpg_browser.py
           /tmp/archive-browser-tests/bin/python tests/playground_bank_host_browser.py
       - name: Verify album feed and image authorization before any upload
         run: /tmp/archive-browser-tests/bin/python tests/albums_feed_browser.py
