@@ -32,6 +32,7 @@ with sync_playwright() as p:
     stage(page,f"home-{width}")
     page.locator('a[href="#/arcade"]').first.click()
     ok(page.get_by_role("heading",name="우당탕 이세돌").count()>=1,f"arcade exists {width}")
+    page.locator(".arcade-member-card img").first.wait_for(state="visible",timeout=5000)
     ok(page.locator(".arcade-member-card img").count()==6,f"six illustrated member cards {width}")
     page.wait_for_function("() => [...document.querySelectorAll('.arcade-member-card img')].every(x => x.complete && x.naturalWidth > 50)",timeout=12000)
     ok(page.locator(".arcade-cover-art img").count()==6,f"illustrated arcade splash {width}")
