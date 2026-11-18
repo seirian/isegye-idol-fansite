@@ -1,0 +1,41 @@
+name: Melon charts - independent lightweight evidence capture
+on:
+  schedule:
+    # UTC 22-23 and 00-15 = KST 07-23 and 00; avoid GitHub's busy :00.
+    - cron: '11,37 0-15,22-23 * * *'
+  workflow_dispatch:
+  # One-time bootstrap after the workflow itself is promoted to main.
+  push:
+    branches: [main]
+    paths: [.github/workflows/melon-chart-capture.yml]
+permissions:
+  contents: read
+concurrency:
+  group: isegye-melon-capture
+  cancel-in-progress: false
+  queue: max
+jobs:
+  capture:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Respect existing album and production pause controls
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+        run: test "$PRODUCTION_PAUSED" != true && test "$ISEGYE_ALBUMS_PAUSED" != true
+      - name: Install pinned public chart parser only
+        run: python -m pip install beautifulsoup4==4.14.3
+      - name: Capture verified full Melon chart hours without any SFTP credentials
+        run: python scripts/album_chart_capture.py
+      - name: Preserve source evidence even when one of two charts fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: melon-chart-capture
+          path: melon-chart-capture.json
+          retention-days: 30
+          if-no-files-found: warn
