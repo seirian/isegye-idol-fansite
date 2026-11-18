@@ -79,6 +79,7 @@ jobs:
           python scripts/promote_playground.py
           /tmp/release-tools/bin/python tests/playground_production_browser.py
           python scripts/build_playground_production_host.py
+          /tmp/release-tools/bin/python tests/courier_host_browser.py
           /tmp/release-tools/bin/python tests/playground_bank_host_browser.py
       - name: Build permanent monitor route and verify administrator-only access
         run: |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preserve all current preview routes; add only the normal-reader quiz-bank API."""
+"""Preserve existing gates and previews; serve the quiz bank and approved game."""
 from pathlib import Path
 import json,hashlib
 import build_playground_host as preview
@@ -13,7 +13,25 @@ HOOK="""        // ISEGYE-PLAYGROUND-BANK: regular reader endpoint after the exi
 def patched(s):
     base=preview.patched(s);anchor=preview.ANCHOR
     if base.count(anchor)!=1 or base.index("if (!$access['allowed'])")>base.index(anchor):raise ValueError('Existing gate moved')
-    return base.replace(anchor,HOOK+anchor,1)
+    base=base.replace(anchor,HOOK+anchor,1)
+    # This exact document uses the same allowed-reader check as every site asset.
+    # No public router, iframe exception, new role or broad HTML glob is added.
+    changes={
+        "        $relative = ltrim($path, '/');": """        // ISEGYE-COURIER: canonical standalone game after the existing access gate.
+        if ($path === '/games/starlight-courier') {
+            header('Location: /games/starlight-courier/', true, 308); return;
+        }
+        $relative = $path === '/games/starlight-courier/'
+            ? 'games/starlight-courier/index.html' : ltrim($path, '/');""",
+        "['index.html','robots.txt','build-info.json']": "['index.html','robots.txt','build-info.json','games/starlight-courier/index.html']",
+        "$mime = ['js'=>": "$mime = ['html'=>'text/html; charset=utf-8','js'=>",
+    }
+    for old,new in changes.items():
+        if base.count(old)!=1:raise ValueError('Courier static serving anchor changed')
+        base=base.replace(old,new,1)
+    if base.index("if (!$access['allowed'])")>=base.index('// ISEGYE-COURIER:'):
+        raise ValueError('Access gate must precede standalone game')
+    return base
 def main():
     preview.main();out=ROOT/'auth-bundle'
     (out/'Gateway.php').write_text(patched((ROOT/'auth/Gateway.php').read_text()))

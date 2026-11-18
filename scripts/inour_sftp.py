@@ -75,7 +75,8 @@ def load_payload(directory, commit):
         if path.is_dir():
             continue
         rel = path.relative_to(root).as_posix()
-        require(rel in ('index.html', 'robots.txt', 'build-info.json', '.nojekyll') or
+        require(rel in ('index.html', 'robots.txt', 'build-info.json', '.nojekyll',
+                        'games/starlight-courier/index.html') or
                 re.fullmatch(r'(src|assets)/[A-Za-z0-9_./-]+\.(js|css|svg|png|webp|jpg|json)', rel), 'Unexpected build file')
         write_path(ROOT + '/_isegye_releases/r' + commit[:12] + '/' + rel)
         data = path.read_bytes()

@@ -17,6 +17,110 @@ feed,_=bank.assemble(None,[],datetime.now(timezone.utc))
 # Exercise the real canonical on-disk representation, then the served wire bytes.
 wire=bank.published_bytes(json.loads(bank.encoded(feed)))
 expected_daily=json.loads(subprocess.check_output(['node','--input-type=module','-e',"import fs from 'node:fs';import {chooseQuestions,kstDate} from './playground/core.js';const d=JSON.parse(fs.readFileSync('playground/catalog.json'));console.log(JSON.stringify(chooseQuestions(d,{mode:'daily',count:5,seed:d.version+':'+kstDate()})));"],cwd=ROOT,text=True))
+COURIER_PATH='/games/starlight-courier/'
+COURIER_KEY='isegye:playground:courier:v2'
+PRESERVED_KEYS=('isegye:playground:v1','isegye:playground:review:v1','isegye:bookmarks:v1','isegye:review:courier:v2')
+def stored(page):
+ return page.evaluate('(keys)=>Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))',PRESERVED_KEYS)
+def ready_courier(page):
+ page.wait_for_function('()=>window.CourierApp?.ready===true',timeout=20000)
+ expect(page.locator('#start-button')).to_be_enabled()
+def courier_start(page):
+ page.locator('#start-button').click()
+ page.wait_for_function('()=>CourierApp.state?.elapsed>0',timeout=7000)
+def courier_position(page):
+ return page.evaluate('()=>({x:CourierApp.state.x,y:CourierApp.state.y,elapsed:CourierApp.state.elapsed})')
+def courier_touch(page):
+ page.locator('#joystick').scroll_into_view_if_needed()
+ box=page.locator('#joystick').bounding_box();x=box['x']+box['width']/2;y=box['y']+box['height']/2
+ cdp=page.context.new_cdp_session(page)
+ try:
+  cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
+  cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x+box['width']*.32,'y':y}]})
+  page.wait_for_timeout(300)
+  cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+ finally:cdp.detach()
+def courier_integration(browser,page,apis,errors):
+ """Only operating-site integration; the game has its own full mechanics suite."""
+ before=stored(page);feedback=page.locator('.feedback').text_content();external=[];watch=[False]
+ def request(req):
+  if watch[0] and req.url.startswith(('http://','https://')) and not req.url.startswith(url+'/'):external.append(req.url)
+ page.on('request',request)
+ try:
+  page.goto(url+'/#/playground',wait_until='networkidle')
+  launch=page.locator('a[data-courier-launch]');expect(launch).to_be_visible()
+  check('courier card opens same-tab operating game',launch.get_attribute('href')==COURIER_PATH and launch.get_attribute('target') in (None,'','_self'))
+  watch[0]=True;launch.click();page.wait_for_url(url+COURIER_PATH);ready_courier(page)
+  check('courier has one document without iframe',len(page.context.pages)==1 and page.locator('iframe').count()==0)
+  check('courier operating screen has no review wording','검토' not in page.locator('body').inner_text() and '검토' not in page.title())
+  expect(page.locator('a.wordmark')).to_have_text('← 놀이터')
+  check('courier has an operating playground return link',page.locator('a.wordmark').get_attribute('href')=='/#/playground')
+  check('courier generated scene is loaded',page.locator('#hero-background').evaluate("c=>{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.some((v,i)=>i%4===3&&v>0)}"))
+  check('courier preview records are not imported',page.locator('#member-name').inner_text()=='아이네' and '1,234' not in page.locator('#best-label').inner_text())
+  expect(page.locator('.member-card')).to_have_count(6)
+  for name in ('아이네','징버거','릴파','주르르','비챤','고세구'):
+   page.get_by_role('button',name=name+' 선택',exact=True).click()
+   expect(page.locator('#member-name')).to_have_text(name)
+   check('operating courier selection '+name,page.locator('.member-card[aria-pressed=true]').count()==1 and name in page.locator('#hero-character').get_attribute('aria-label'))
+  check('courier selected member uses isolated operating storage',page.evaluate('(key)=>JSON.parse(localStorage.getItem(key)).selected',COURIER_KEY)=='gosegu' and stored(page)==before)
+  page.reload(wait_until='networkidle');ready_courier(page)
+  expect(page.locator('#member-name')).to_have_text('고세구')
+  check('courier direct reload restores chosen member',page.evaluate('CourierApp.screen==="lobby"&&CourierApp.state===null'))
+  page.screenshot(path=str(OUT/'courier-lobby-1440.png'),full_page=True)
+  courier_start(page);initial=courier_position(page)
+  page.keyboard.down('ArrowRight');page.wait_for_timeout(300);page.keyboard.up('ArrowRight')
+  check('operating courier keyboard movement',courier_position(page)['x']>initial['x']+30)
+  page.keyboard.press('Space')
+  check('operating courier keyboard dash',page.evaluate('CourierApp.state.stats.dashes===1&&CourierApp.state.dashCooldown>0'))
+  page.screenshot(path=str(OUT/'courier-playing-1440.png'),full_page=True)
+  page.locator('#pause-button').click();expect(page.locator('#resume-button')).to_be_visible()
+  paused=courier_position(page);page.wait_for_timeout(250)
+  check('operating courier pause freezes motion and time',courier_position(page)==paused)
+  page.locator('#resume-button').click();watch[0]=False
+  page.locator('a.wordmark').click();page.wait_for_url(url+'/#/playground')
+  expect(page.locator('.playground-component h1')).to_have_text('놀이터')
+  check('courier return restores operating shell',page.locator('header').count()==1 and page.locator('.desktop-nav a').count()==8 and page.evaluate('typeof CourierApp==="undefined"'))
+  check('courier round trip preserves quiz bookmarks and preview records',stored(page)==before)
+  page.locator('a[href="#/playground/play"]').first.click();expect(page.locator('.feedback')).to_have_text(feedback)
+  expect(page.locator('[data-action=next]')).to_be_visible()
+  check('courier return resumes the existing answered quiz',stored(page)==before)
+  # Leaving this independent document ends the current round. Reentry starts at
+  # member selection, preserving only the game's own selected member/records.
+  watch[0]=True;page.goto(url+COURIER_PATH);ready_courier(page);courier_start(page)
+  watch[0]=False;page.goto(url+'/#/music');expect(page.get_by_role('heading',name='한 곡에서 시작되는 이야기',exact=True)).to_be_visible()
+  watch[0]=True;page.goto(url+COURIER_PATH);ready_courier(page)
+  check('leaving for another menu ends the courier round',page.evaluate('CourierApp.screen==="lobby"&&CourierApp.state===null') and page.locator('#member-name').inner_text()=='고세구')
+  watch[0]=False;page.goto(url+'/#/playground/play');expect(page.locator('.feedback')).to_have_text(feedback)
+  check('quiz survives repeated independent game visits',stored(page)==before)
+ finally:page.remove_listener('request',request)
+ for width,height in ((320,720),(390,844),(768,1024)):
+  ctx=browser.new_context(viewport={'width':width,'height':height},is_mobile=True,has_touch=True,device_scale_factor=1)
+  mobile=ctx.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
+  mobile.route('**/api/**',apis);mobile.route('**/auth/status',apis)
+  def remote(route):
+   if route.request.frame.url.startswith(url+COURIER_PATH):external.append(route.request.url)
+   route.abort()
+  mobile.route('https://**',remote)
+  try:
+   mobile.goto(url+'/#/playground');expect(mobile.locator('a[data-courier-launch]')).to_be_visible()
+   check('operating game card fits '+str(width),mobile.evaluate('document.documentElement.scrollWidth')<=width+1)
+   mobile.locator('a[data-courier-launch]').click();ready_courier(mobile)
+   check('operating courier lobby fits '+str(width),mobile.evaluate('document.documentElement.scrollWidth')<=width+1)
+   mobile.screenshot(path=str(OUT/f'courier-lobby-{width}.png'),full_page=True)
+   courier_start(mobile);check('operating courier playfield fits '+str(width),mobile.evaluate('document.documentElement.scrollWidth')<=width+1)
+   expect(mobile.locator('#joystick')).to_be_visible()
+   if width in (390,768):
+    initial=courier_position(mobile);courier_touch(mobile)
+    check('operating courier actual touch movement '+str(width),courier_position(mobile)['x']>initial['x']+30)
+    released=courier_position(mobile);mobile.wait_for_timeout(150)
+    check('operating courier touch release stops '+str(width),abs(courier_position(mobile)['x']-released['x'])<1)
+   mobile.screenshot(path=str(OUT/f'courier-playing-{width}.png'),full_page=True)
+   mobile.locator('a.wordmark').click();expect(mobile.locator('.playground-component h1')).to_have_text('놀이터')
+   check('mobile courier returns to operating playground '+str(width),mobile.url==url+'/#/playground' and mobile.locator('header').count()==1)
+  except Exception:
+   mobile.screenshot(path=str(OUT/f'courier-failure-{width}.png'),full_page=True);raise
+  finally:ctx.close()
+ check('courier game requires no external network',not external)
 try:
  with sync_playwright() as p:
   opt={'headless':True}
@@ -27,9 +131,10 @@ try:
    elif route.request.url.endswith('/auth/status'):route.fulfill(json={'authenticated':False,'administrator':False,'maintenance':False,'allowed':True})
    else:route.fulfill(status=503,json={'error':'fixture_offline'})
   page.route('**/api/**',apis);page.route('**/auth/status',apis);page.route('https://**',lambda r:r.abort())
-  page.add_init_script("localStorage.setItem('isegye:playground:review:v1','REVIEW_KEEP');localStorage.setItem('isegye:bookmarks:v1','BOOKMARK_KEEP')")
   try:
    page.goto(url+'/#/playground',wait_until='networkidle');expect(page.locator('.playground-component h1')).to_have_text('놀이터')
+   # Seed once: resetting these on every document load would hide navigation loss.
+   page.evaluate("localStorage.setItem('isegye:playground:review:v1','REVIEW_KEEP');localStorage.setItem('isegye:bookmarks:v1','BOOKMARK_KEEP');localStorage.setItem('isegye:review:courier:v2',JSON.stringify({version:2,best:1234,runs:2,selected:'lilpa',sound:false}))")
    expect(page.locator('.hero')).to_have_css('display','grid');check('production scoped stylesheet loaded',True)
    check('eight operating navigation entries',page.locator('.desktop-nav a').count()==8)
    check('mobile more menu contains playground',page.locator('#more-menu a[href="#/playground"]').count()==1)
@@ -43,6 +148,7 @@ try:
    page.locator('[data-answer]').first.click();expect(page.locator('[data-action=next]')).to_be_visible()
    check('answered round persisted before reload',page.evaluate("JSON.parse(localStorage.getItem('isegye:playground:v1')).session.answers.length===1"))
    page.reload(wait_until='networkidle');expect(page.locator('[data-action=next]')).to_be_visible();check('production resume survives reload',page.locator('.feedback').count()==1)
+   courier_integration(b,page,apis,errors)
    for i in range(5):
     if i:page.locator('[data-action=skip]').click()
     page.locator('[data-action=next]').click()

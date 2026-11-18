@@ -17,9 +17,72 @@ import stat
 import subprocess
 import sys
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 import inour_sftp as d
 import auth_routing as a
 from production_release import EXISTING
+from build_courier_production import HTML_PATH as COURIER_HTML, ROUTE as COURIER_ROUTE, STORAGE_KEY as COURIER_STORAGE, ACCEPTED_COMMIT as COURIER_ACCEPTED
+
+
+class CourierPolicy(HTMLParser):
+    """Read enforced CSP metadata, excluding comments and inert templates."""
+    def __init__(self):
+        super().__init__()
+        self.in_head=False;self.template_depth=0;self.inline_seen=False;self.policies=[]
+
+    def handle_starttag(self,tag,attrs):
+        if tag=='head':self.in_head=True
+        if tag=='template':self.template_depth+=1
+        if tag in ('script','style'):self.inline_seen=True
+        values=dict(attrs)
+        if tag=='meta' and (values.get('http-equiv') or '').lower()=='content-security-policy':
+            d.require(self.in_head and not self.template_depth and not self.inline_seen and len(values)==len(attrs),'Courier CSP placement mismatch')
+            self.policies.append(values.get('content',''))
+
+    def handle_endtag(self,tag):
+        if tag=='head':self.in_head=False
+        if tag=='template':self.template_depth=max(0,self.template_depth-1)
+
+
+def courier_artifact(payload):
+    """Bind the approved standalone document and card artwork to the release."""
+    # Older deployment callers do not include parsed release metadata. Preserve
+    # that path only when no standalone game document requires an identity.
+    try:metadata=json.loads(payload.get('build-info.json',b'{}'))
+    except (ValueError,TypeError):metadata={}
+    game=metadata.get('courierGame') if isinstance(metadata,dict) else None
+    if game is None and COURIER_HTML not in payload:return None
+    d.require(isinstance(game,dict) and COURIER_HTML in payload,'Courier metadata/document missing')
+    raw=payload[COURIER_HTML]
+    d.require(game.get('game')=='starlight-courier' and game.get('version')==2 and game.get('acceptedCommit')==COURIER_ACCEPTED and
+              game.get('route')==COURIER_ROUTE and game.get('htmlPath')==COURIER_HTML and
+              game.get('storageKey')==COURIER_STORAGE and game.get('generatedArtwork') is True and
+              game.get('counts')=={'games':1,'characters':6,'stages':3},'Courier identity mismatch')
+    d.require(game.get('htmlSha256')==d.digest(raw) and game.get('htmlBytes')==len(raw),'Courier artifact mismatch')
+    text=raw.decode()
+    d.require(COURIER_STORAGE in text and 'isegye:review:courier:' not in text and
+              'const COURIER_ART=' in text and "connect-src 'none'" in text and
+              "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'Courier isolation mismatch')
+    expected={name:["'none'"] for name in ('default-src','connect-src','media-src','font-src','base-uri','form-action','object-src')}
+    expected['img-src']=['data:']
+    for tag in ('script','style'):
+        blocks=re.findall('<'+tag+'>([\\s\\S]*?)</'+tag+'>',text)
+        d.require(len(blocks)==1,'Courier inline block mismatch')
+        hashed=base64.b64encode(hashlib.sha256(blocks[0].encode()).digest()).decode()
+        expected[tag+'-src']=["'sha256-"+hashed+"'"]
+    parser=CourierPolicy();parser.feed(text);parser.close()
+    d.require(len(parser.policies)==1,'Courier CSP metadata missing or duplicated')
+    directives={}
+    for directive in parser.policies[0].split(';'):
+        parts=directive.split()
+        if not parts:continue
+        d.require(parts[0] not in directives,'Courier CSP directive duplicated')
+        directives[parts[0]]=parts[1:]
+    d.require(directives==expected,'Courier CSP mismatch')
+    cards=game.get('cardAssets',{})
+    d.require(set(cards)=={'assets/courier/characters.webp','assets/courier/plaza.webp'},'Courier card inventory mismatch')
+    d.require(all(path in payload and d.digest(payload[path])==value for path,value in cards.items()),'Courier card image mismatch')
+    return game
 
 
 def private_file(remote, path):
@@ -72,6 +135,7 @@ def verify_public(payload, report):
     # Compare the server's role-specific response, never expose raw diagnostics.
     from compose_admin_visibility import POLICY
     protected = set(POLICY['protectedPaths'])
+    courier=courier_artifact(payload)
     before = status()
     if not before['maintenance']:
         for rel, data in payload.items():
@@ -90,10 +154,15 @@ def verify_public(payload, report):
         report['publicBeforeAdministratorVerified'] = True
     now = status()
     if now['maintenance']:
-        for path in ('/', '/index.html', '/src/app.js'):
+        paths=['/', '/index.html', '/src/app.js']
+        if courier:paths += [COURIER_ROUTE,'/'+COURIER_HTML,*('/'+p for p in courier['cardAssets'])]
+        for path in paths:
             code, body = d.http(d.ORIGIN + path)
-            d.require(code == 503 and '현재 사이트는'.encode() in body, 'Maintenance gate not enforced')
+            d.require(code == 503 and '현재 사이트는'.encode() in body and b'const COURIER_ART=' not in body, 'Maintenance gate not enforced')
         report['anonymousMaintenanceVerified'] = True
+    elif courier:
+        d.require(d.http(d.ORIGIN+COURIER_ROUTE)==(200,payload[COURIER_HTML]),'Canonical Courier route differs')
+    if courier:report['courierExistingAccessPolicyVerified']=True
     for path in protected:
         d.require(d.http(d.ORIGIN + path) == (401, b'Administrator access required'), 'Admin diagnostics exposed: ' + path)
     report['anonymousAdminDiagnosticsBlocked'] = True
@@ -133,6 +202,7 @@ def verify_browser(commit, client_id):
 
 
 def deploy(remote, payload, commit, client_id, report):
+    courier=courier_artifact(payload)
     runtime, files = a.bundle(Path('auth-bundle'))
     remote.directory('/web')
     remote.directory(d.ROOT)
@@ -212,11 +282,19 @@ def deploy(remote, payload, commit, client_id, report):
         report['googleButtonRendered'] = browser['googleButtonRendered']
         report['googleAccountChooserReached'] = browser['googleAccountChooserReached']
         report['realGoogleAccountLoginPerformed'] = False
-        for path in ('/.auth-private/accounts.json', '/.auth-private/config.json', '/.release-backups/'+release+'.before',
+        private_paths=['/.auth-private/accounts.json', '/.auth-private/config.json', '/.release-backups/'+release+'.before',
                      '/.auth-runtime/'+runtime+'/Store.php', '/_isegye_releases/'+old_release+'/index.html',
-                     '/_isegye_releases/'+release+'/src/app.js', '/_mir_site/index.html', '/access.php'):
+                     '/_isegye_releases/'+release+'/src/app.js', '/_mir_site/index.html', '/access.php']
+        if courier:private_paths.append('/_isegye_releases/'+release+'/'+COURIER_HTML)
+        for path in private_paths:
             code, body = d.http(d.ORIGIN + path)
-            d.require(code in (403,404,503) and body != payload['index.html'] and body != payload['src/app.js'], 'Direct path exposure')
+            d.require(code in (403,404,503) and body != payload['index.html'] and body != payload['src/app.js'] and b'const COURIER_ART=' not in body, 'Direct path exposure')
+        if courier:
+            for name in (COURIER_HTML,*courier['cardAssets']):
+                d.require(remote.read(release_parent+'/'+release+'/'+name)==payload[name],'Published Courier readback mismatch')
+            report['courierGame']={'url':d.ORIGIN+COURIER_ROUTE,'acceptedCommit':courier['acceptedCommit'],'htmlSha256':courier['htmlSha256'],
+                'htmlBytes':courier['htmlBytes'],'counts':courier['counts'],'publishedBytesVerified':True,
+                'cardImagesVerified':True,'existingAccessPolicyPreserved':True,'previewStorageUnchanged':True}
         report['membershipAfter'] = a.account_state(private_file(remote, a.PRIVATE + '/accounts.json'))
         report['maintenanceActive'] = status()['maintenance']
         d.require(report['maintenanceActive'] == report['membershipAfter']['administratorRegistered'], 'Maintenance condition mismatch')
