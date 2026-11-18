@@ -1,12 +1,8 @@
 name: Playground - daily verified question bank
 on:
   schedule:
-    - cron: '37 22 * * *' # 07:37 Asia/Seoul, UTC previous day
+    - cron: '0 23 * * *' # daily 08:00 Asia/Seoul, UTC previous day
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Production - isolated inour SFTP deployment']
-    types: [completed]
-    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -15,11 +11,7 @@ concurrency:
   queue: max
 jobs:
   refresh:
-    if: >-
-      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       (github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_repository.full_name == github.repository))
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 20

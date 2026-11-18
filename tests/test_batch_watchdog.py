@@ -26,8 +26,8 @@ class Watchdog(unittest.TestCase):
         early=self.at.replace(hour=5)
         self.assertEqual(w.due_slot('music',early).astimezone(w.KST).day,12)
         self.assertEqual(w.due_slot('catalog',self.at).astimezone(w.KST).strftime('%H:%M'),'07:15')
-    def test_schedule_before_five_uses_previous_hour(self):
-        self.assertEqual(w.due_slot('schedule',self.at.replace(minute=4)).astimezone(w.KST).hour,13)
+    def test_schedule_before_five_uses_previous_even_hour(self):
+        self.assertEqual(w.due_slot('schedule',self.at.replace(minute=4)).astimezone(w.KST).hour,12)
         self.assertEqual(w.due_slot('schedule',self.at.replace(minute=5)).astimezone(w.KST).hour,14)
     def test_history_not_due_until_first_new_sunday(self):
         self.assertIsNone(w.due_slot('history',self.at))

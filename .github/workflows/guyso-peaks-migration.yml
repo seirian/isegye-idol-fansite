@@ -1,0 +1,58 @@
+name: Albums - verified Guyso peak reference migration
+on:
+  workflow_run:
+    workflows: ['Production - isolated inour SFTP deployment']
+    types: [completed]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: isegye-inour-production
+  cancel-in-progress: false
+  queue: max
+jobs:
+  migrate:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        contains(github.event.workflow_run.head_commit.message, '[guyso-peaks-20261118]')))
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Respect existing maintenance pause controls
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+        run: test "$PRODUCTION_PAUSED" != true && test "$ISEGYE_ALBUMS_PAUSED" != true
+      - name: Install verified transfer dependencies
+        run: |
+          python -m venv /tmp/guyso-peaks
+          /tmp/guyso-peaks/bin/pip install beautifulsoup4==4.14.3 pillow==11.3.0 paramiko==5.0.0
+      - name: Verify actual ranks and strict reference-only publication
+        run: |
+          /tmp/guyso-peaks/bin/python -m unittest discover -s tests -p 'test_albums_peak_fallback.py' -v
+          /tmp/guyso-peaks/bin/python -m unittest discover -s tests -p 'test_guyso_peak_migration.py' -v
+          node --test tests/albums-peak-fallback.test.js
+          rm -f guyso-peaks-before.json guyso-peaks-after.json guyso-peaks-report.json
+      - name: Publish reviewed peak references without chart or collection-clock changes
+        env:
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          EXPECTED_RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: /tmp/guyso-peaks/bin/python scripts/migrate_guyso_peaks.py publish
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: guyso-peaks-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            guyso-peaks-before.json
+            guyso-peaks-after.json
+            guyso-peaks-report.json
+          retention-days: 30

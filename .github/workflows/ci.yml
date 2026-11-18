@@ -66,6 +66,7 @@ jobs:
         run: |
           /tmp/release-tools/bin/python scripts/promote_albums.py
           /tmp/release-tools/bin/python tests/albums_production_browser.py
+          /tmp/release-tools/bin/python tests/guyso_peaks_browser.py
           /tmp/release-tools/bin/python tests/external_videos_browser.py
           /tmp/release-tools/bin/python tests/music_beginning_browser.py
           /tmp/release-tools/bin/python tests/admin_visibility_browser.py
@@ -79,6 +80,11 @@ jobs:
           /tmp/release-tools/bin/python tests/playground_production_browser.py
           python scripts/build_playground_production_host.py
           /tmp/release-tools/bin/python tests/playground_bank_host_browser.py
+      - name: Build permanent monitor route and verify administrator-only access
+        run: |
+          python scripts/build_batch_monitor_host.py
+          /tmp/release-tools/bin/python tests/batch_monitor_host_browser.py
+          /tmp/release-tools/bin/python scripts/batch_monitor_catalog.py
       - name: Validate main-only production packaging without upload
         env:
           PYTHON: /tmp/release-tools/bin/python

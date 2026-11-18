@@ -25,3 +25,10 @@ The API reports HD, not a verified 4K resolution. Do not inherit STUDIO CHOOM's 
 `catalog/music-core-videos.json` and `scripts/music_core_videos.py` add exactly this one video, after the unchanged STUDIO CHOOM selection. The existing two uploads and original observation timestamps are preserved. Content > External, Music > Videos and the existing REBELS related-performance section include the new stage. Related sections derive publisher names from actual rows and sort full performances newest first, then teasers. MBCkpop has its own selected-video channel filter, not channel-wide collection.
 
 No song, album, official MV, album/MV statistic, collection schedule, auth, member store or pinned review source is changed. The existing pre-upload external-video browser suite covers all three selected videos and source restrictions.
+
+
+## M2 REBELS Relay Dance — owner-selected video
+
+On 2026-11-17 the owner requested `mkJRSPYjX8k`. YouTube Data API v3 verification run 44057788105 confirmed `[릴레이댄스] 이세계아이돌(ISEGYE IDOL) - REBELS (4K)`, published by M2 (`UCTQVIXvcHrR9jYoJ6qaBAow`) on 2026-11-16 at 18:00:17 KST (09:00:17Z), duration 3:18, public and embeddable. Checked 2026-11-17T09:41:08.048557+00:00. The description identifies REBELS Relay Dance; this is public metadata verification, not full audiovisual playback review. The 4K label is explicitly based on the source title, not independently measured resolution.
+
+`catalog/m2-relay-videos.json` and `scripts/m2_relay_videos.py` allow only the requested video, separate from the unchanged STUDIO CHOOM and MBC selections. The selected M2 channel is not added to scheduled whole-channel collection. Composition adds one video in Contents > External, Music > Videos and the REBELS related-performance section. Original MV, songs, album tracks/statistics, artist channel counters, collection schedules, login/access rules and pinned review sources are unchanged. Pre-upload browser tests verify the four selected external videos, original links, publication dates, relay classification, source labels, mobile layouts and preservation after runtime music refresh.

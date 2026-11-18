@@ -97,6 +97,9 @@ def verify_public(payload, report):
     for path in protected:
         d.require(d.http(d.ORIGIN + path) == (401, b'Administrator access required'), 'Admin diagnostics exposed: ' + path)
     report['anonymousAdminDiagnosticsBlocked'] = True
+    from batch_monitor_storage import verify_anonymous
+    verify_anonymous()
+    report['batchMonitorAnonymousUIAndAPIDenied'] = True
     return now
 
 
@@ -202,6 +205,16 @@ def deploy(remote, payload, commit, client_id, report):
         d.require(remote.snapshot() == protected, 'Protected site changed')
         unchanged = {url: d.http(url) == value for url, value in baseline.items()}
         d.require(all(unchanged.values()), 'Other site response changed')
+        catalog_path=Path('catalog-publication.json')
+        if catalog_path.is_file():
+            catalog_raw=catalog_path.read_bytes();catalog=json.loads(catalog_raw)
+            d.require(catalog.get('buildCommit')==commit and catalog.get('mode')=='production', 'Catalog build identity mismatch')
+            hashes=catalog.get('bundleFiles',{})
+            d.require(bool(hashes) and all(name in payload and d.digest(payload[name])==value for name,value in hashes.items()),
+                      'Catalog report differs from uploaded application')
+            report['catalogEvidenceSha256']=d.digest(catalog_raw)
+            report['catalogBundleVerified']=True
+        report['verifiedAt']=datetime.now(timezone.utc).isoformat()
         report.update(status='deployed_and_verified', privatePathsBlocked=True, protectedFilesUnchanged=True,
                       existingSitesUnchanged=unchanged, sharedRouterModified=False, administratorPrecreated=False,
                       accountStoreWrittenByDeployment=False)

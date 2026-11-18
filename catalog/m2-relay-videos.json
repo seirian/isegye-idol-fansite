@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "selection": "owner_requested_video_ids",
+  "source": "YouTube Data API v3 videos.list",
+  "evidenceRun": 44057788105,
+  "checkedAt": "2026-11-17T09:41:08.048557+00:00",
+  "channel": {
+    "key": "m2-relay-selected",
+    "name": "M2",
+    "channelId": "UCTQVIXvcHrR9jYoJ6qaBAow",
+    "url": "https://www.youtube.com/channel/UCTQVIXvcHrR9jYoJ6qaBAow"
+  },
+  "videos": [
+    {
+      "id": "mkJRSPYjX8k",
+      "title": "[릴레이댄스] 이세계아이돌(ISEGYE IDOL) - REBELS (4K)",
+      "publishedAt": "2026-11-16T09:00:17Z",
+      "durationSeconds": 198,
+      "privacyStatus": "public",
+      "embeddable": true,
+      "type": "external_performance",
+      "performanceKind": "relay_dance",
+      "relatedSong": "rebels",
+      "qualityLabel": "4K",
+      "qualityBasis": "source_title"
+    }
+  ]
+}

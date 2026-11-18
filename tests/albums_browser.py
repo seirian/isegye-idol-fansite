@@ -100,12 +100,9 @@ try:
       page.goto(url+'#/song/'+sid,wait_until='domcontentloaded');expect(page.locator('.ai-peaks')).to_be_visible()
       expected=[];sources=[]
       for key in expected_keys:
-        origin=record.get('melonPeaks',{});secondary=record.get('melonPeakFallback',{})
-        if key=='daily' and type(origin.get('dailyBestRank')) is int:
-          expected.append(str(origin['dailyBestRank'])+'위');sources.append('melon_original')
-        else:
-          rank=secondary.get('records',{}).get(key,{}).get('rank')
-          expected.append(str(rank)+'위' if type(rank) is int else '—');sources.append('secondary_observation' if type(rank) is int else 'unknown')
+        secondary=record.get('melonPeakFallback',{})
+        rank=secondary.get('records',{}).get(key,{}).get('rank')
+        expected.append(str(rank)+'위' if type(rank) is int else '—');sources.append('guyso_observation' if secondary else 'unknown')
       check(f'{sid}: seven displayed peaks match collected record and provenance',page.locator('.ai-peak strong').all_text_contents()==expected and page.locator('.ai-peak').evaluate_all('(cells)=>cells.map(c=>c.dataset.sourceType)')==sources)
     page.goto(url+'#/song/but-you-want-more',wait_until='domcontentloaded')
     check('video-only track has no invented peak',page.locator('.ai-peak strong').all_text_contents()==['—']*7)

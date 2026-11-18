@@ -1,0 +1,115 @@
+name: Batch monitoring - administrator-only production status
+on:
+  schedule:
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - monitoring/**
+      - scripts/*batch_monitor*.py
+      - tests/*batch_monitor*
+      - .github/workflows/batch-monitoring.yml
+  workflow_run:
+    workflows:
+      - Albums - hourly verified metadata and chart refresh
+      - Music - daily verified catalog refresh
+      - Schedule - every 2 hours permitted-source refresh
+      - Content - verified channel video catalog
+      - Playground - daily verified question bank
+      - History - weekly verified activity refresh
+      - Production - isolated inour SFTP deployment
+      - Batches - verified outcome recovery watchdog
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+# At most one monitor run and one replacement pending run. Never cancel a writer.
+concurrency:
+  group: isegye-monitoring-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://isegye-idol.kr/ops/batches/
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Validate authoritative main completion; include failed and cancelled outcomes
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python scripts/batch_monitor_trigger.py
+      - name: Respect existing pause and bind exact current main
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          test "$ISEGYE_MONITOR_PAUSED" != true
+          commit="$(git rev-parse HEAD)"
+          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$commit"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+      - name: Install isolated transport without new credentials
+        run: |
+          python -m venv /tmp/batch-monitor-tools
+          /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
+      - name: Verify read-only projection and bounded storage
+        run: |
+          /tmp/batch-monitor-tools/bin/python -m unittest discover -s tests -p 'test_batch_monitor*.py' -v
+          php -l monitoring/BatchMonitor.php
+          node --check monitoring/monitor.js
+      - name: Read current execution and verified publication evidence
+        id: inspection
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_COMMIT: ${{ steps.source.outputs.commit }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+        run: /tmp/batch-monitor-tools/bin/python scripts/batch_monitor_snapshot.py
+      - name: Recheck main before snapshot publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_COMMIT: ${{ steps.source.outputs.commit }}
+        run: test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$MONITOR_COMMIT"
+      - name: Refresh private monitor snapshot only; preserve runtime and all data feeds
+        env:
+          MONITOR_COMMIT: ${{ steps.source.outputs.commit }}
+          MONITOR_PRODUCTION_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+        run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py --refresh-only
+      - name: Fail visibly when monitoring inspection is incomplete, even if diagnostics were published
+        env: {INSPECTION_OUTCOME: '${{ steps.inspection.outcome }}'}
+        run: |
+          python -c "import json,os; r=json.load(open('batch-monitor-inspection.json')); assert os.getenv('INSPECTION_OUTCOME')=='success' and r['collectorHealth']['state']=='ok', 'Monitoring inspection incomplete; historical verified outcomes were preserved'"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-monitor-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            batch-monitor-deployment.json
+            batch-monitor-inspection.json
+          retention-days: 30
+          if-no-files-found: warn
+# Never upload monitoring-dist/data.json: it is administrator-only operational data.

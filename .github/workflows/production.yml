@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
@@ -85,6 +86,7 @@ jobs:
         run: |
           /tmp/archive-browser-tests/bin/python scripts/promote_albums.py
           /tmp/archive-browser-tests/bin/python tests/albums_production_browser.py
+          /tmp/archive-browser-tests/bin/python tests/guyso_peaks_browser.py
           /tmp/archive-browser-tests/bin/python tests/external_videos_browser.py
           /tmp/archive-browser-tests/bin/python tests/music_beginning_browser.py
           /tmp/archive-browser-tests/bin/python tests/admin_visibility_browser.py
@@ -98,6 +100,12 @@ jobs:
           /tmp/archive-browser-tests/bin/python tests/playground_bank_host_browser.py
       - name: Verify album feed and image authorization before any upload
         run: /tmp/archive-browser-tests/bin/python tests/albums_feed_browser.py
+      - name: Build permanent administrator-only monitoring route and test access
+        run: |
+          python scripts/build_batch_monitor_host.py
+          /tmp/archive-browser-tests/bin/python tests/batch_monitor_host_browser.py
+      - name: Record exact catalog evidence from the built application
+        run: /tmp/archive-browser-tests/bin/python scripts/batch_monitor_catalog.py
       - name: Activate Google access without pre-registering the administrator
         run: /tmp/archive-browser-tests/bin/python -u scripts/deploy_verified_albums.py
         env:
@@ -105,6 +113,35 @@ jobs:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
           ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
+      - name: Collect initial production monitoring snapshot without batch actions
+        run: /tmp/archive-browser-tests/bin/python scripts/batch_monitor_snapshot.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+      - name: Install verified private monitor without changing operating UI or feeds
+        run: /tmp/archive-browser-tests/bin/python scripts/deploy_batch_monitor.py
+        env:
+          MONITOR_PRODUCTION_ENABLED: 'true'
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+      - name: Preserve small verified production evidence for read-only monitoring
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            auth-deployment.json
+            catalog-publication.json
+            batch-monitor-deployment.json
+          retention-days: 90
+          if-no-files-found: warn
       - name: Archive deployed source
         if: always()
         run: git archive HEAD -o release-source.tar

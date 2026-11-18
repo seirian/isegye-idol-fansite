@@ -122,8 +122,8 @@ class Bank(unittest.TestCase):
     with self.assertRaises(p.d.Stop):p.guard()
   with patch.dict(os.environ,{'GITHUB_REPOSITORY':'seirian/isegye-idol-fansite','GITHUB_REF':'refs/heads/main','ISEGYE_PLAYGROUND_PAUSED':'true'}):
    with self.assertRaises(p.d.Stop):p.guard()
- def test_daily_watchdog_uses_korean_0737(self):
-  due=w.due_slot('playground',self.now).astimezone(b.KST);self.assertEqual(due.strftime('%H:%M'),'07:37')
+ def test_daily_watchdog_uses_korean_0800(self):
+  due=w.due_slot('playground',self.now).astimezone(b.KST);self.assertEqual(due.strftime('%H:%M'),'08:00')
   self.assertFalse(w.evidence_ok('playground',{},due,self.now))
   pub={'status':'published','generatedAt':self.now.isoformat(),'readbackAt':self.now.isoformat(),'verifiedReadback':True,'bankVerified':True,'questionCount':32}
   self.assertTrue(w.evidence_ok('playground',{'playground-publication.json':pub},due,self.now));pub['verifiedReadback']=False;self.assertFalse(w.evidence_ok('playground',{'playground-publication.json':pub},due,self.now))
