@@ -4,6 +4,10 @@ on:
     # UTC 22-23 and 00-15 = KST 07-23 and 00; avoid GitHub's busy :00.
     - cron: '11,37 0-15,22-23 * * *'
   workflow_dispatch:
+  # One-time bootstrap after the workflow itself is promoted to main.
+  push:
+    branches: [main]
+    paths: [.github/workflows/melon-chart-capture.yml]
 permissions:
   contents: read
 concurrency:
