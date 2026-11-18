@@ -32,9 +32,17 @@ with sync_playwright() as p:
     stage(page,f"home-{width}")
     page.locator('a[href="#/arcade"]').first.click()
     ok(page.get_by_role("heading",name="우당탕 이세돌").count()>=1,f"arcade exists {width}")
+    ok(page.locator(".arcade-member-card img").count()==6,f"six illustrated member cards {width}")
+    page.wait_for_function("() => [...document.querySelectorAll('.arcade-member-card img')].every(x => x.complete && x.naturalWidth > 50)",timeout=12000)
+    ok(page.locator(".arcade-cover-art img").count()==6,f"illustrated arcade splash {width}")
+
     page.locator('[data-action="practice"]').click()
     page.wait_for_timeout(930)
     ok(page.locator("#stage-input .tile.bad").count()>=1,f"EMP challenge active {width}")
+    ok(page.locator(".arcade-stage-portrait").count()==1 and page.locator(".arcade-scene-bg").count()==1,f"portrait and scene inside active game {width}")
+    page.wait_for_function("() => document.querySelector('.arcade-stage-portrait')?.naturalWidth > 50 && document.querySelector('.arcade-scene-bg')?.naturalWidth > 100",timeout=12000)
+    ok(page.locator(".arcade-timeline-item").count()==6,f"stage timeline is visible {width}")
+
     page.locator("#stage-input .tile.bad").first.click()
     ok(page.locator("#stage-input .tile.bad").count()>=1,f"EMP acts {width}")
     stage(page,f"arcade-{width}")
