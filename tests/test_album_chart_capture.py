@@ -62,7 +62,7 @@ class CaptureReliability(unittest.TestCase):
         old = HOUR - timedelta(hours=1)
         with patch.object(producer, 'chart_rows', return_value=(ranking, old.isoformat())):
             stale = producer.capture(at=AT, reader=lambda url: b'public-chart')
-        self.assertEqual(stale['status'], 'partial')
+        self.assertEqual(stale['status'], 'failed')
         self.assertEqual(set(stale['errors']), set(producer.KINDS))
         self.assertFalse(stale['charts'])
 
