@@ -20,11 +20,13 @@ def payload(directory,commit):
     for name in ('review.html','build-info.json'):
         p=folder/name;d.require(p.is_file() and not p.is_symlink(),'Missing artifact')
     html=(folder/'review.html').read_bytes();meta=json.loads((folder/'build-info.json').read_text())
-    d.require(30000<len(html)<500000,'Artifact size')
+    d.require(30000<len(html)<850000,'Artifact size')
     d.require(meta.get('branch')=='feature/isegye-fangames' and meta.get('commit')==commit and meta.get('mode')=='fangames-preview','Artifact identity')
     d.require(meta.get('counts',{}).get('games')==3 and meta['counts'].get('missions')==12 and meta['counts'].get('characters')==6 and meta['counts'].get('puzzles')==8,'Three complete games required')
     d.require(meta.get('productionWrites') is False and meta.get('liveFeedsConnected') is False and meta.get('externalMediaUsed') is False,'Preview isolation')
     d.require(meta.get('storageKey')=='isegye:review:fangames:v1','Storage namespace')
+    d.require(meta.get('portraitsPacked')==6 and 'review/portraits/ine.webp' in meta.get('sourceHashes',{}),'Member art missing')
+    d.require('img-src data:' in html.decode(),'Offline images must have CSP data policy')
     text=html.decode();d.require('이세돌 팬게임' in text and 'noindex,nofollow,noarchive' in text and "connect-src 'none'" in text and "media-src 'none'" in text and "'unsafe-inline'" not in text and "'unsafe-eval'" not in text,'CSP policy')
     for tag in ('script','style'):
         blocks=re.findall('<'+tag+'>([\s\S]*?)</'+tag+'>',text);d.require(len(blocks)==1,'Unexpected inline block')
