@@ -19,6 +19,11 @@ import build_rpg as b
 
 class RPGBuilderTests(unittest.TestCase):
     def setUp(self):
+        # Fixtures exercise review packaging even when the runner is on main.
+        # The dedicated branch guard test overrides these values explicitly.
+        environment = patch.dict(os.environ, {"GITHUB_REF": "refs/heads/feature/ipari-rpg", "DEPLOY_ENV": "review"})
+        environment.start()
+        self.addCleanup(environment.stop)
         self.temporary = tempfile.TemporaryDirectory(prefix="rpg-build-test-")
         self.root = Path(self.temporary.name).resolve()
         self.addCleanup(self.temporary.cleanup)
