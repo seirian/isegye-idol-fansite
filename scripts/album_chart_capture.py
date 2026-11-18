@@ -50,7 +50,8 @@ def capture(at=None, reader=None, run_id=0, attempt=1):
                                        'responseSha256': hashlib.sha256(raw).hexdigest(), 'rows': rows}
         except Exception as exc:
             result['errors'][kind] = type(exc).__name__
-    result['status'] = 'complete' if set(result['charts']) == set(KINDS) else 'partial'
+    result['status'] = ('complete' if set(result['charts']) == set(KINDS) else
+                        'partial' if result['charts'] else 'failed')
     return result
 
 
