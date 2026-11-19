@@ -10,6 +10,10 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import socket
+import ssl
+import time
+import urllib.error
 
 from album_hourly import KINDS, ROOT, allowed, clock, slot
 from collect_album_domestic import CHARTS, chart_rows, fetch
@@ -20,11 +24,32 @@ OUTPUT = ROOT / 'melon-chart-capture.json'
 SOURCE_TYPE = 'melon_public_full_chart'
 
 
+def failure_class(exc):
+    """Stable diagnostics without source bodies, request URLs or credentials."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return 'http_status_' + str(exc.code)
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        if isinstance(reason, socket.gaierror):
+            return 'dns'
+        if isinstance(reason, (socket.timeout, TimeoutError)):
+            return 'timeout'
+        if isinstance(reason, ssl.SSLError):
+            return 'tls'
+        return 'network'
+    if isinstance(exc, (socket.timeout, TimeoutError)):
+        return 'timeout'
+    if isinstance(exc, ValueError):
+        return 'source_validation'
+    return type(exc).__name__
+
+
 def capture(at=None, reader=None, run_id=0, attempt=1):
     at = at or datetime.now(timezone.utc)
     if at.tzinfo is None:
         raise ValueError('An aware clock is required')
     at = at.astimezone(timezone.utc)
+    supplied_reader = reader is not None
     reader = reader or (lambda url: fetch(url, binary=True))
     result = {'schemaVersion': 1, 'repository': REPOSITORY, 'workflow': WORKFLOW,
               'runId': run_id, 'runAttempt': attempt, 'checkedAt': at.isoformat(),
@@ -35,7 +60,15 @@ def capture(at=None, reader=None, run_id=0, attempt=1):
     for kind in KINDS:
         _, url, limit = CHARTS[kind]
         try:
-            raw = reader(url)
+            try:
+                raw = reader(url)
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                # One bounded transport retry only; never retry HTTP rejection,
+                # identity/schema failures or a caller-provided reader.
+                if supplied_reader or isinstance(exc, urllib.error.HTTPError):
+                    raise
+                time.sleep(2)
+                raw = reader(url)
             if not isinstance(raw, bytes) or not 0 < len(raw) <= 4_000_000:
                 raise ValueError('Invalid chart response bytes')
             ranks, source_at = chart_rows(raw.decode('utf-8', errors='replace'), 'melon', at, limit)
@@ -50,6 +83,7 @@ def capture(at=None, reader=None, run_id=0, attempt=1):
                                        'responseSha256': hashlib.sha256(raw).hexdigest(), 'rows': rows}
         except Exception as exc:
             result['errors'][kind] = type(exc).__name__
+            result.setdefault('errorClasses', {})[kind] = failure_class(exc)
     result['status'] = ('complete' if set(result['charts']) == set(KINDS) else
                         'partial' if result['charts'] else 'failed')
     return result
@@ -65,7 +99,7 @@ def main():
     OUTPUT.write_text(json.dumps(result, ensure_ascii=False, separators=(',', ':')) + '\n')
     print(json.dumps({'status': result['status'], 'checkedAt': result['checkedAt'],
                       'sourceAt': {k: v['sourceAt'] for k, v in result['charts'].items()},
-                      'errors': result['errors']}, ensure_ascii=False))
+                      'errors': result['errors'], 'errorClasses': result.get('errorClasses', {})}, ensure_ascii=False))
     return 0 if result['status'] in ('complete', 'scheduled_night_pause') else 1
 
 

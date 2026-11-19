@@ -12,7 +12,6 @@ import base64, hashlib, json, os, re, secrets, socket, subprocess, sys
 import urllib.error, urllib.parse, urllib.request
 import inour_sftp as d
 import batch_watchdog as policy
-from batch_monitor_trigger import COMPLETIONS, validate
 from deploy_verified_albums import VerifiedTransferRemote
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -160,13 +159,10 @@ def main():
     password=os.environ.pop('ISEGYE_SFTP_PASSWORD','')
     try:
         if os.getenv('GITHUB_REPOSITORY')!=REPO or os.getenv('GITHUB_REF')!='refs/heads/main':raise ValueError('Main required')
+        # Completed workflows are not administrator requests; only explicit/scheduled wake-ups are allowed.
+        if os.getenv('GITHUB_EVENT_NAME') not in ('schedule','workflow_dispatch','push'):raise ValueError('Unsupported worker event')
         api=GitHub();commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
         if not re.fullmatch('[0-9a-f]{40}',commit):raise ValueError('Invalid checkout commit')
-        if os.getenv('GITHUB_EVENT_NAME')=='workflow_run':
-            event=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
-            # Authenticate the completion before deciding whether this wake-up is stale.
-            COMPLETIONS['Batch monitoring - administrator-only production status']='batch-monitoring.yml'
-            validate(event,lambda rid:api('actions/runs/'+str(rid)))
         current=api('git/ref/heads/main')['object']['sha']
         event_sha=os.getenv('GITHUB_SHA','')
         if not re.fullmatch('[0-9a-f]{40}',current) or (event_sha and not re.fullmatch('[0-9a-f]{40}',event_sha)):
