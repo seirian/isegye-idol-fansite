@@ -6,19 +6,6 @@ on:
   push:
     branches: [main]
     paths: [.github/workflows/batch-manual.yml, scripts/batch_manual_worker.py]
-  workflow_run:
-    workflows:
-      - Albums - hourly verified metadata and chart refresh
-      - Music - daily verified catalog refresh
-      - Schedule - every 2 hours permitted-source refresh
-      - Content - verified channel video catalog
-      - Playground - daily verified question bank
-      - History - weekly verified activity refresh
-      - Production - isolated inour SFTP deployment
-      - Batches - verified outcome recovery watchdog
-      - Batch monitoring - administrator-only production status
-    types: [completed]
-    branches: [main]
 permissions:
   contents: read
   actions: write
@@ -27,10 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   process:
-    if: >-
-      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
     environment: production
     runs-on: ubuntu-24.04
     timeout-minutes: 8

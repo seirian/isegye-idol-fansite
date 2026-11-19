@@ -133,7 +133,7 @@ class WorkerPolicy(unittest.TestCase):
     def test_superseded_main_is_safe_noop(self):
         with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
              patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
-                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic','GITHUB_EVENT_NAME':'schedule'}),\
              patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'b'*40}}),\
              patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
              patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
@@ -145,17 +145,35 @@ class WorkerPolicy(unittest.TestCase):
     def test_stale_event_sha_is_safe_noop(self):
         with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
              patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
-                                   'GITHUB_SHA':'b'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+                                   'GITHUB_SHA':'b'*40,'ISEGYE_SFTP_PASSWORD':'synthetic','GITHUB_EVENT_NAME':'schedule'}),\
              patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'a'*40}}),\
              patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
              patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
             self.assertEqual(worker.main(),0)
             report=json.loads((Path(tmp)/'batch-manual-worker.json').read_text())
         self.assertEqual(report['reason'],'main_changed_before_processing')
+    def test_no_completed_workflow_wakes_the_manual_worker(self):
+        config=(ROOT/'.github/workflows/batch-manual.yml').read_text()
+        self.assertNotIn('workflow_run:',config)
+        self.assertIn("cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'",config)
+        self.assertIn('workflow_dispatch:',config)
+
+    def test_unexpected_completion_event_cannot_contact_control_queue(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
+                                    'GITHUB_EVENT_NAME':'workflow_run','ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+             patch.object(worker,'GitHub',side_effect=AssertionError('never inspect')) as github,\
+             patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
+            self.assertEqual(worker.main(),1)
+            report=json.loads((Path(tmp)/'batch-manual-worker.json').read_text())
+        self.assertEqual(report['errorCode'],'ValueError')
+        self.assertFalse(report['realUserRequestCreated'])
+        github.assert_not_called()
+
     def test_invalid_main_identity_is_real_failure(self):
         with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
              patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
-                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic','GITHUB_EVENT_NAME':'schedule'}),\
              patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'invalid'}}),\
              patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
              patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
