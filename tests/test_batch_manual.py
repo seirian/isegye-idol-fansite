@@ -130,4 +130,38 @@ class WorkerPolicy(unittest.TestCase):
         def api(path,**kw):return {} if kw.get('method')=='POST' else self.api(path)
         result,calls=self.process(api);self.assertEqual(result['unconfirmed'],1);self.assertNotIn('runId',calls[-1])
 
+    def test_superseded_main_is_safe_noop(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
+                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+             patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'b'*40}}),\
+             patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
+             patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
+            self.assertEqual(worker.main(),0)
+            report=json.loads((Path(tmp)/'batch-manual-worker.json').read_text())
+        self.assertEqual(report['status'],'superseded')
+        self.assertFalse(report['realUserRequestCreated'])
+        self.assertNotIn('runtime',report)
+    def test_stale_event_sha_is_safe_noop(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
+                                   'GITHUB_SHA':'b'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+             patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'a'*40}}),\
+             patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
+             patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
+            self.assertEqual(worker.main(),0)
+            report=json.loads((Path(tmp)/'batch-manual-worker.json').read_text())
+        self.assertEqual(report['reason'],'main_changed_before_processing')
+    def test_invalid_main_identity_is_real_failure(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(worker,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':worker.REPO,'GITHUB_REF':'refs/heads/main',
+                                   'GITHUB_SHA':'a'*40,'ISEGYE_SFTP_PASSWORD':'synthetic'}),\
+             patch.object(worker,'GitHub',return_value=lambda _: {'object':{'sha':'invalid'}}),\
+             patch.object(worker.subprocess,'check_output',return_value='a'*40+'\n'),\
+             patch.object(worker.socket,'create_connection',side_effect=AssertionError('never connect')):
+            self.assertEqual(worker.main(),1)
+            report=json.loads((Path(tmp)/'batch-manual-worker.json').read_text())
+        self.assertEqual(report['status'],'failed')
+        self.assertEqual(report['errorCode'],'ValueError')
+
 if __name__=='__main__':unittest.main()

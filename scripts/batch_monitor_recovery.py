@@ -112,9 +112,12 @@ def main():
             report['state']='paused'
         else: report.update(recover(API(),datetime.now(timezone.utc),apply='--apply' in sys.argv))
     except Exception as exc: report['errorCode']=type(exc).__name__
+    # A validated dispatch is a successful request, never evidence of recovery.
+    report['recoveryRequestSent'] = report['state'] == 'dispatched'
+    report['monitorVerified'] = report['state'] == 'healthy'
     (ROOT/'batch-monitor-recovery.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
-    return 0 if report['state'] in ('healthy','paused','active','cooldown') else 1
+    return 0 if report['state'] in ('healthy','paused','active','cooldown','dispatched') else 1
 
 
 if __name__=='__main__': sys.exit(main())

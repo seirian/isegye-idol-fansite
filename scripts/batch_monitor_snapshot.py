@@ -279,6 +279,13 @@ def inspect(kind, at, head, getter):
             row['inspectionError'] = 'incomplete_execution_history'
             row['note'] = '이력 조회가 불완전하여 최신 실행·정상 여부를 확정하지 않습니다.'
             return row
+        # The new main build must not be judged against the previous release's
+        # publication artifact. Keep it pending until its own job completes.
+        if (kind == 'production' and latest and latest.get('head_sha') == head and
+                latest.get('status') in policy.ACTIVE):
+            row['dataState'] = 'running'
+            row['note'] = '현재 main 배포가 진행 중입니다. 해당 커밋의 서버 반영 및 검증을 기다립니다.'
+            return row
         success = next((r for r in runs if r.get('status') == 'completed' and r.get('conclusion') == 'success'), None)
         if not success:
             row['note'] = '검증 가능한 성공 실행이 없습니다.'
@@ -396,7 +403,18 @@ def attach_catalog_publication(doc, at, getter):
     """Bind catalog freshness to the exact verified deployed build, not a green job."""
     row=next(r for r in doc['batches'] if r['key']=='catalog')
     production=next(r for r in doc['batches'] if r['key']=='production')
-    if row.get('paused') or not row.get('listingComplete') or production.get('dataState')!='healthy':
+    if row.get('paused') or not row.get('listingComplete'):
+        return
+    # This is a known publication wait, not an inspector failure or a verified
+    # catalog release. No old successful deployment may certify the new commit.
+    prod_run = production.get('run') or {}
+    if (production.get('dataState') == 'running' and prod_run.get('status') in policy.ACTIVE and
+            prod_run.get('commit') == doc['mainCommit']):
+        row['dataState'] = 'running'
+        row['note'] = '현재 main 운영 배포가 진행 중입니다. 새 콘텐츠 게시 증거 검증을 기다립니다.'
+        row['state'] = row_state(row)
+        return
+    if production.get('dataState') != 'healthy':
         return
     evidence=production.get('evidenceRun') or {}
     try:

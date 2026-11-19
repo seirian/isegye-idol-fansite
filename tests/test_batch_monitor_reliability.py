@@ -37,12 +37,44 @@ class HistoryAndHealth(unittest.TestCase):
         doc=fixture_snapshot()
         for row in doc['batches']:row.update(dataState='attention',listingComplete=True)
         self.assertEqual(h.inspection_health(doc)['state'],'ok')
+    def test_unknown_publication_does_not_count_as_failed_read(self):
+        doc=fixture_snapshot()
+        for row in doc['batches']:
+            row.update(dataState='healthy',listingComplete=True)
+            row.pop('inspectionError',None)
+        doc['batches'][3]['dataState']='unknown'
+        result=h.inspection_health(doc)
+        self.assertEqual((result['state'],result['inspected'],result['failed'],result['unresolved']),('ok',8,0,1))
+        self.assertIsNone(h.verified_summary(doc['batches'][3],h.clock(doc['checkedAt'])))
     def test_partial_api_failure_is_degraded(self):
         doc=fixture_snapshot()
         for row in doc['batches']:row.update(dataState='healthy',listingComplete=True)
         doc['batches'][0].update(dataState='unknown',inspectionError='execution_query_failed',listingComplete=False)
         quality=h.inspection_health(doc)
         self.assertEqual((quality['state'],quality['failed'],quality['inspected']),('degraded',1,7))
+    def test_current_main_deployment_is_pending_without_old_artifact(self):
+        at=datetime.now(timezone.utc);head='a'*40
+        current={'id':123,'run_attempt':1,'head_sha':head,'status':'in_progress',
+                 'created_at':at.isoformat(),'run_started_at':at.isoformat()}
+        previous={**current,'id':122,'head_sha':'b'*40,'status':'completed','conclusion':'success'}
+        with patch.dict(os.environ,{'PRODUCTION_PAUSED':''}),patch.object(m,'listing',return_value=([current,previous],True)),\
+             patch.object(m,'extra_artifact',side_effect=AssertionError('no old artifact reads')):
+            row=m.inspect('production',at,head,lambda _: {'jobs':[],'total_count':0})
+        self.assertEqual((row['state'],row['dataState'],row['listingComplete']),('running','running',True))
+        self.assertNotIn('inspectionError',row)
+        self.assertNotIn('evidenceRun',row)
+    def test_catalog_waits_for_current_main_deployment(self):
+        at=datetime.now(timezone.utc);doc=fixture_snapshot(at)
+        production=next(row for row in doc['batches'] if row['key']=='production')
+        production['dataState']='running'
+        production['run']={'status':'in_progress','commit':doc['mainCommit']}
+        catalog=next(row for row in doc['batches'] if row['key']=='catalog')
+        catalog.update(paused=False,listingComplete=True,dataState='unknown')
+        with patch.object(m,'extra_artifact',side_effect=AssertionError('no release verification yet')):
+            m.attach_catalog_publication(doc,at,None)
+        self.assertEqual(catalog['dataState'],'running')
+        self.assertIn('배포가 진행 중',catalog['note'])
+        self.assertNotIn('inspectionError',catalog)
     def test_history_does_not_copy_arbitrary_fields(self):
         at=datetime.now(timezone.utc)
         record={'observedAt':at.isoformat(),'kind':'publication','token':'must-not-copy','privateUser':'must-not-copy'}
@@ -127,6 +159,23 @@ class Recovery(unittest.TestCase):
         with patch.object(r,'inspect',return_value={'state':'dispatch'}),patch.object(r,'API') as api:
             self.assertEqual(r.recover(api,datetime.now(timezone.utc),True)['state'],'dispatched')
             api.assert_called_once_with(r.PREFIX+'/dispatches',method='POST',payload={'ref':'main'})
+    def test_dispatch_succeeds_as_request_but_not_verified_monitor(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(r,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':m.REPO,'GITHUB_REF':'refs/heads/main'}),\
+             patch.object(r,'recover',return_value={'state':'dispatched','reason':'monitor_only_recovery_requested'}):
+            self.assertEqual(r.main(),0)
+            result=json.loads((Path(tmp)/'batch-monitor-recovery.json').read_text())
+        self.assertEqual(result['state'],'dispatched')
+        self.assertTrue(result['recoveryRequestSent'])
+        self.assertFalse(result['monitorVerified'])
+    def test_exhausted_recovery_budget_still_fails(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(r,'ROOT',Path(tmp)),\
+             patch.dict(os.environ,{'GITHUB_REPOSITORY':m.REPO,'GITHUB_REF':'refs/heads/main'}),\
+             patch.object(r,'recover',return_value={'state':'retry_budget','reason':'two_monitor_dispatches_per_hour'}):
+            self.assertEqual(r.main(),1)
+            result=json.loads((Path(tmp)/'batch-monitor-recovery.json').read_text())
+        self.assertFalse(result['recoveryRequestSent'])
+        self.assertFalse(result['monitorVerified'])
     def test_partial_or_corrupt_read_never_dispatches(self):
         with patch.object(r,'inspect',side_effect=ValueError('incomplete')),patch.object(r,'API') as api:
             with self.assertRaises(ValueError):r.recover(api,datetime.now(timezone.utc),True)

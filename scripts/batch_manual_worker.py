@@ -161,12 +161,21 @@ def main():
     try:
         if os.getenv('GITHUB_REPOSITORY')!=REPO or os.getenv('GITHUB_REF')!='refs/heads/main':raise ValueError('Main required')
         api=GitHub();commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-        if api('git/ref/heads/main')['object']['sha']!=commit:raise ValueError('Main changed')
+        if not re.fullmatch('[0-9a-f]{40}',commit):raise ValueError('Invalid checkout commit')
         if os.getenv('GITHUB_EVENT_NAME')=='workflow_run':
             event=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
-            # Use the existing authoritative same-repository completion validator.
+            # Authenticate the completion before deciding whether this wake-up is stale.
             COMPLETIONS['Batch monitoring - administrator-only production status']='batch-monitoring.yml'
             validate(event,lambda rid:api('actions/runs/'+str(rid)))
+        current=api('git/ref/heads/main')['object']['sha']
+        event_sha=os.getenv('GITHUB_SHA','')
+        if not re.fullmatch('[0-9a-f]{40}',current) or (event_sha and not re.fullmatch('[0-9a-f]{40}',event_sha)):
+            raise ValueError('Invalid main or event identity')
+        if current!=commit or (event_sha and event_sha!=commit):
+            # A new main commit superseded this queued wake-up. Never claim requests,
+            # open the server's control queue, or use a dispatch credential.
+            report.update(status='superseded',reason='main_changed_before_processing')
+            return 0
         if not password:raise ValueError('Transport credential missing')
         import paramiko
         sock=socket.create_connection((d.HOST,d.PORT),timeout=15);resources.append(sock)

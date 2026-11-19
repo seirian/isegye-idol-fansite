@@ -20,7 +20,10 @@ def inspection_health(doc):
     rows = doc['batches']
     failed = sum(bool(r.get('inspectionError')) or not r.get('listingComplete', False) for r in rows)
     missing = sum(r.get('dataState') == 'unknown' for r in rows)
-    state = 'failed' if failed == len(rows) or missing == len(rows) else 'degraded' if failed or missing else 'ok'
+    # An unknown publication outcome is not itself a failed inspection: the verified
+    # read may be complete while a new release is still awaiting publication.
+    # Count unknown outcomes separately; never treat them as verified successes.
+    state = 'failed' if failed == len(rows) else 'degraded' if failed else 'ok'
     # A batch failure is an observed outcome, NOT an inspector failure.
     return {'state': state, 'checkedAt': doc['checkedAt'], 'total': len(rows),
             'inspected': len(rows)-failed, 'failed': failed, 'unresolved': missing,
