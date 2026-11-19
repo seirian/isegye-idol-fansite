@@ -48,7 +48,7 @@ jobs:
           GITHUB_REF=refs/heads/feature/fanmade DEPLOY_ENV=preview python scripts/build_fanmade.py
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Install isolated build and browser tools
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
           python -m venv /tmp/archive-browser-tests
           /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 tinycss2==1.4.0 beautifulsoup4==4.14.3 cryptography

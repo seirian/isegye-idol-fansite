@@ -47,5 +47,7 @@ def verify(check, page, install, fixture, out):
     observed_failure['collectorHealth']=inspection_health(observed_failure)
     install(observed_failure);page.locator('#refresh').click()
     expect(page.locator('#health')).to_contain_text('모니터링 자료 수집 완료')
+    # The prior fixture has the same health heading: wait for the new response/render.
+    expect(page.locator('#rows').get_by_text('반영 확인 필요',exact=True)).to_have_count(8)
     check('monitor actual batch failures not called inspector outage',page.locator('#rows').get_by_text('반영 확인 필요',exact=True).count()==8)
     install(fixture(datetime.now(timezone.utc)));page.locator('#refresh').click();expect(page.locator('#refresh')).to_be_enabled()
