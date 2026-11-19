@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 import hashlib
+from urllib.error import URLError
 import json
 import sys
 import unittest
@@ -77,6 +78,31 @@ class CaptureReliability(unittest.TestCase):
         self.assertEqual(result['status'], 'partial')
         self.assertIn('melon_hot100', result['errors'])
         self.assertEqual(set(result['charts']), {'melon_top100'})
+
+    def test_transient_public_transport_retried_once_without_fake_data(self):
+        ranking = {song: idx for idx, song in enumerate(IDS, 1)}
+        attempts = {}
+        def source(url, binary=False):
+            attempts[url] = attempts.get(url, 0) + 1
+            if 'hot100' in url and attempts[url] == 1:
+                raise URLError(TimeoutError('transient'))
+            return b'public-chart'
+        with patch.object(producer, 'fetch', side_effect=source), \
+             patch.object(producer, 'chart_rows', return_value=(ranking, HOUR.isoformat())), \
+             patch.object(producer.time, 'sleep') as sleep:
+            result = producer.capture(at=AT)
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(attempts[producer.CHARTS['melon_hot100'][1]], 2)
+        self.assertEqual(sleep.call_count, 1)
+        self.assertFalse(result['errors'])
+
+    def test_network_diagnostics_never_expose_internal_error_body(self):
+        with patch.object(producer, 'fetch', side_effect=URLError('private diagnostic URL')), \
+             patch.object(producer.time, 'sleep'):
+            result = producer.capture(at=AT)
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(set(result['errorClasses'].values()), {'network'})
+        self.assertNotIn('private diagnostic URL', json.dumps(result))
 
     def test_night_pause_cannot_produce_artificial_rank(self):
         paused = datetime(2026, 11, 18, 19, 15, tzinfo=timezone.utc)  # 04:15 KST

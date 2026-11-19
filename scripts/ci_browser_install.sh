@@ -17,4 +17,22 @@ for name in ('/etc/apt/apt-mirrors.txt', '/etc/apt/sources.list.d/ubuntu.sources
 print('Ubuntu archive mirror selected; package signature checks unchanged')
 PY
 fi
-"$1" -m playwright install --with-deps chromium
+# Attempt a real Chromium launch using the pinned runner's existing libraries.
+# Only fall back to signed apt dependencies when they are actually missing.
+"$1" -m playwright install chromium
+playwright_smoke() {
+  "$1" - <<'PY'
+from playwright.sync_api import sync_playwright
+with sync_playwright() as playwright:
+    browser = playwright.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto("data:text/html,<title>isolated-browser-check</title>")
+    assert page.title() == "isolated-browser-check"
+    browser.close()
+PY
+}
+if ! playwright_smoke "$1"; then
+  echo "Chromium needs additional signed system dependencies" >&2
+  "$1" -m playwright install-deps chromium
+  playwright_smoke "$1"
+fi
