@@ -15,6 +15,11 @@ class Promotion(unittest.TestCase):
   before=self.source();after=release.adapt_app(before)
   for a,b in [('function musicView(p)','function contentView(p)'),('function contentView(p)','function videoView('),('function historyView(p)','function historyDetail(')]:
    self.assertEqual(before[before.index(a):before.index(b)],after[after.index(a):after.index(b)])
+ def test_home_heading_changes_without_renaming_menu(self):
+  code=release.adapt_app(self.source())
+  self.assertIn("return heading('오늘의 이세계아이돌',",code)
+  self.assertNotIn("return heading('오늘의 이세돌',",code)
+  self.assertIn("['home','오늘의 이세돌','spark']",code)
  def test_only_main_can_package_production(self):
   with patch.dict(os.environ,DEPLOY_ENV='production',GITHUB_REF='refs/heads/develop'):
    with self.assertRaisesRegex(ValueError,'main-only'):release.build(ROOT/'missing')

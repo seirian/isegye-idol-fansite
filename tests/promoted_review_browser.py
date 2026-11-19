@@ -63,7 +63,7 @@ try:
     if width<=640:
      a=p.locator('.isegye-account-link').bounding_box();n=p.locator('.mobile-nav').bounding_box()
      check(f'{theme}/{width} account control clears mobile nav',a['y']+a['height']<=n['y'])
-    for route,title in [('home','오늘의 이세돌'),('members','멤버 소개'),('live','지금, 우리와 함께 LIVE'),('content','콘텐츠'),('music','한 곡에서 시작되는 이야기'),('history','차곡차곡, 우리의 발자취.'),('schedule?month=2026-11&view=calendar','소식·일정'),('guide','좋아하는 마음이 오래 가도록')]:
+    for route,title in [('home','오늘의 이세계아이돌'),('members','멤버 소개'),('live','지금, 우리와 함께 LIVE'),('content','콘텐츠'),('music','한 곡에서 시작되는 이야기'),('history','차곡차곡, 우리의 발자취.'),('schedule?month=2026-11&view=calendar','소식·일정'),('guide','좋아하는 마음이 오래 가도록')]:
      go(route);check(f'{theme}/{width}/{route} title',p.locator('h1').first.inner_text()==title)
      check(f'{theme}/{width}/{route} no overflow',p.evaluate('document.documentElement.scrollWidth<=innerWidth'))
      check(f'{theme}/{width}/{route} operating footer',p.locator('.footer-links a').all_text_contents()==['이용약관','개인정보처리방침','팬가이드','사이트소개'])

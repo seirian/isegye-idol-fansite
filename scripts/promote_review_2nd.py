@@ -51,6 +51,9 @@ def adapt_app(code):
     code = one(code, "else if(root==='review')html=reviewView();", "else if(root==='review')html=ProductionUI.about();")
     code = one(code, "else if(root==='member'||root==='record')html=memberView(r.parts[1],r.params);",
                "else if(root==='member')html=memberView(r.parts[1],r.params);else if(root==='record')html=persons.has(r.parts[1])?memberView(r.parts[1]):songs.has(r.parts[1])?songView(r.parts[1]):ProductionUI.record(r.parts[1]);else if(root==='report')html=ProductionUI.report(r.params);")
+    # Update only the operating home heading; keep the approved review and menu text unchanged.
+    code = one(code, "return heading('오늘의 이세돌','지금의 방송, 새로운 소식, 다시 보고 싶은 순간.'",
+                    "return heading('오늘의 이세계아이돌','지금의 방송, 새로운 소식, 다시 보고 싶은 순간.'")
     code = one(code, "+' · 2차 검토'", "+' · ISEGYE 팬 아카이브'")
     code = code.replace('이 브라우저의 검토용 저장함에 담았습니다.', '이 브라우저의 저장함에 담았습니다.')
     code = code.replace('이 검토본에 포함되지 않은 항목입니다.', '현재 등록되지 않은 항목입니다.')
