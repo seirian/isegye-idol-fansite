@@ -6,7 +6,7 @@ Existing Google access gate serves this feed only to authorized visitors.
 """
 from pathlib import Path
 from datetime import datetime, timezone
-import base64,hashlib,json,os,socket,sys
+import base64,hashlib,json,os,socket,sys,traceback
 import inour_sftp as d
 import schedule_feed as feed
 import auth_routing
@@ -20,7 +20,32 @@ def path(name):
     d.require(name in ALLOWED,'Unknown feed file')
     return FOLDER+'/'+name
 
-def publish(remote,collect=feed.collect):
+def failure_report(err, stage):
+    """Report bounded context, never arbitrary exception text or source titles."""
+    result={'status':'failed','errorType':type(err).__name__,'stage':stage}
+    import cafe_runtime
+    if isinstance(err,cafe_runtime.CafeEvidenceError):
+        result['errorCode']=err.code
+        result['field']=err.field
+        if err.articleId is not None:result['articleId']=err.articleId
+        if err.sourceId is not None:result['sourceId']=err.sourceId
+    elif isinstance(err,(d.Stop,feed.FeedError)):
+        # These application exceptions already contain fixed, credential-free reasons.
+        result['reason']=str(err)
+    # A source location is useful even for unexpected exceptions whose message
+    # could contain a remote response, user text or a credential.
+    root=Path(__file__).resolve().parents[1]
+    for frame in reversed(traceback.extract_tb(err.__traceback__)):
+        try:relative=Path(frame.filename).resolve().relative_to(root)
+        except ValueError:continue
+        if relative.parts[0]=='scripts':
+            result['location']={'file':relative.as_posix(),'line':frame.lineno,'function':frame.name}
+            break
+    return result
+
+def publish(remote,collect=feed.collect,progress=None):
+    progress=progress if progress is not None else {}
+    progress['stage']='remote_preflight'
     remote.directory('/web');remote.directory(d.ROOT)
     d.require(remote.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Wrong site owner')
     router=remote.read(d.ROOT+'/.htaccess') or b''
@@ -38,16 +63,22 @@ def publish(remote,collect=feed.collect):
     d.require(remote.info(path('.lock')) is None,'Existing feed lock; no overwrite')
     remote.new(path('.lock'),lock);remote.s.chmod(path('.lock'),0o600)
     try:
+        progress['stage']='previous_snapshot_validation'
         old=remote.read(path('current.json'))
         old_value=feed.validate(json.loads(old)) if old else None
         previous=feed.validate(notice_policy.clean_snapshot(old_value)) if old_value else None
         removed={k:len(old_value[k])-len(previous[k]) if old_value else 0 for k in ('news','events','forecasts')}
-        value=feed.validate(notice_policy.clean_snapshot(collect(previous=previous)))
+        progress['stage']='source_collection'
+        collected=collect(previous=previous)
+        progress['stage']='snapshot_validation'
+        value=feed.validate(notice_policy.clean_snapshot(collected))
         value['collectionHealth']=schedule_health.assess(value)
+        progress['stage']='publication_guard'
         raw=(json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode()
         d.require(remote.read(d.ROOT+'/.htaccess')==router,'Router changed during collection')
         d.require(remote.snapshot()==protected,'Protected file changed during collection')
         if old:
+            progress['stage']='backup'
             backup=remote.read(path('previous.json'))
             # The rollback snapshot must not resurrect deleted general-user posts.
             clean_backup=(json.dumps(previous,ensure_ascii=False,indent=2)+'\n').encode()
@@ -55,10 +86,13 @@ def publish(remote,collect=feed.collect):
             else:remote.replace(path('previous.json'),clean_backup,backup)
             d.require(remote.read(path('previous.json'))==clean_backup,'Backup cleanup differs')
             remote.s.chmod(path('previous.json'),0o600)
+        progress['stage']='publication_write'
         remote.replace(path('current.json'),raw,old)
         published_at=datetime.now(timezone.utc).isoformat()
         remote.s.chmod(path('current.json'),0o600)
+        progress['stage']='publication_readback'
         d.require(remote.read(path('current.json'))==raw,'Feed bytes differ')
+        progress['stage']='publication_report'
         return {'status':'published','generatedAt':value['generatedAt'],'sha256':d.digest(raw),
                 'publishedAt':published_at,'readbackAt':datetime.now(timezone.utc).isoformat(),
                 'verifiedReadback':True,'evidenceVersion':2,
@@ -82,6 +116,7 @@ def publish(remote,collect=feed.collect):
 
 def main():
     result={'status':'failed'};resources=[];password=os.environ.pop('ISEGYE_SFTP_PASSWORD','')
+    progress={'stage':'preflight'}
     try:
         d.require(os.getenv('GITHUB_REPOSITORY')=='seirian/isegye-idol-fansite' and os.getenv('GITHUB_REF')=='refs/heads/main','Main only')
         d.require(os.getenv('PRODUCTION_PAUSED')!='true' and os.getenv('ISEGYE_SCHEDULE_PAUSED')!='true','Collection paused')
@@ -89,8 +124,10 @@ def main():
         review_path=os.getenv('ISEGYE_CAFE_REVIEW_PATH')
         packet=None
         if review_path:
+            progress['stage']='review_validation'
             import cafe_runtime
             packet=cafe_runtime.validate_packet(json.loads(Path(review_path).read_text()),feed.stamp())
+        progress['stage']='sftp_connection'
         import paramiko
         sock=socket.create_connection((d.HOST,d.PORT),timeout=15);resources.append(sock)
         t=paramiko.Transport(sock);resources.append(t);t.banner_timeout=15;t.auth_timeout=20
@@ -99,10 +136,9 @@ def main():
         d.require(k.get_name()=='ssh-ed25519' and fingerprint==d.FINGERPRINT,'Host key mismatch; password not sent')
         t.auth_password(d.USER,password);password=None;d.require(t.is_authenticated(),'SFTP authentication incomplete')
         c=paramiko.SFTPClient.from_transport(t);resources.append(c);c.get_channel().settimeout(30)
-        result=publish(d.Remote(c),lambda **kw:feed.collect(**kw,cafe_review=packet))
+        result=publish(d.Remote(c),lambda **kw:feed.collect(**kw,cafe_review=packet),progress)
     except Exception as err:
-        result={'status':'failed','errorType':type(err).__name__}
-        if isinstance(err,(d.Stop,feed.FeedError)):result['reason']=str(err)
+        result=failure_report(err,progress['stage'])
     finally:
         password=None
         for r in reversed(resources):
