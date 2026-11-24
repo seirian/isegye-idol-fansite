@@ -46,7 +46,10 @@ def component():
     mobile=shared[shared.index('@media(max-width:640px)'):].replace(':root',':host')
     mobile=mobile.replace(' .production-footer{padding-bottom:82px}','')
     css+='\n'+headings+mobile
+    from playground_pipeline import editorial_manifest
     runtime=(ROOT/'site/playground-runtime.js').read_text()
+    runtime=runtime.replace('__EDITORIAL__',jsjson(editorial_manifest()))
+    runtime=runtime.replace('__BANK__',re.sub(r'^export ','',(ROOT/'site/playground-editorial.js').read_text(),flags=re.M)+'\n__BANK__')
     for key,value in {'__SEED__':jsjson(seed),'__CSS__':"''",'__MARKUP__':jsjson(markup),'__CORE__':core,'__APP__':src,'__BANK__':re.sub(r'^export ','',(ROOT/'site/playground-bank.js').read_text(),flags=re.M)}.items():runtime=runtime.replace(key,value)
     return runtime,css,seed
 

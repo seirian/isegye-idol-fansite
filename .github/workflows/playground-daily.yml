@@ -1,10 +1,21 @@
 name: Playground - daily verified question bank
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/playground-daily.yml
+      - playground/reserve.json
+      - playground/editorial.json
+      - scripts/playground_bank.py
+      - scripts/playground_pipeline.py
+      - scripts/collect_playground.py
+      - scripts/publish_playground_bank.py
   schedule:
     - cron: '0 23 * * *' # daily 08:00 Asia/Seoul, UTC previous day
   workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 concurrency:
   group: isegye-inour-production
   cancel-in-progress: false
@@ -26,7 +37,8 @@ jobs:
       - name: Test immutable answers, deduplication and rollback
         run: |
           python -m unittest discover -s tests -p test_playground_bank.py -v
-          node --test tests/playground-bank.test.js
+          python -m unittest discover -s tests -p test_playground_pipeline.py -v
+          node --test tests/playground-bank.test.js tests/playground-editorial.test.js
       - name: Install isolated source-reading and transfer tools
         run: |
           python -m venv /tmp/playground-daily
@@ -56,13 +68,22 @@ jobs:
           import json,os
           from pathlib import Path
           p=Path('playground-publication.json');d=json.loads(p.read_text()) if p.exists() else {'status':'not_published'}
-          line=f"놀이터 문제은행: {d.get('status')}; 자동 추가 {d.get('added','—')}, 승인 확장 {d.get('reviewedAdded',0)}, 전체 {d.get('questionCount','—')}; 서버 재확인 {d.get('verifiedReadback',False)}. 커뮤니티 후보는 자동 출제하지 않습니다."
+          line=f"놀이터 문제은행: {d.get('status')}; 신규 추가 {d.get('added','—')} (공식 자료 {d.get('automaticAdded',0)}, 검수 대기분 {d.get('reserveAdded',0)}), 승인 확장 {d.get('reviewedAdded',0)}, 전체 {d.get('questionCount','—')}; 서버 재확인 {d.get('verifiedReadback',False)}. 커뮤니티 후보는 자동 출제하지 않습니다."
           print(line);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(line+'\n')
+          g=d.get('growth',{});growth=f"증설 상태: {g.get('state','미확인')}; 오늘 {g.get('todayAdded','—')}문제, 검수 대기 {g.get('readyCount','—')}문제, 연속 추가 0일 {g.get('consecutiveZeroDays','—')}; 마지막 신규 추가 {g.get('lastAdditionAt') or '추적 시작 전 미확인'}"
+          print(growth);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(growth+'\n')
           r=Path('playground-discovery.json')
           if r.exists():
               v=json.loads(r.read_text());bad=v.get('referenceWarnings',[])+[x.get('url',x.get('state')) for x in v.get('referenceChecks',[]) if x.get('state')!='body_checked']
               if bad:print('::warning::Some reference bodies/searches were unavailable; no unverified answers were published.')
           PY
+      - name: Reconcile one content-supply incident without repeat notifications
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+        run: python scripts/playground_growth_alert.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -70,6 +91,7 @@ jobs:
           path: |
             playground-publication.json
             playground-discovery.json
+            playground-review-inbox.json
             playground-restore.json
             playground-state/references.json
           retention-days: 30

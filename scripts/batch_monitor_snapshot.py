@@ -231,6 +231,8 @@ def row_state(row):
         return 'running'
     if run.get('conclusion') in FAILURES:
         return 'attention'
+    if row.get('growth',{}).get('alerts'):
+        return 'attention'
     return row.get('dataState', 'unknown')
 
 
@@ -332,6 +334,11 @@ def inspect(kind, at, head, getter):
                 row['sources'].append({'name': str(key)[:80], 'state': str(value.get('state', 'unknown') if isinstance(value, dict) else value)[:40],
                                        'lastSuccessAt': safe_time(value.get('lastSuccessAt')) if isinstance(value, dict) else None})
             row['counts'] = {k: pub[k] for k in ('questionCount','added','updated','collectedCount') if type(pub.get(k)) is int and pub[k] >= 0}
+            if kind == 'playground' and good and isinstance(pub.get('growth'),dict):
+                growth=pub['growth']
+                row['growth']={key:growth[key] for key in ('state','lastAdditionAt','todayAdded','addedThisRun','dailyTarget','readyCount','reserveDays','consecutiveZeroDays','alerts','candidateCounts') if key in growth}
+                row['counts'].update({key:growth[key] for key in ('todayAdded','readyCount','consecutiveZeroDays') if type(growth.get(key)) is int and growth[key]>=0})
+                row['note']='게시 검증과 신규 문제 확보를 별도로 표시합니다. 신규 추가 0건을 정상 증설로 간주하지 않습니다.'
             if kind == 'albums':
                 from album_hourly import coverage, allowed
                 cov = coverage(files.get('albums/snapshot.json', {}), at, hours=168)

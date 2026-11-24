@@ -1,0 +1,2633 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-24",
+  "policy": "검수된 보존 자료와 대조한 고정 출제 대기열. 원문 재열람을 주장하지 않습니다. 목록 변경은 코드 검토와 테스트를 거칩니다.",
+  "entries": [
+    {
+      "question": {
+        "id": "reserve-9b7fd031f67dd5c9b2c56570",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈Stargazers〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2025년 4월 17일",
+          "2025년 7월 19일",
+          "2025년 6월 18일",
+          "2025년 5월 18일"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈Stargazers〉의 국내 음원 발매일은 2025년 5월 18일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-stars"
+        ],
+        "related": "/#/song/stargazers",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "9b7fd031f67dd5c9b2c565708cd6f32855ee561f78aa2bc4da5c6bd2e4e36d87",
+          "subject": "release:Stargazers",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-stars",
+      "source": {
+        "title": "기존 검수 자료 · 패러블 · Stargazers",
+        "url": "https://parable-asia.com/portfolio-item/stargazers/",
+        "kind": "catalog",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-ee4c2ee082739ccb75660143",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈Be My Light〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2025년 10월 3일",
+          "2025년 11월 3일",
+          "2025년 12월 4일",
+          "2026년 1월 4일"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈Be My Light〉의 국내 음원 발매일은 2025년 11월 3일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-discography"
+        ],
+        "related": "/#/song/be-my-light",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "ee4c2ee082739ccb756601438e9b4ddb0f388270a024059aea30afddb7dee30f",
+          "subject": "release:Be My Light",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-discography",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/디스코그래피",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EB%94%94%EC%8A%A4%EC%BD%94%EA%B7%B8%EB%9E%98%ED%94%BC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-6bf16bee6908b50503bcc80b",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈화이트 (White)〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2026년 2월 19일",
+          "2026년 1월 19일",
+          "2025년 12월 19일",
+          "2025년 11월 18일"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈화이트 (White)〉의 국내 음원 발매일은 2025년 12월 19일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-white"
+        ],
+        "related": "/#/song/white",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "6bf16bee6908b50503bcc80b7aedf84fc8b42b71c58ee2d38769c36c530ec6ed",
+          "subject": "release:화이트 (White)",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-white",
+      "source": {
+        "title": "기존 검수 자료 · 패러블 · 화이트 (White)",
+        "url": "https://parable-asia.com/portfolio-item/%ED%99%94%EC%9D%B4%ED%8A%B8-white/",
+        "kind": "catalog",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-6979731fe198bfbb627110db",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈Smile For You〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2026년 7월 20일",
+          "2026년 8월 20일",
+          "2026년 6월 19일",
+          "2026년 5월 19일"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈Smile For You〉의 국내 음원 발매일은 2026년 6월 19일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-smile"
+        ],
+        "related": "/#/song/smile-for-you",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "6979731fe198bfbb627110db147a4d2f449c032582a7cc6c3be2fb73bb9820cb",
+          "subject": "release:Smile For You",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-smile",
+      "source": {
+        "title": "기존 검수 자료 · 패러블 · Smile For You",
+        "url": "https://parable-asia.com/portfolio-item/smile-for-you/",
+        "kind": "catalog",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-17bc88406d1e972fa2a7eb91",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈마법소녀 이세계아이돌 OST〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2023년 6월 22일",
+          "2023년 5월 22일",
+          "2023년 8월 23일",
+          "2023년 7월 23일"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈마법소녀 이세계아이돌 OST〉의 국내 음원 발매일은 2023년 6월 22일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-discography"
+        ],
+        "related": "/#/song/lockdown",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "17bc88406d1e972fa2a7eb915d4f1b8547c4b844a9e1d1d05bf8032a885f39e1",
+          "subject": "release:마법소녀 이세계아이돌 OST",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-discography",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/디스코그래피",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EB%94%94%EC%8A%A4%EC%BD%94%EA%B7%B8%EB%9E%98%ED%94%BC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-5b056a3ef26b0055871afeb8",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈차원을 넘어 이세계아이돌 OST〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2023년 7월 21일",
+          "2023년 8월 21일",
+          "2023년 9월 21일",
+          "2023년 6월 20일"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈차원을 넘어 이세계아이돌 OST〉의 국내 음원 발매일은 2023년 7월 21일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-discography"
+        ],
+        "related": "/#/song/another-world",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "5b056a3ef26b0055871afeb8a305766e37c742238a90275564d0f75ed48dd66d",
+          "subject": "release:차원을 넘어 이세계아이돌 OST",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-discography",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/디스코그래피",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EB%94%94%EC%8A%A4%EC%BD%94%EA%B7%B8%EB%9E%98%ED%94%BC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-0538a84955e1f0053d8767ea",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈이세계 페스티벌 2025 Theme Song〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2025년 3월 20일",
+          "2025년 4월 20일",
+          "2025년 5월 21일",
+          "2025년 2월 17일"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈이세계 페스티벌 2025 Theme Song〉의 국내 음원 발매일은 2025년 3월 20일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-discography"
+        ],
+        "related": "/#/song/syzygy",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "0538a84955e1f0053d8767ea9e7d887cd6e9d72329da4646ec8916782e31d630",
+          "subject": "release:이세계 페스티벌 2025 Theme Song",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-discography",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/디스코그래피",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EB%94%94%EC%8A%A4%EC%BD%94%EA%B7%B8%EB%9E%98%ED%94%BC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-468e0ec86e874cba7c166281",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈이세계 페스티벌〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2023년 11월 25일",
+          "2023년 10월 25일",
+          "2023년 9월 24일",
+          "2023년 8월 24일"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈이세계 페스티벌〉의 국내 음원 발매일은 2023년 9월 24일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-discography"
+        ],
+        "related": "/#/song/over",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "468e0ec86e874cba7c166281803da49bf563213487c326ac40162ceda93e149b",
+          "subject": "release:이세계 페스티벌",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-discography",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/디스코그래피",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EB%94%94%EC%8A%A4%EC%BD%94%EA%B7%B8%EB%9E%98%ED%94%BC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-707ef64631dcb1910ff32bed",
+        "category": "music",
+        "level": "조금 더",
+        "stem": "〈NO CAT, NO LIFE!〉의 국내 음원 발매일은 언제일까요?",
+        "choices": [
+          "2026년 11월 29일",
+          "2026년 9월 28일",
+          "2026년 10월 29일",
+          "2026년 8월 28일"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "〈NO CAT, NO LIFE!〉의 국내 음원 발매일은 2026년 9월 28일입니다. 영상 공개일을 묻는 문제가 아닙니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-music-cat"
+        ],
+        "related": "/#/song/cat-save-world",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "707ef64631dcb1910ff32bed02a50bb3e32714b4143103defa3d37a41462bd70",
+          "subject": "release:NO CAT, NO LIFE!",
+          "predicate": "domestic-release-date",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-music-cat",
+      "source": {
+        "title": "기존 검수 자료 · 패러블 · NO CAT, NO LIFE!",
+        "url": "https://parable-asia.com/portfolio-item/no-cat-no-life/",
+        "kind": "catalog",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-133e03ae0fc5ec5f6e085917",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "징버거의 상징색 조합은 무엇일까요?",
+        "choices": [
+          "노란색 · 빨간색",
+          "분홍색",
+          "남색",
+          "파란제비꽃색"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "징버거의 상징색은 노란색 · 빨간색입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-jingburger"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "133e03ae0fc5ec5f6e0859171b46c5cb5aae4e0a980c84d6f401c1ca00a06952",
+          "subject": "member:jingburger",
+          "predicate": "symbol-colors",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-jingburger",
+      "source": {
+        "title": "기존 검수 자료 · 징버거",
+        "url": "https://namu.wiki/w/%EC%A7%95%EB%B2%84%EA%B1%B0",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-ddac40212cec796e84930931",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "비챤의 상징색 조합은 무엇일까요?",
+        "choices": [
+          "파란제비꽃색",
+          "노란색 · 빨간색",
+          "스프링버드 · 진회색 · 코토리 베이지",
+          "남색"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "비챤의 상징색은 스프링버드 · 진회색 · 코토리 베이지입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-viichan"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "ddac40212cec796e8493093159e3dc69bcee63d58759ca5a8839d3753f1d1247",
+          "subject": "member:viichan",
+          "predicate": "symbol-colors",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-viichan",
+      "source": {
+        "title": "기존 검수 자료 · 비챤",
+        "url": "https://namu.wiki/w/%EB%B9%84%EC%B1%A4",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-00d3c670983f2eef477ed246",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "유튜브 채널 「아이네 다시보기」에서 주로 볼 수 있는 영상은 무엇일까요?",
+        "choices": [
+          "공식 뮤직비디오만 모은 채널",
+          "방송 다시보기",
+          "게임 공략만 모은 채널",
+          "음반 음원만 모은 채널"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "「아이네 다시보기」는 아이네의 다시보기 채널로 등록되어 있습니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-ine"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "00d3c670983f2eef477ed24631f22188f2dd9152f3bbebcafde16072f90366f4",
+          "subject": "channel:UCBF6nBTgFN_xzrLMF9eiRhw",
+          "predicate": "channel-purpose",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-ine",
+      "source": {
+        "title": "기존 검수 자료 · 아이네",
+        "url": "https://namu.wiki/w/%EC%95%84%EC%9D%B4%EB%84%A4",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f8620af95b63e3f2397f0fe4",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "유튜브 채널 「징버거의 다시부기」에서 주로 볼 수 있는 영상은 무엇일까요?",
+        "choices": [
+          "방송 다시보기",
+          "공식 뮤직비디오만 모은 채널",
+          "음반 음원만 모은 채널",
+          "게임 공략만 모은 채널"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "「징버거의 다시부기」는 징버거의 다시보기 채널로 등록되어 있습니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-jingburger"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f8620af95b63e3f2397f0fe461899e4174abcb24ef38382f118c9691796b1b3d",
+          "subject": "channel:UCrN7Gb8xIZF_0ZYA1cmVNxQ",
+          "predicate": "channel-purpose",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-jingburger",
+      "source": {
+        "title": "기존 검수 자료 · 징버거",
+        "url": "https://namu.wiki/w/%EC%A7%95%EB%B2%84%EA%B1%B0",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-deb8233db697feea80a79987",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "유튜브 채널 「주르르 다시보기」에서 주로 볼 수 있는 영상은 무엇일까요?",
+        "choices": [
+          "음반 음원만 모은 채널",
+          "게임 공략만 모은 채널",
+          "방송 다시보기",
+          "공식 뮤직비디오만 모은 채널"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "「주르르 다시보기」는 주르르의 다시보기 채널로 등록되어 있습니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-jururu"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "deb8233db697feea80a7998721dc16fcbb8a81a984cca986f99a23d179095331",
+          "subject": "channel:UCo28fS0LmlcyPcKItrZMPiQ",
+          "predicate": "channel-purpose",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-jururu",
+      "source": {
+        "title": "기존 검수 자료 · 주르르",
+        "url": "https://namu.wiki/w/%EC%A3%BC%EB%A5%B4%EB%A5%B4",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-10cf4f84d212eab85509385f",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "유튜브 채널 「밥친구 고세구」에서 주로 볼 수 있는 영상은 무엇일까요?",
+        "choices": [
+          "방송 다시보기",
+          "음반 음원만 모은 채널",
+          "공식 뮤직비디오만 모은 채널",
+          "게임 공략만 모은 채널"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "「밥친구 고세구」는 고세구의 다시보기 채널로 등록되어 있습니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-gosegu"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "10cf4f84d212eab85509385f82857b2734f6fba6fa8f2cff0b358e22aca2ce7d",
+          "subject": "channel:UCc4qGj6d8LBXW2qZ9GZQWqQ",
+          "predicate": "channel-purpose",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-gosegu",
+      "source": {
+        "title": "기존 검수 자료 · 고세구",
+        "url": "https://namu.wiki/w/%EA%B3%A0%EC%84%B8%EA%B5%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-b81a0756725e5d2ebb862f81",
+        "category": "members",
+        "level": "조금 더",
+        "stem": "유튜브 채널 「비챤의 무릉도원」에서 주로 볼 수 있는 영상은 무엇일까요?",
+        "choices": [
+          "게임 공략만 모은 채널",
+          "방송 다시보기",
+          "공식 뮤직비디오만 모은 채널",
+          "음반 음원만 모은 채널"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "「비챤의 무릉도원」는 비챤의 다시보기 채널로 등록되어 있습니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-member-viichan"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "b81a0756725e5d2ebb862f81b6a002ab27c8ce2903215bc6463c2132b044a67a",
+          "subject": "channel:UCk2vPN7LATiMz_r8VUiA0KQ",
+          "predicate": "channel-purpose",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-member-viichan",
+      "source": {
+        "title": "기존 검수 자료 · 비챤",
+        "url": "https://namu.wiki/w/%EB%B9%84%EC%B1%A4",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-026c0fdff2379b27b1ed989b",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "2023년 이세계 페스티벌이 열린 장소는 어디일까요?",
+        "choices": [
+          "인천 송도 달빛축제공원",
+          "경희대학교 평화의전당",
+          "부산 BEXCO",
+          "더현대 서울"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "이세계 페스티벌 출연의 장소는 인천 송도 달빛축제공원입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "026c0fdff2379b27b1ed989ba06b0d692c460af833ba47a443a04dc29851147a",
+          "subject": "event:event-2023-09-23-14",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-7049f2d0db09bf0d7a55043a",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "2024년 2월 팝업스토어 「이세돌팝업봤?」가 열린 곳은 어디일까요?",
+        "choices": [
+          "더현대 서울",
+          "인천 송도 달빛축제공원",
+          "경희대학교 평화의전당",
+          "부산 BEXCO"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "이세돌팝업봤? 팝업스토어의 장소는 더현대 서울입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "7049f2d0db09bf0d7a55043af273b8eaa0e89f6e8709565e1a6004972cabcbec",
+          "subject": "event:event-2024-02-16-18",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-05e53ca19ebd1b2e5c8915e5",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "2024년 릴파의 「LILPACON : Going Out」이 열린 공연장은 어디일까요?",
+        "choices": [
+          "부산 BEXCO",
+          "더현대 서울",
+          "인천 송도 달빛축제공원",
+          "경희대학교 평화의전당"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "LILPACON : Going Out의 장소는 경희대학교 평화의전당입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "05e53ca19ebd1b2e5c8915e54e6307b3da2cebae08e187096366b3d31b5f4ee6",
+          "subject": "event:event-2024-07-12-19",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-2bf41902f1ee58384c4b7c24",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "2024년 이세계아이돌이 참여한 AGF 에픽세븐 무대의 행사장은 어디일까요?",
+        "choices": [
+          "인천 송도 달빛축제공원",
+          "부산 BEXCO",
+          "더현대 서울",
+          "일산 KINTEX"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "AGF 2024 에픽세븐 무대 참여의 장소는 일산 KINTEX입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "2bf41902f1ee58384c4b7c2427ab4f35508d5720c3c140656e104ef0243d36fb",
+          "subject": "event:event-2024-12-07-24",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-e68b33fe9267275b4b64dd84",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "이세계 페스티벌 2025가 열린 공연장은 어디일까요?",
+        "choices": [
+          "고척 스카이돔",
+          "인천 송도 달빛축제공원",
+          "더현대 서울",
+          "부산 BEXCO"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "이세계 페스티벌 2025 출연의 장소는 고척 스카이돔입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "e68b33fe9267275b4b64dd84d109d81f668f458187e11d10c006d74225d0193d",
+          "subject": "event:event-2025-05-16-32",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-fb1c254b1b55985445a583df",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "2025년 MBC 버추얼 라이브 페스티벌에서 이세계아이돌이 공연한 장소는 어디일까요?",
+        "choices": [
+          "더현대 서울",
+          "부산 BEXCO",
+          "상암문화광장",
+          "인천 송도 달빛축제공원"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "MBC 버추얼 라이브 페스티벌 출연의 장소는 상암문화광장입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "fb1c254b1b55985445a583df69c59d924a6f633b0061d7aeef63cd6a72453a35",
+          "subject": "event:event-2025-10-18-35",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-271b91bc0c242ba95e41de8a",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "이세계아이돌이 참여한 G-STAR 2024 넷마블 행사는 어디에서 열렸을까요?",
+        "choices": [
+          "부산 BEXCO",
+          "인천 송도 달빛축제공원",
+          "경희대학교 평화의전당",
+          "더현대 서울"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "G-STAR 2024 넷마블 행사 참여의 장소는 부산 BEXCO입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-events"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "271b91bc0c242ba95e41de8ae0ebf847ed5029322b9d4403cb6c8712c84fce13",
+          "subject": "event:event-2024-11-14-21",
+          "predicate": "venue",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-events",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/공연 및 행사",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EA%B3%B5%EC%97%B0%20%EB%B0%8F%20%ED%96%89%EC%82%AC",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-5a39a4bae0743978e40dca5e",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "이세계아이돌 선발 프로젝트의 지원자 모집 공지가 나온 해는 언제일까요?",
+        "choices": [
+          "2023년",
+          "2020년",
+          "2022년",
+          "2021년"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "해당 활동의 기록 날짜는 2021-06-22입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-audition"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "5a39a4bae0743978e40dca5e24e46a8a6fd3ae9d0fe27bf9a1257707cf8669d8",
+          "subject": "event:event-2021-06-22-1",
+          "predicate": "year",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-audition",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/오디션",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%98%A4%EB%94%94%EC%85%98",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-5098e1fcb2d47eaf2c0efabe",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "이세계아이돌 공식 웹툰 제작 계획이 처음 공개된 해는 언제일까요?",
+        "choices": [
+          "2021년",
+          "2023년",
+          "2020년",
+          "2022년"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "해당 활동의 기록 날짜는 2022-08-10입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-group"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "5098e1fcb2d47eaf2c0efabe2832bd978a6e3c8087a184715bfc61d62b01b0b6",
+          "subject": "event:event-2022-08-10-8",
+          "predicate": "year",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-group",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-76021c629f0cbee82c1cc30e",
+        "category": "stories",
+        "level": "조금 더",
+        "stem": "이세계아이돌 공식 그룹 유튜브 채널이 개설된 해는 언제일까요?",
+        "choices": [
+          "2020년",
+          "2022년",
+          "2025년",
+          "2021년"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "해당 활동의 기록 날짜는 2025-09-16입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-history-group"
+        ],
+        "related": "/#/history",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "76021c629f0cbee82c1cc30e054960bdd06f6694966fe819ade1eeb53288a7d0",
+          "subject": "event:event-2025-09-16-33",
+          "predicate": "year",
+          "reviewedAt": "2026-11-24"
+        }
+      },
+      "sourceId": "reserve-history-group",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-57b35ff4227428e4f723c88f",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2021년에 공개된 〈God knows...〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "릴파",
+          "징버거",
+          "주르르"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2021-11-25 공개된 〈God knows...〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "57b35ff4227428e4f723c88f640450cd14da899da3fb12b04de6d9a9710ad952",
+          "subject": "cover:godknows:2021-11-25",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "-in8F0zmLcM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-7604000f90f653e21c63d3b5",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2021년에 공개된 〈Happy Halloween〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "주르르",
+          "징버거",
+          "아이네"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2021-10-31 공개된 〈Happy Halloween〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "7604000f90f653e21c63d3b58f294326dc7f01cbce5e8c8b192ad5e30bc0d31d",
+          "subject": "cover:happyhalloween:2021-10-31",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "zjZpfpRkHJs"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f5cff1b2d22f5f901d49da76",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2021년에 공개된 〈불꽃〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "주르르",
+          "아이네",
+          "릴파",
+          "징버거"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2021-11-20 공개된 〈불꽃〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f5cff1b2d22f5f901d49da76051983a96dde0a6439768d3109c8245c4658741b",
+          "subject": "cover:불꽃:2021-11-20",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "FAEARaip0rM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-b8f388edd0bde90017b8e001",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈어푸〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "주르르",
+          "아이네",
+          "징버거",
+          "릴파"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-10-23 공개된 〈어푸〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "b8f388edd0bde90017b8e001f5e46f3d91f63a5d6aeea75e17365638f5b8ee65",
+          "subject": "cover:어푸:2022-10-23",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "_OsnBqrh6yg"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-2062099b4c97afe1b27c9de2",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈팬서비스〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "아이네",
+          "고세구",
+          "릴파"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-01-11 공개된 〈팬서비스〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "2062099b4c97afe1b27c9de2dfb15d9a23591fbde0e00a56b02ccf741deb0d71",
+          "subject": "cover:팬서비스:2022-01-11",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "DPEtmqvaKqY"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-599b51b5728d739032d7531c",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈취기를 빌려〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "아이네",
+          "비챤",
+          "징버거"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-03-09 공개된 〈취기를 빌려〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "599b51b5728d739032d7531ccb62050f9c939e5ea6e37e1d3d4258392b5298fd",
+          "subject": "cover:취기를빌려:2022-03-09",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "NVns4yRoTlU"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-cc1bfd0703334a01694daeb0",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈부엉이〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "주르르",
+          "아이네",
+          "징버거",
+          "릴파"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-02-23 공개된 〈부엉이〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "cc1bfd0703334a01694daeb0df151a63a3aff2b73885e8c0471dc9b767132cdb",
+          "subject": "cover:부엉이:2022-02-23",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "YZoeO3T7hsc"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-8d65be25f426e09a8c861111",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2021년에 공개된 〈JUST 4 U...〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "아이네",
+          "징버거",
+          "주르르"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2021-12-27 공개된 〈JUST 4 U...〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "8d65be25f426e09a8c861111e8d653a7032f2067239fa298fcf73b752892c7e9",
+          "subject": "cover:just4u:2021-12-27",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "q8iiUYJsOUM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-fc56a2b85f59caebec37c73b",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2021년에 공개된 〈Promise〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "주르르",
+          "릴파",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2021-12-29 공개된 〈Promise〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "fc56a2b85f59caebec37c73b447dac6ac210e0f0f4432593ed065c4ca2e0881d",
+          "subject": "cover:promise:2021-12-29",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "6hEvgKL0ClA"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-9bd62f9a787844f05b292f55",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈귀여워서 미안해〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "아이네",
+          "주르르",
+          "릴파"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-01-15 공개된 〈귀여워서 미안해〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "9bd62f9a787844f05b292f55ac7c183081d376cd8ee03595e11d2d4bd8309a31",
+          "subject": "cover:귀여워서미안해:2023-01-15",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "-pczFfMtWrc"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-d16057095a008314c5594f9d",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈후라이의 꿈〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "아이네",
+          "고세구"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-05-02 공개된 〈후라이의 꿈〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "d16057095a008314c5594f9d2d9e174b13e142446ceba73b1daee007f5dac6ba",
+          "subject": "cover:후라이의꿈:2022-05-02",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "gT3HKgVJuRQ"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-9af507229d725c5ceee97bca",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈사랑은 은하수 다방에서〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "비챤",
+          "릴파",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-04-30 공개된 〈사랑은 은하수 다방에서〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "9af507229d725c5ceee97bcabb3b093b52db6b15858a4c6593331b063bb63c38",
+          "subject": "cover:사랑은은하수다방에서:2022-04-30",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "fzHJxq37cqI"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-91f34f1d231bcd34335c4dbf",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈신호등〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "릴파",
+          "주르르",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-04-19 공개된 〈신호등〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "91f34f1d231bcd34335c4dbfa29196a684c8a9bf7256cf08547a42392e9db5f4",
+          "subject": "cover:신호등:2022-04-19",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "7IcafhbXprU"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-e3e2ea8d480a184b3b38c42a",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈슈퍼 참치〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "징버거",
+          "주르르",
+          "아이네"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-02-10 공개된 〈슈퍼 참치〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "e3e2ea8d480a184b3b38c42a609b937a8d14a3c0ec68292661c767680cd6c042",
+          "subject": "cover:슈퍼참치:2022-02-10",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "Q0LWEyWI8-E"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-3d51bd5bced6304933964164",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈세계는 사랑에 빠져있어〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "주르르",
+          "징버거",
+          "릴파",
+          "아이네"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-02-14 공개된 〈세계는 사랑에 빠져있어〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "3d51bd5bced6304933964164af8abfcc8204b97a6cf3e625faa2943d52a0724e",
+          "subject": "cover:세계는사랑에빠져있어:2022-02-14",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "1UbyyaDc8x0"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-02266c229419512da5bb3aa8",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈Darling〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "주르르",
+          "징버거",
+          "아이네"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-08-13 공개된 〈Darling〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "02266c229419512da5bb3aa821af1a9cc80eddd2ccf935c38021aa18560b424e",
+          "subject": "cover:darling:2023-08-13",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "7sFIjj5BW3M"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-34cd06b5f16c0b4242d2dba0",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈나만, 봄〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "고세구",
+          "징버거",
+          "릴파",
+          "아이네"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-05-22 공개된 〈나만, 봄〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "34cd06b5f16c0b4242d2dba00c013ea8dc3fa0e890c6a441485e9417866ee00d",
+          "subject": "cover:나만봄:2022-05-22",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "SAJrAQGvOHE"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-9c676a00632fe09f5848a20d",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈Baby I need you〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "징버거",
+          "릴파",
+          "비챤"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-12-16 공개된 〈Baby I need you〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "9c676a00632fe09f5848a20dafa317021229c5131bb61c80b4271b66b72db0e5",
+          "subject": "cover:babyineedyou:2022-12-16",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "lLIpFxWtqCQ"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-e08addb5d1d96f2ed1d6ade4",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈와스레모노〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "징버거",
+          "릴파",
+          "주르르"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-11-05 공개된 〈와스레모노〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "e08addb5d1d96f2ed1d6ade4b1214ff0e91cc8bc7155519628855c2917106c3c",
+          "subject": "cover:와스레모노:2023-11-05",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "YpCpF_CD2pM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-a038f7671556faf7239003e7",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈Girls〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "주르르",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-10-08 공개된 〈Girls〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "a038f7671556faf7239003e765a1458ef609397cac44be4630349369028e109b",
+          "subject": "cover:girls:2022-10-08",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "wB4MB-UrVcc"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-e471317f28c8c9e1c4b7b88f",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈너로피어오라〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "주르르",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-03-31 공개된 〈너로피어오라〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "e471317f28c8c9e1c4b7b88feb4268b24de11b8958f5c8f287d8fd0b6c948447",
+          "subject": "cover:너로피어오라:2022-03-31",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "8tJb1YlMHfA"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-889f44bcedcc9da9cbf6ab81",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈너에게 닿기를〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "주르르",
+          "아이네"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-12-09 공개된 〈너에게 닿기를〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "889f44bcedcc9da9cbf6ab81099b2197fe232bda09a8c229911e0fe99b9c8b74",
+          "subject": "cover:너에게닿기를:2023-12-09",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "_T4ck9kc1ws"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-245dc50e80f06df435222c82",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈홍련화〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "고세구",
+          "아이네",
+          "릴파"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-02-23 공개된 〈홍련화〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "245dc50e80f06df435222c823a352677a921a6d0e870359516c8e798f0b23a3b",
+          "subject": "cover:홍련화:2023-02-23",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "uG91iq0AzKM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-c0f6ebda6ea543bb6bc0f033",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈Tot Musica〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "비챤",
+          "징버거",
+          "아이네"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-04-23 공개된 〈Tot Musica〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "c0f6ebda6ea543bb6bc0f033382c571baa96744f9bb4856a84a7ff5a508c11a3",
+          "subject": "cover:totmusica:2023-04-23",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "sP0E6y0gWxA"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-2c70a7a4ec3f478bf28ca3cf",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2024년에 공개된 〈그래 그래〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "아이네",
+          "주르르"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2024-03-31 공개된 〈그래 그래〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "2c70a7a4ec3f478bf28ca3cf052bfa0d90af97e355680367b8e07b766e853bdd",
+          "subject": "cover:그래그래:2024-03-31",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "Dl9l3kQ1Wjs"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-440a3e9252c4facad6cd5216",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈STAY〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "주르르",
+          "릴파",
+          "아이네"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-01-20 공개된 〈STAY〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "440a3e9252c4facad6cd5216cb9cd980a9afe83ff3b6fe382b9448c0e28c05a4",
+          "subject": "cover:stay:2023-01-20",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "tT-kuonVzfY"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-a03da53087ae9cebb9ff67b1",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2022년에 공개된 〈마지막 재회〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "주르르",
+          "릴파",
+          "아이네"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2022-06-05 공개된 〈마지막 재회〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "a03da53087ae9cebb9ff67b164ba55140ee713f0330bcda15af6f5f7a50d8c6b",
+          "subject": "cover:마지막재회:2022-06-05",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "K-5WdjbCYnk"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f4d24b000e19243aa2b29bcf",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2024년에 공개된 〈Perfect Night〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "아이네",
+          "주르르"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2024-03-05 공개된 〈Perfect Night〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f4d24b000e19243aa2b29bcf86b3480506e366e3a214a42e1159821ef8896166",
+          "subject": "cover:perfectnight:2024-03-05",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "q8YSCkfkqac"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f5ffc6949eeefb023de34453",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈참새〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "고세구",
+          "아이네",
+          "징버거",
+          "릴파"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-03-29 공개된 〈참새〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f5ffc6949eeefb023de34453be6bcdc190560ae14ea06f23b0e908780a1a0fdb",
+          "subject": "cover:참새:2023-03-29",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "ZLQc1yuUOAM"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f25584c07892bcc349e55a04",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈스물셋〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "비챤",
+          "릴파",
+          "징버거"
+        ],
+        "answer": 1,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-06-18 공개된 〈스물셋〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f25584c07892bcc349e55a040341a39698c8bc8bfc8fc41974764761d9d61ae8",
+          "subject": "cover:스물셋:2023-06-18",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "iLXmqg_HHRA"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-d61e00bcb4603a0a50d524a8",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2024년에 공개된 〈우르릉 쾅쾅쾅〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "주르르",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2024-04-06 공개된 〈우르릉 쾅쾅쾅〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "d61e00bcb4603a0a50d524a803285e7ea4e23fbe1e4bea2538a2e19ebf3552a3",
+          "subject": "cover:우르릉쾅쾅쾅:2024-04-06",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "eVLI_YUSScg"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-15e6efbf29f5543dca40d49a",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈강풍 올백〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "주르르",
+          "아이네"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-04-26 공개된 〈강풍 올백〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "15e6efbf29f5543dca40d49a0b51f007ac5feb8a7c469ec2bff52392218171bb",
+          "subject": "cover:강풍올백:2023-04-26",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "qunpFTI90sU"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-e134bf8fd83b6d15a4c6a4a6",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈타상연화〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "릴파",
+          "아이네",
+          "주르르",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-04-01 공개된 〈타상연화〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "e134bf8fd83b6d15a4c6a4a6cc934b5e7f9674a42fc4e648194e2b95f686d0c3",
+          "subject": "cover:타상연화:2023-04-01",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "H02v7OU9Rtg"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-57c086e96772b4bc9c96092e",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2024년에 공개된 〈What is Love?〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "아이네",
+          "릴파",
+          "주르르"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2024-06-10 공개된 〈What is Love?〉 개인 커버의 참여 멤버는 주르르입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jururu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "57c086e96772b4bc9c96092e9b567cfb9eaeefcf9503ca22b2bfefc9655afc8a",
+          "subject": "cover:whatislove:2024-06-10",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "T-LRqnvEi9E"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-11804b73fb7d2a5364793289",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈약속해요 (I.P.U.)〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "아이네",
+          "고세구",
+          "릴파"
+        ],
+        "answer": 2,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-07-28 공개된 〈약속해요 (I.P.U.)〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "11804b73fb7d2a5364793289404e27c114ae785b2787ffdc360381a754d9597f",
+          "subject": "cover:약속해요ipu:2023-07-28",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "suAKxhbbtVs"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-061de421097a11015c5f153b",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2024년에 공개된 〈당신의 연인이 되고 싶어〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "비챤",
+          "릴파",
+          "징버거",
+          "아이네"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2024-01-16 공개된 〈당신의 연인이 되고 싶어〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "061de421097a11015c5f153ba97408bf610b1cdfa140e5a491521c37fd316d0a",
+          "subject": "cover:당신의연인이되고싶어:2024-01-16",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "J5DS7wDq7Lo"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-ecc374d46d14a184ba7f2e04",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2025년에 공개된 〈Catch You Catch Me〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "징버거",
+          "주르르",
+          "릴파"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2025-01-12 공개된 〈Catch You Catch Me〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "ecc374d46d14a184ba7f2e04d14f5186aed2b4876723395d7b6394e6cd950cc9",
+          "subject": "cover:catchyoucatchme:2025-01-12",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "cvplKgW8qR0"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-f67f81a11ccee708db4d9df4",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈봄도둑〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "주르르",
+          "아이네"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-04-30 공개된 〈봄도둑〉 개인 커버의 참여 멤버는 징버거입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/jingburger",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "f67f81a11ccee708db4d9df442a33c2cd2c88f022edd919ec108eff595b1afdb",
+          "subject": "cover:봄도둑:2023-04-30",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "p9TFQ9ySJLs"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-fa36e51e5365259ff3057467",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈LADY〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "주르르",
+          "징버거",
+          "릴파"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-07-09 공개된 〈LADY〉 개인 커버의 참여 멤버는 릴파입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/lilpa",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "fa36e51e5365259ff30574670870259dbafadad0a906683449c82fa3810b7e36",
+          "subject": "cover:lady:2023-07-09",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "crvPldgKJIo"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-72c67dcb238dc037b9ab36e4",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2023년에 공개된 〈자다깨니 야자수〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "징버거",
+          "릴파",
+          "아이네",
+          "고세구"
+        ],
+        "answer": 3,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2023-08-11 공개된 〈자다깨니 야자수〉 개인 커버의 참여 멤버는 고세구입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/gosegu",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "72c67dcb238dc037b9ab36e4774ab200883bcec0e6f3d88b43716f80922a6114",
+          "subject": "cover:자다깨니야자수:2023-08-11",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "xdvDs1Jgp6k"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-8d8871474534b70ed2290fa9",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2025년에 공개된 〈불가행력〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "비챤",
+          "릴파",
+          "아이네",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2025-01-11 공개된 〈불가행력〉 개인 커버의 참여 멤버는 비챤입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/viichan",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "8d8871474534b70ed2290fa9e77c4c5956f79f29056fd981e017356e7b598f1c",
+          "subject": "cover:불가행력:2025-01-11",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "5150G3fL8y8"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    },
+    {
+      "question": {
+        "id": "reserve-acfe6b6bb7d2d87452d16e7f",
+        "category": "covers",
+        "level": "조금 더",
+        "stem": "2025년에 공개된 〈Get Jinxed〉 개인 커버를 부른 멤버는 누구일까요?",
+        "choices": [
+          "아이네",
+          "주르르",
+          "릴파",
+          "징버거"
+        ],
+        "answer": 0,
+        "hint": "문제 아래의 해설에서 관련 활동과 출처를 확인할 수 있어요.",
+        "explanation": "2025-01-12 공개된 〈Get Jinxed〉 개인 커버의 참여 멤버는 아이네입니다. 날짜는 영상 공개일 기준입니다. 기존 검수 자료를 기준으로 하며 출처의 확인 시점은 아래에 표시합니다.",
+        "sources": [
+          "reserve-covers"
+        ],
+        "related": "/#/member/ine",
+        "inspiration": [],
+        "status": "reviewed",
+        "provenance": {
+          "template": "reviewed-reserve-v1",
+          "factKey": "acfe6b6bb7d2d87452d16e7f271ec8efbb4ac7030a7eebbdb387c82c6180e4f1",
+          "subject": "cover:getjinxed:2025-01-12",
+          "predicate": "performer",
+          "reviewedAt": "2026-11-24",
+          "videoId": "aaqIHn61OVE"
+        }
+      },
+      "sourceId": "reserve-covers",
+      "source": {
+        "title": "기존 검수 자료 · 나무위키 · 이세계아이돌/커버 곡",
+        "url": "https://namu.wiki/w/%EC%9D%B4%EC%84%B8%EA%B3%84%EC%95%84%EC%9D%B4%EB%8F%8C/%EC%BB%A4%EB%B2%84%20%EA%B3%A1",
+        "kind": "archive",
+        "checkedAt": "2026-10-23",
+        "note": "사이트에 보존된 검수 자료를 대조해 출제했습니다. 이번에 원문 전체를 재열람하거나 공식 발표로 새로 검증했다는 뜻은 아닙니다."
+      }
+    }
+  ]
+}

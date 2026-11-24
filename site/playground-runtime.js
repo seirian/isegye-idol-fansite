@@ -27,7 +27,7 @@ window.PlaygroundUI=(()=>{
     target.replaceChildren(host);
     const realDocument=window.document;
     const document={querySelector:s=>root.querySelector(s),addEventListener:(...a)=>root.addEventListener(...a),get body(){return root.querySelector('.pg-body');},get activeElement(){return root.activeElement;},set title(t){realDocument.title=t;}};
-    const PLAYGROUND_DATA=bank.data;
+    const PLAYGROUND_DATA=applyEditorial(bank.data,__EDITORIAL__);
     __CORE__
     __APP__
     const notice=root.querySelector('#bank-note');notice.textContent=bank.message;notice.hidden=!bank.message;
