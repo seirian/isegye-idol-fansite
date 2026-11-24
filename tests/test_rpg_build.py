@@ -32,6 +32,10 @@ class RPGBuilderTests(unittest.TestCase):
                    '<!--CSP--><!--STYLE--></head><body><main>' + "모험 기록 " * 1400
                    + '</main><!--SCRIPT--></body></html>')
         self.write("rpg/styles.css", "body { color: #eee; background: #111; }")
+        for relative in b.STYLES[1:]:
+            self.write(relative, "/* fixture stylesheet */\n")
+        for relative in b.SOURCES:
+            self.write(relative, "// fixture module\n")
         self.write("rpg/content.js", "export const CHAPTERS = [{ id: 'first' }];\n")
         self.write("rpg/engine.js", "import { CHAPTERS } from './content.js';\n"
                    "export const SAVE_KEY = 'isegye:rpg:v1';\n"
@@ -43,6 +47,10 @@ class RPGBuilderTests(unittest.TestCase):
         self.write("rpg/art-source/PROMPTS.md", "Original fantasy game artwork prompts.\n")
         for name in b.ART_NAMES:
             self.write(f"rpg/assets/{name}.webp", b"RIFF" + (2040).to_bytes(4, "little") + b"WEBP" + b"\x00" * 2040)
+        for family, basename in b.FONT_FAMILIES.items():
+            self.write(f"rpg/fonts/{basename}-Regular.woff2",
+                       b"wOF2\x00\x01\x00\x00" + (80).to_bytes(4, "big") + b"\x00" * 68)
+            self.write(f"rpg/fonts/{basename}-OFL.txt", f"Copyright 2021 {family}\nSIL OPEN FONT LICENSE Version 1.1\n")
 
     def write(self, relative, value):
         path = self.root / relative
@@ -51,7 +59,7 @@ class RPGBuilderTests(unittest.TestCase):
 
     def mutate(self, relative, old, new):
         path = self.root / relative
-        path.write_text(path.read_text().replace(old, new))
+        path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
 
     def test_bundle_hashes_and_art_round_trip(self):
         raw, metadata = b.assemble(self.root)
@@ -90,6 +98,31 @@ class RPGBuilderTests(unittest.TestCase):
         for relative, raw in original.items():
             self.assertEqual((self.root / relative).read_bytes(), raw)
 
+    def test_offline_fonts_and_notices_round_trip_with_existing_csp(self):
+        raw, meta = b.assemble(self.root)
+        html = raw.decode()
+        self.assertIn("font-src 'none'", html)
+        def unpack(name):
+            return json.loads(re.search(r"const " + name + r" = Object.freeze\((\{[^\n]+\})\);", html)[1])
+        fonts, notices = unpack("RPG_FONT"), unpack("RPG_FONT_NOTICES")
+        self.assertEqual(set(fonts), set(b.FONT_FAMILIES))
+        self.assertEqual(set(notices), set(b.FONT_FAMILIES))
+        for family, basename in b.FONT_FAMILIES.items():
+            for path, packed in [(f"rpg/fonts/{basename}-Regular.woff2", base64.b64decode(fonts[family], validate=True)),
+                                 (f"rpg/fonts/{basename}-OFL.txt", notices[family].encode())]:
+                self.assertEqual(packed, (self.root/path).read_bytes())
+                self.assertEqual(meta["sourceHashes"][path], b.digest(packed))
+
+    def test_invalid_font_or_missing_license_stops_packaging(self):
+        path = self.root/"rpg/fonts/Jua-Regular.woff2"
+        path.write_bytes(path.read_bytes()[:-1])
+        with self.assertRaisesRegex(ValueError, "WOFF2"):
+            b.assemble(self.root)
+        path.write_bytes((self.root/"rpg/fonts/GowunDodum-Regular.woff2").read_bytes())
+        (self.root/"rpg/fonts/Jua-OFL.txt").unlink()
+        with self.assertRaisesRegex(ValueError, "Jua-OFL"):
+            b.assemble(self.root)
+
     def test_missing_artwork_fails_without_output(self):
         (self.root / "rpg/assets/cast.webp").unlink()
         with self.assertRaisesRegex(ValueError, "source"):
@@ -127,6 +160,14 @@ class RPGBuilderTests(unittest.TestCase):
     def test_module_dependency_order_is_checked(self):
         with self.assertRaisesRegex(ValueError, "dependency order"):
             b.flatten_modules({"rpg/app.js": "import { game } from './engine.js';\n"})
+
+    def test_windows_line_endings_preserve_browser_hashes_and_imports(self):
+        original, _ = b.assemble(self.root)
+        for relative in ("rpg/index.html", *b.STYLES, *b.SOURCES):
+            path = self.root / relative
+            path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        rebuilt, _ = b.assemble(self.root)
+        self.assertEqual(original, rebuilt)
 
     def test_unsupported_module_loading_is_rejected(self):
         for source in ("import { x } from 'https://example.com/x.js';\n", "import('./engine.js');\n", "import * as Engine from './engine.js';\n", "import { x as y } from './engine.js';\n"):

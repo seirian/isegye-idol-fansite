@@ -1,4 +1,5 @@
-import { CONTENT, CHAPTERS, MEMBERS, UPGRADES, FINALE, ALL_FACTS, LEGACY_MAPS } from './content.js';
+import { CONTENT, CHAPTERS, MEMBERS, UPGRADES, FINALE, ALL_FACTS, LEGACY_MAPS, previousRoomTiles } from './content.js';
+import { createTacticalField, restoreTacticalField, tacticalCommand, tacticalActive, tacticalApproach, tacticalRange, tacticalTarget, tacticalTerrain, tacticalFlank, advanceTacticalEnemy } from './tactics.js';
 
 export const SAVE_KEY = 'isegye:rpg:v1';
 export const SAVE_VERSION = 1;
@@ -26,7 +27,7 @@ function rpgPuzzleInitial(chapter) {
 
 export function createGame() {
   const state = {
-    version: SAVE_VERSION, mapRevision: 2, mode: 'explore', chapter: 0, room: 0, position: { x: 2, y: 4 },
+    version: SAVE_VERSION, mapRevision: 3, mode: 'explore', chapter: 0, room: 0, position: { x: 2, y: 4 },
     player: { hp: 100, maxHp: 100, attack: 12, focus: 3, level: 1 },
     met: [], defeated: [], solved: [], records: [], memories: [], upgrades: [],
     puzzle: Object.fromEntries(CHAPTERS.map(c => [c.id, rpgPuzzleInitial(c)])),
@@ -61,16 +62,16 @@ export function currentScene(state) {
 export function describeObjective(state) {
   if (state.mode === 'ending') return '마지막 앙코르 완주! 기록첩에서 지나온 여정을 돌아보세요.';
   if (state.mode === 'defeat') return '전투 시작 지점에서 다시 도전할 수 있습니다. 어려우면 도움 모드를 켜 보세요.';
-  if (state.mode === 'battle') return `${state.battle.name} · 다음 행동을 읽고 공격·방어·응원·지원을 고르세요.`;
+  if (state.mode === 'battle') return `${state.battle.name}에게 길을 부탁하세요. 동료가 먼저 움직일 수 있습니다. 이파리가 행동하면 상대 차례가 됩니다.`;
   if (state.mode === 'upgrade') return '이번 여정에서 얻은 힘을 골라 주세요. 세 번의 성장 선택이 있습니다.';
   if (state.mode === 'victory') return '이 장의 길을 이었습니다. 다음 해로 출발할 준비가 되었습니다.';
   if (state.chapter === 6) return '여섯 동료와 인사하고 우왁굳의 마지막 친선 시험에 도전하세요.';
   const c = CHAPTERS[state.chapter];
-  if (!state.met.includes(c.member)) return `${MEMBERS[c.member].name}에게 다가가 말을 걸어 첫 길과 지원기술을 받으세요.`;
-  if (state.room === 0) return '오른쪽 문을 통해 다음 장소로 이동하세요. 기록과 쉼터도 살펴볼 수 있습니다.';
+  if (!state.met.includes(c.member)) return `${MEMBERS[c.member].name}에게 다가가 말을 걸어 보세요.`;
+  if (state.room === 0) return `열린 문을 지나세요. 다음 목적지는 ‘${c.locations[1]}’입니다.`;
   if (!state.solved.includes(c.id)) return `${c.puzzle.title} · 안내를 읽고 세 장치를 연결하세요. ${puzzleStatus(state)}`;
   if (!state.defeated.includes(c.encounters[0].id)) return `${c.encounters[0].name}에게 도전해 기록의 문을 여세요.`;
-  if (state.room < 2) return '퍼즐과 첫 전투를 마쳤습니다. 오른쪽 기록의 문으로 들어가세요.';
+  if (state.room < 2) return `‘${c.locations[2]}’ 입구가 열렸습니다. 문을 지나 다음 장소로 가세요.`;
   if (!state.defeated.includes(c.encounters[1].id)) return `쉼터에서 준비한 뒤 ${c.encounters[1].name}에게 도전하세요.`;
   return '오른쪽 빛나는 출구에서 이번 장을 마치세요.';
 }
@@ -121,6 +122,7 @@ export function enemyIntent(state) {
 function rpgStartBattle(state, id, phase = 0) {
   const e = rpgEncounter(id);
   state.battle = { ...e, hp: e.maxHp + (id === 'final-trial' ? phase * 26 : 0), maxHp: e.maxHp + (id === 'final-trial' ? phase * 26 : 0), turn: 0, phase, exposed: 0, counter: false, previousMove: null, lastMove: null };
+  state.battle.field = createTacticalField(state);
   state.mode = 'battle'; state.choice = null; state.dialogue = null; state.pending = null;
   state.checkpoint = { id, phase, chapter: state.chapter, room: state.room, position: { ...state.position } };
   rpgLog(state, `${e.name} · ${id === 'final-trial' ? FINALE.phases[phase] : '친선 전투 시작'}. 적의 예고를 먼저 확인하세요.`);
@@ -130,7 +132,7 @@ function rpgSolve(state) {
   const c = CHAPTERS[state.chapter];
   if (!state.solved.includes(c.id)) {
     state.solved.push(c.id); rpgFocus(state, 3); rpgHeal(state, 15);
-    rpgLog(state, `${c.puzzle.title} 완료! 길이 연결되었습니다. 체력 15와 응원 3을 회복했습니다.`);
+    rpgLog(state, `${c.puzzleResult} 체력 15, 응원 3 회복.`);
   }
 }
 function rpgChoice(state, target, title, text, options) {
@@ -200,11 +202,14 @@ function rpgInteract(state, id) {
   }
   if (obj.type === 'member') {
     if (state.met.includes(c.member)) rpgDialogue(state, MEMBERS[c.member].name, ['잘하고 있어, 이파리. 서두르지 않아도 돼.', ...c.puzzle.clue], null, c.member);
-    else rpgDialogue(state, MEMBERS[c.member].name, c.intro, { kind: 'meet', id: c.member }, c.member);
+    else {
+      const lines = [...c.intro];
+      if (state.records.includes(c.facts[0].id)) lines[0] = c.meeting.recognized;
+      rpgDialogue(state, MEMBERS[c.member].name, lines, { kind: 'meet', id: c.member }, c.member);
+    }
   } else if (obj.type === 'record') {
-    const f = c.facts[Number(obj.id.slice(-1))];
-    if (!state.records.includes(f.id)) state.records.push(f.id);
-    rpgDialogue(state, '활동 기록 · 실제 자료', [`${f.date} · ${f.title}`, f.text, '이 사실 기록의 출처는 기록첩에서 열 수 있습니다. 주변 장소와 인물의 대사는 팬 창작입니다.']);
+    const index = Number(obj.id.slice(-1)), f = c.facts[index], relic = c.relics[index];
+    rpgDialogue(state, relic.name, relic.lines, { kind: 'relic', id: f.id });
   } else if (obj.type === 'rest') {
     state.player.hp = state.player.maxHp; state.player.focus = rpgMaxFocus(state);
     rpgLog(state, '잠시 쉬었습니다. 체력과 응원이 모두 회복되었습니다.');
@@ -222,7 +227,9 @@ function rpgInteract(state, id) {
     else rpgChoice(state, { kind: 'battle', id: e.id }, e.name, e.description, [{ id: 'start', label: '도전하기' }]);
   } else if (obj.type === 'exit') {
     if (obj.locked) { rpgLog(state, '이 무대의 상대를 이겨야 다음 해로 나아갈 수 있습니다.'); return; }
-    rpgDialogue(state, MEMBERS[c.member].name, c.outro, { kind: 'chapterClear' }, c.member);
+    const lines = [...c.outro];
+    if (state.records.includes(c.facts[1].id)) lines[0] = c.relics[1].echo;
+    rpgDialogue(state, MEMBERS[c.member].name, lines, { kind: 'chapterClear' }, c.member);
   } else if (obj.type === 'ensemble') {
     rpgDialogue(state, '여섯 동료 · 창작 이야기', rpgMemberIds.map(mid => `${MEMBERS[mid].name}: ${MEMBERS[mid].ending}`));
   }
@@ -243,8 +250,10 @@ function rpgDamage(state, amount, bypass, move, intent) {
   if (state.battle.mechanic === 'relay') damage *= state.battle.previousMove === move ? 0.55 : 1.25;
   if (state.battle.mechanic === 'final' && state.battle.phase === 2) damage *= 1 + state.finalContributions.length * 0.04;
   if (state.help) damage *= 1.2;
+  if (tacticalFlank(state)) damage *= 1.35;
   const value = Math.max(1, Math.round(damage));
-  state.battle.hp = Math.max(0, state.battle.hp - value);
+  const recipient = state.battle.field.target === 'echo' ? state.battle.field.echo : state.battle;
+  recipient.hp = Math.max(0, recipient.hp - value);
   return value;
 }
 
@@ -252,11 +261,22 @@ function rpgBattleTurn(state, move, support) {
   const b = state.battle, intent = enemyIntent(state);
   if (!b || !intent) return;
   if (support && (!state.met.includes(support) || state.player.focus < MEMBERS[support].skill.cost)) { rpgLog(state, '지원기술을 쓰려면 동료를 만나고 응원 2를 모아야 합니다.'); return; }
+  const field = b.field, unit = tacticalActive(state);
+  const unitName = MEMBERS[unit.id]?.name || '이파리';
+  const attackTarget = tacticalTarget(state);
+  if (move === 'attack' || (support && support !== 'ine')) {
+    const dest = tacticalApproach(state, support ? 4 : tacticalRange(unit));
+    if (!dest) { rpgLog(state, '거리가 멉니다. 다음 차례에 가까이 다가가거나 다른 대상을 골라 주세요.'); return; }
+    if (dest.cost) {
+      unit.x = dest.x; unit.y = dest.y;
+      field.moved.push(unit.id);
+    }
+  }
   let guard = 0, cancel = false, dealt = 0, actionName = '', usedCounter = false, grantsExposure = false;
   const power = state.player.attack;
   if (move === 'attack') {
     const multiplier = b.counter ? 1.8 : 1; usedCounter = b.counter;
-    dealt = rpgDamage(state, power * multiplier, false, move, intent); rpgFocus(state, 1); actionName = usedCounter ? '힘을 실은 반격' : '이파리의 공격';
+    dealt = rpgDamage(state, power * multiplier, false, move, intent); rpgFocus(state, 1); actionName = usedCounter ? '힘을 실은 반격' : `${unitName}의 공격`;
   } else if (move === 'defend') { guard = 0.76; rpgFocus(state, 2); actionName = '단단히 방어'; }
   else if (move === 'cheer') {
     rpgFocus(state, 3 + state.upgrades.filter(u => u === 'bond').length); rpgHeal(state, 5); actionName = '응원을 모아 체력 5 회복';
@@ -272,11 +292,13 @@ function rpgBattleTurn(state, move, support) {
   } else return;
   if (usedCounter) b.counter = false;
   b.previousMove = support || move; b.lastMove = support || move;
-  state.stats.turns += 1;
-  rpgLog(state, `${actionName}${dealt ? ` · ${dealt} 피해` : ''}.`);
+  if (unit.id === 'hero') state.stats.turns += 1;
+  rpgLog(state, `${actionName}${dealt ? ` · ${attackTarget.id === 'echo' ? '잔향' : b.name}에게 ${dealt} 피해` : ''}.`);
+  if (attackTarget.id === 'echo' && !field.echo.hp) { field.target = 'leader'; rpgLog(state, '잔향이 사라졌습니다. 수호자의 협공이 풀립니다.'); }
   if (b.hp <= 0) {
     if (b.mechanic === 'final' && b.phase < 2) {
       b.phase += 1; b.maxHp = FINALE.encounter.maxHp + b.phase * 26; b.hp = b.maxHp; b.turn = 0; b.exposed = 0; b.previousMove = null;
+      b.field = createTacticalField(state);
       rpgHeal(state, Math.round(state.player.maxHp * 0.4)); rpgFocus(state, 3);
       state.checkpoint.phase = b.phase;
       rpgLog(state, `${FINALE.phases[b.phase]}! 체력과 응원을 회복했습니다. 이 단계부터 재도전할 수 있습니다.`);
@@ -295,14 +317,29 @@ function rpgBattleTurn(state, move, support) {
     }
     return;
   }
-  const damage = cancel ? 0 : Math.max(0, Math.round(intent.power * (1 - guard)));
+  if (dealt > 0 && !grantsExposure) b.exposed = Math.max(0, b.exposed - 1);
+  if (unit.id !== 'hero') {
+    field.acted.push(unit.id); field.active = 'hero';
+    field.guard = Math.max(field.guard,guard); field.silence ||= cancel;
+    rpgLog(state, `${unitName} 행동 완료. 이파리가 이어서 움직입니다.`);
+    return;
+  }
+  guard = Math.max(guard, field.guard); cancel ||= field.silence;
+  const strike = (foe, scale) => {
+    if (cancel || intent.kind === 'rest') return 0;
+    const victim = advanceTacticalEnemy(state, foe);
+    if (!victim) return 0;
+    const cover = tacticalTerrain(state, victim.x, victim.y) === '+' ? .65 : 1;
+    return Math.max(0, Math.round(intent.power * scale * cover * (1 - guard)));
+  };
+  const leaderDamage = strike(field.leader, field.echo ? .83 : 1);
+  const echoDamage = field.echo?.hp > 0 ? strike(field.echo,.17) : 0;
+  const damage = leaderDamage + echoDamage;
   state.player.hp = Math.max(0, state.player.hp - damage);
   if (cancel) rpgLog(state, '규칙이 뒤집혀 상대의 이번 행동이 취소되었습니다.');
-  else if (damage) rpgLog(state, `${intent.name} · ${damage} 피해${guard ? ' (방어 적용)' : ''}.`);
-  else rpgLog(state, '상대가 숨을 고릅니다.');
-  // Exposure counts offensive actions, not elapsed turns. A multi-hit support
-  // spends one charge, and the skill granting it does not spend its own grant.
-  if (dealt > 0 && !grantsExposure) b.exposed = Math.max(0, b.exposed - 1);
+  else if (damage) rpgLog(state, `${intent.name}${echoDamage ? ' · 잔향 협공' : ''} · 일행 체력 −${damage}${guard ? ' (방어 적용)' : ''}.`);
+  else rpgLog(state, intent.kind === 'rest' ? '상대가 숨을 고릅니다.' : '상대가 거리를 좁혔습니다. 일행은 무사합니다.');
+  field.active = 'hero'; field.moved = []; field.acted = []; field.guard = 0; field.silence = false;
   b.turn += 1;
   if (state.player.hp === 0) { state.mode = 'defeat'; state.failures += 1; rpgLog(state, '잠시 넘어졌습니다. 진행 기록은 유지됩니다. 이번 전투부터 다시 도전할 수 있습니다.'); }
 }
@@ -317,6 +354,13 @@ export function dispatch(original, action) {
   }
   if (action.type === 'help') { state.help = Boolean(action.enabled); rpgLog(state, state.help ? '도움 모드: 받는 피해 40% 감소, 주는 피해 20% 증가. 이야기는 같습니다.' : '기본 난이도로 돌아왔습니다.'); return state; }
   if (action.type === 'dialogueNext' && state.mode === 'dialogue') {
+    if (state.pending?.kind === 'relic' && state.dialogue.index === 0 && !state.records.includes(state.pending.id)) {
+      state.records.push(state.pending.id);
+    }
+    const meeting = state.pending?.kind === 'meet' && CHAPTERS[state.chapter]?.meeting;
+    if (meeting && state.dialogue.lines[state.dialogue.index] === meeting.question && action.reply === 1) {
+      state.dialogue.lines[state.dialogue.index + 1] = meeting.choices[1].reply;
+    }
     if (state.dialogue.index < state.dialogue.lines.length - 1) state.dialogue.index += 1;
     else {
       const pending = state.pending; state.mode = 'explore'; state.dialogue = null; state.pending = null;
@@ -336,7 +380,8 @@ export function dispatch(original, action) {
       if (target.kind === 'puzzle') rpgChoosePuzzle(state, target, action.id);
       if (target.kind === 'battle' && action.id === 'start') rpgStartBattle(state, target.id);
     }
-  } else if (action.type === 'battle' && state.mode === 'battle') rpgBattleTurn(state, action.move, null);
+  } else if (action.type === 'tactic' && state.mode === 'battle') tacticalCommand(state, action);
+  else if (action.type === 'battle' && state.mode === 'battle') rpgBattleTurn(state, action.move, null);
   else if (action.type === 'support' && state.mode === 'battle' && MEMBERS[action.id]) rpgBattleTurn(state, 'support', action.id);
   else if (action.type === 'nextChapter' && state.mode === 'victory') {
     if ([0, 2, 4].includes(state.chapter)) state.mode = 'upgrade'; else rpgAdvance(state);
@@ -388,7 +433,12 @@ export function restore(raw) {
   }
   if ((value.mode === 'dialogue') !== Boolean(value.dialogue)) return null;
   if (value.pending !== null) {
-    if (!rpgIsRecord(value.pending) || !['meet', 'chapterClear', 'finalTalk'].includes(value.pending.kind) || value.mode !== 'dialogue') return null;
+    if (!rpgIsRecord(value.pending) || !['meet', 'relic', 'chapterClear', 'finalTalk'].includes(value.pending.kind) || value.mode !== 'dialogue') return null;
+    if (value.pending.kind === 'relic') {
+      const index = value.room === 0 ? 0 : 1;
+      const chapter = CHAPTERS[value.chapter];
+      if (!chapter || value.room === 1 || value.pending.id !== chapter.facts[index].id || value.dialogue.speaker !== chapter.relics[index].name) return null;
+    }
     if (value.pending.kind === 'meet' && value.pending.id !== CHAPTERS[value.chapter]?.member) return null;
     if (value.pending.kind === 'chapterClear' && !value.defeated.includes(CHAPTERS[value.chapter]?.encounters[1].id)) return null;
     if (value.pending.kind === 'finalTalk' && value.chapter !== 6) return null;
@@ -417,6 +467,8 @@ export function restore(raw) {
     if (!e || !rpgNumber(b.phase, 0, e.mechanic === 'final' ? 2 : 0) || !rpgNumber(b.turn, 0, 1000000) || b.maxHp !== e.maxHp + (e.mechanic === 'final' ? b.phase * 26 : 0) || !rpgNumber(b.hp, 0, b.maxHp) || !rpgNumber(b.exposed, 0, 3) || typeof b.counter !== 'boolean' || ![null, 'attack', 'defend', 'cheer', ...rpgMemberIds].includes(b.previousMove) || ![null, 'attack', 'defend', 'cheer', ...rpgMemberIds].includes(b.lastMove)) return null;
     // Combat power and labels always come from the current built-in content.
     value.battle = { ...e, hp: b.hp, maxHp: b.maxHp, turn: b.turn, phase: b.phase, exposed: b.exposed, counter: b.counter, previousMove: b.previousMove, lastMove: b.lastMove };
+    value.battle.field = restoreTacticalField(value, b.field);
+    if (!value.battle.field) return null;
     const expected = value.chapter === 6 ? FINALE.encounter : CHAPTERS[value.chapter].encounters[value.room - 1];
     if (!expected || expected.id !== b.id || (value.mode !== 'ending' && b.hp === 0)) return null;
   }
@@ -445,12 +497,16 @@ export function restore(raw) {
   if (value.room === 2 && (!value.solved.includes(CHAPTERS[value.chapter].id) || !value.defeated.includes(CHAPTERS[value.chapter].encounters[0].id))) return null;
   if (['victory', 'upgrade'].includes(value.mode) && (value.chapter === 6 || !value.defeated.includes(CHAPTERS[value.chapter].encounters[1].id))) return null;
   if (value.mode === 'upgrade' && ![0, 2, 4].includes(value.chapter)) return null;
-  if (value.mapRevision !== undefined && value.mapRevision !== 2) return null;
+  if (![undefined, 2, 3].includes(value.mapRevision)) return null;
   const tiles = currentScene(value).tiles;
-  const legacy = value.mapRevision === undefined;
-  const oldTiles = value.chapter < 6 ? LEGACY_MAPS[value.room] : tiles;
-  // The first review build used shared layouts. Preserve its progress when a
-  // new scenery wall occupies the saved square; move only to the nearest floor.
+  const legacy = value.mapRevision !== 3;
+  let oldTiles = tiles;
+  if (legacy) {
+    oldTiles = LEGACY_MAPS[value.chapter === 6 ? 2 : value.room];
+    if (value.mapRevision === 2 && value.chapter < 6) oldTiles = previousRoomTiles(CHAPTERS[value.chapter], value.room);
+  }
+  // Validate both coordinates against the map on which this save was created.
+  // Move only newly blocked positions, including a battle's retry checkpoint.
   for (const position of [value.position, ...(value.checkpoint ? [value.checkpoint.position] : [])]) {
     if (legacy && oldTiles[position.y]?.[position.x] !== '.') return null;
     if (tiles[position.y]?.[position.x] === '.') continue;
@@ -460,7 +516,7 @@ export function restore(raw) {
     candidates.sort((a,b) => (Math.abs(a.x-position.x)+Math.abs(a.y-position.y))-(Math.abs(b.x-position.x)+Math.abs(b.y-position.y)));
     Object.assign(position, candidates[0]);
   }
-  value.mapRevision = 2;
+  value.mapRevision = 3;
   // Copy known top-level properties only; no storage-derived properties become API input.
   const clean = createGame();
   for (const key of Object.keys(clean)) clean[key] = rpgClone(value[key]);
