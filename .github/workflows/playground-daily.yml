@@ -1,15 +1,5 @@
 name: Playground - daily verified question bank
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/playground-daily.yml
-      - playground/reserve.json
-      - playground/editorial.json
-      - scripts/playground_bank.py
-      - scripts/playground_pipeline.py
-      - scripts/collect_playground.py
-      - scripts/publish_playground_bank.py
   schedule:
     - cron: '0 23 * * *' # daily 08:00 Asia/Seoul, UTC previous day
   workflow_dispatch:
