@@ -14,6 +14,7 @@ def jsjson(value):return json.dumps(value,ensure_ascii=False,separators=(',',':'
 def component():
     seed=validate(json.loads((ROOT/'playground/catalog.json').read_text()))
     src=(ROOT/'playground/app.js').read_text()
+    src=one(src,'\n<!--PREVIEW-QUIZ-OPTIONS-->','')
     card=(ROOT/'site/playground-courier-card.html').read_text()+(ROOT/'site/playground-rpg-card.html').read_text()
     src=one(src,'`<section class="hero" aria-labelledby="daily-title">','`'+card+'<section class="hero" aria-labelledby="daily-title">')
     src=one(src,'<span class="badge">시간제한 없이, 가볍게</span>',"<span class=\"badge\">${title==='놀이터'?'퀴즈부터 미니게임까지':'시간제한 없이, 가볍게'}</span>")
@@ -71,7 +72,7 @@ def build(out=None):
     (out/'src/playground-seed.json').write_text(json.dumps(seed,ensure_ascii=False,separators=(',',':'))+'\n')
     html=(out/'index.html').read_text();html=one(html,'<script src="src/app.js"></script>','<script src="src/playground.js"></script><script src="src/app.js"></script>');(out/'index.html').write_text(html)
     for name in ('production-ui.js','public-production-ui.js'):
-        p=out/'src'/name;s=p.read_text();s=one(s,'<h2>검색과 개인 설정</h2>','<h2><a href="#/playground">놀이터</a></h2><p>별빛 배송부, 오늘의 다섯 문제, 주제별 퀴즈와 발매 순서 게임을 즐길 수 있습니다. 플레이 기록은 이 브라우저에만 보관합니다.</p><h2>검색과 개인 설정</h2>');p.write_text(s)
+        p=out/'src'/name;s=p.read_text();s=one(s,'<h2>검색과 개인 설정</h2>','<h2><a href="#/playground">놀이터</a></h2><p>오늘의 다섯 문제를 풀거나 별빛 배송부와 이파리 연대기를 플레이할 수 있습니다. 플레이 기록은 이 브라우저에만 보관합니다.</p><h2>검색과 개인 설정</h2>');p.write_text(s)
     meta['playground']={'schemaVersion':1,'acceptedCommit':ACCEPTED,'operatorApprovedDeployment':True,'route':'/#/playground','readEndpoint':'/api/playground','seedVersion':seed['version'],'seedQuestions':len(seed['questions']),'storageKey':'isegye:playground:v1','dailySchedule':'매일 08:00 Asia/Seoul','seedSha256':hashlib.sha256((out/'src/playground-seed.json').read_bytes()).hexdigest()}
     meta['courierGame']=build_courier(out)
     meta['rpgGame']=build_rpg(out)
