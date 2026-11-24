@@ -31,10 +31,13 @@ SPECS = {
     'catalog': ('video-catalog.yml', None, 'ISEGYE_VIDEO_CATALOG_PAUSED'),
     'production': ('production.yml', None, 'PRODUCTION_PAUSED'),
 }
+# A caller may inspect the controller itself without gaining a dispatch target.
+READABLE_WORKFLOWS = frozenset(spec[0] for spec in SPECS.values()) | {'batch-watchdog.yml'}
 MAX_ARCHIVE = 8_000_000
 RUN_PAGE_SIZE = 100
 MAX_RUN_PAGES = 20
 MAX_ARTIFACT_PAGES = 10
+MAX_HTTP_HEADERS = 32_768
 COMPLETION_WORKFLOWS = {
     'Albums - hourly verified metadata and chart refresh': 'albums-daily.yml',
     'Schedule - every 2 hours permitted-source refresh': 'schedule-refresh.yml',
@@ -46,6 +49,105 @@ REQUIRED_SCHEDULE = {'cafe-members','cafe-agency','fan-roundup',
 
 class EvidenceUnavailable(ValueError):
     """Absent or expired evidence is not success, but permits bounded recollection."""
+
+REASON_CODES = frozenset({
+    'unapproved_workflow', 'invalid_run_listing', 'run_history_changed',
+    'run_history_incomplete', 'run_history_budget_exceeded', 'duplicate_run_id',
+    'invalid_run_provenance', 'invalid_run_attempt', 'invalid_run_status',
+    'invalid_run_clock', 'workflow_query_failed', 'invalid_inspection_budget',
+    'github_timeout', 'github_request_failed', 'github_rate_limited',
+    'github_http_error', 'github_response_too_large', 'github_invalid_headers',
+    'github_invalid_json', 'inspection_validation_failed', 'inspection_api_unavailable',
+    'inspection_internal_error',
+})
+API_DIAGNOSTIC_LIMITS = {
+    'httpStatus': 599, 'rateLimitLimit': 1_000_000_000,
+    'rateLimitRemaining': 1_000_000_000, 'rateLimitReset': 999_999_999_999,
+    'retryAfterSeconds': 604_800,
+}
+
+
+def safe_api_diagnostics(value):
+    """Only bounded numeric response metadata may enter reports or incidents."""
+    if not isinstance(value, dict):
+        return {}
+    return {key:value[key] for key, limit in API_DIAGNOSTIC_LIMITS.items()
+            if type(value.get(key)) is int and 0 <= value[key] <= limit}
+
+
+class InspectionError(ValueError):
+    def __init__(self, reason_code, message, *, inspection=None, api_diagnostics=None):
+        super().__init__(message)
+        self.reason_code = reason_code if reason_code in REASON_CODES else 'inspection_validation_failed'
+        self.inspection = inspection
+        self.api_diagnostics = safe_api_diagnostics(api_diagnostics)
+
+
+class GitHubAPIError(RuntimeError):
+    def __init__(self, reason_code, *, api_diagnostics=None):
+        # Never retain CLI stderr, response bodies, signed URLs, or request data.
+        super().__init__('GitHub API request failed')
+        self.reason_code = reason_code if reason_code in REASON_CODES else 'github_request_failed'
+        self.inspection = None
+        self.api_diagnostics = safe_api_diagnostics(api_diagnostics)
+
+
+def error_details(exc):
+    """Stable public diagnostics; unknown exception text is deliberately omitted."""
+    fallback = ('inspection_validation_failed' if isinstance(exc, ValueError) else
+                'inspection_api_unavailable' if isinstance(exc, RuntimeError) else 'inspection_internal_error')
+    result = {'error':type(exc).__name__, 'reasonCode':fallback}
+    if isinstance(exc, (InspectionError, GitHubAPIError)):
+        result['reasonCode'] = exc.reason_code
+        info = exc.inspection
+        if isinstance(info, dict) and info.get('workflow') in READABLE_WORKFLOWS:
+            clean = {'scope':'workflow', 'workflow':info['workflow'], 'complete':info.get('complete') is True}
+            for key in ('pageSize','pageBudget','pagesRead','expectedRuns','observedRuns','mainRuns'):
+                value = info.get(key)
+                if value is None and key == 'expectedRuns':
+                    clean[key] = None
+                elif type(value) is int and 0 <= value <= 1_000_000_000:
+                    clean[key] = value
+            result['inspection'] = clean
+        if exc.api_diagnostics:
+            result['apiDiagnostics'] = safe_api_diagnostics(exc.api_diagnostics)
+    return result
+
+
+def http_response(raw):
+    """Strip gh --include headers without ever decoding a binary archive body."""
+    remaining = raw
+    diagnostics = {}
+    consumed = 0
+    for _ in range(5):
+        endings = [(remaining.find(marker), len(marker)) for marker in (b'\r\n\r\n', b'\n\n')]
+        endings = [(offset, size) for offset, size in endings if offset >= 0]
+        if not endings:
+            raise InspectionError('github_invalid_headers', 'GitHub response headers missing')
+        end, size = min(endings)
+        consumed += end+size
+        if consumed > MAX_HTTP_HEADERS:
+            raise InspectionError('github_invalid_headers', 'GitHub response headers too large')
+        lines = remaining[:end].splitlines()
+        status = re.fullmatch(rb'HTTP/\d(?:\.\d)? ([1-5][0-9]{2})(?: [^\r\n]*)?', lines[0] if lines else b'')
+        if not status:
+            raise InspectionError('github_invalid_headers', 'Invalid GitHub response status')
+        diagnostics = {'httpStatus':int(status[1])}
+        names = {b'x-ratelimit-limit':'rateLimitLimit', b'x-ratelimit-remaining':'rateLimitRemaining',
+                 b'x-ratelimit-reset':'rateLimitReset', b'retry-after':'retryAfterSeconds'}
+        for line in lines[1:]:
+            name, separator, value = line.partition(b':')
+            key = names.get(name.strip().lower())
+            value = value.strip()
+            if separator and key and re.fullmatch(rb'[0-9]{1,12}', value):
+                number = int(value)
+                if number <= API_DIAGNOSTIC_LIMITS[key]:
+                    diagnostics[key] = number
+        remaining = remaining[end+size:]
+        if not remaining.startswith(b'HTTP/'):
+            return remaining, diagnostics
+    raise InspectionError('github_invalid_headers', 'Too many GitHub response header blocks')
+
 
 def clock(value):
     result = datetime.fromisoformat(value.replace('Z', '+00:00'))
@@ -140,16 +242,35 @@ def schedule_readback_ok(pub, due, at):
 def api(path, method='GET', payload=None, binary=False):
     if not path.startswith(('actions/', 'git/ref/heads/main', 'issues')):
         raise ValueError('Unapproved endpoint')
-    args = ['gh','api','--method',method,'repos/'+REPO+'/'+path]
+    args = ['gh','api','--include','--method',method,'repos/'+REPO+'/'+path]
     if payload is not None:
         args += ['--input','-']
-    result = subprocess.run(args, input=json.dumps(payload).encode() if payload is not None else None,
-                            capture_output=True, timeout=70)
-    if result.returncode:
-        raise RuntimeError('GitHub API request failed')  # never expose signed URLs or credentials
-    if len(result.stdout) > (MAX_ARCHIVE if binary else 2_000_000):
-        raise ValueError('Oversized GitHub response')
-    return result.stdout if binary else json.loads(result.stdout) if result.stdout.strip() else {}
+    try:
+        result = subprocess.run(args, input=json.dumps(payload).encode() if payload is not None else None,
+                                capture_output=True, timeout=70)
+    except subprocess.TimeoutExpired:
+        raise GitHubAPIError('github_timeout') from None
+    except OSError:
+        raise GitHubAPIError('github_request_failed') from None
+    limit = MAX_ARCHIVE if binary else 2_000_000
+    if len(result.stdout) > limit+MAX_HTTP_HEADERS:
+        raise InspectionError('github_response_too_large', 'Oversized GitHub response')
+    if result.returncode and not result.stdout.startswith(b'HTTP/'):
+        raise GitHubAPIError('github_request_failed')
+    raw, diagnostics = http_response(result.stdout)
+    status = diagnostics['httpStatus']
+    if result.returncode or not 200 <= status < 300:
+        limited = status == 429 or (status == 403 and
+                  (diagnostics.get('rateLimitRemaining') == 0 or 'retryAfterSeconds' in diagnostics))
+        raise GitHubAPIError('github_rate_limited' if limited else 'github_http_error', api_diagnostics=diagnostics)
+    if len(raw) > limit:
+        raise InspectionError('github_response_too_large', 'Oversized GitHub response', api_diagnostics=diagnostics)
+    if binary:
+        return raw
+    try:
+        return json.loads(raw) if raw.strip() else {}
+    except (ValueError, UnicodeError):
+        raise InspectionError('github_invalid_json', 'Invalid GitHub JSON response', api_diagnostics=diagnostics) from None
 
 def artifact_files(run, prefix, filename, getter=api):
     name = prefix+'-'+str(run['id'])+'-'+str(run['run_attempt'])
@@ -238,51 +359,96 @@ def recovery_action(runs, at, due, healthy, grace=timedelta(minutes=5)):
                and -timedelta(minutes=2) <= at-started(r) < timedelta(hours=1)]
     return 'retry_budget' if len(retries) >= 2 else 'dispatch'
 
-def workflow_runs(filename, getter=None, max_pages=MAX_RUN_PAGES):
-    """Read bounded, complete history; old run IDs can have a recent attempt.
+def read_workflow_runs(filename, getter=None, max_pages=MAX_RUN_PAGES):
+    """Return complete runs and their read coverage, never dispatch permission.
 
-    GitHub orders runs by creation, not latest attempt. Never dispatch based on
-    an incomplete page of runs. A limit/API/provenance error fails closed.
+    Creation pages do not establish the latest attempt. Read every page within
+    the unchanged budget, then order locally. This is not an atomic API snapshot;
+    callers must still perform their fresh pre-dispatch decision and slot checks.
+    An incomplete result is raised with coverage diagnostics, never returned as
+    a partial list that could be mistaken for the absence of active/recent runs.
     """
     getter = getter or api
-    if filename not in {spec[0] for spec in SPECS.values()}:
-        raise ValueError('Unapproved workflow')
+    if not isinstance(filename, str) or filename not in READABLE_WORKFLOWS:
+        raise InspectionError('unapproved_workflow', 'Unapproved workflow')
+    if type(max_pages) is not int or not 1 <= max_pages <= MAX_RUN_PAGES:
+        raise InspectionError('invalid_inspection_budget', 'Invalid workflow inspection budget')
+    inspection = {'scope':'workflow', 'workflow':filename, 'pageSize':RUN_PAGE_SIZE,
+                  'pageBudget':max_pages, 'pagesRead':0, 'expectedRuns':None,
+                  'observedRuns':0, 'mainRuns':0, 'complete':False}
     found = {}
+    main = []
     expected_total = None
+
+    def fail(code, message):
+        raise InspectionError(code, message, inspection=dict(inspection))
+
     for page in range(1, max_pages+1):
         # Do not use branch/status/created filters: GitHub caps filtered searches
         # at 1,000 results, and an old run can have a new attempt. Filter locally.
-        listing = getter('actions/workflows/'+filename+
-                         f'/runs?per_page={RUN_PAGE_SIZE}&page={page}')
+        try:
+            listing = getter('actions/workflows/'+filename+
+                             f'/runs?per_page={RUN_PAGE_SIZE}&page={page}')
+        except (InspectionError, GitHubAPIError) as exc:
+            exc.inspection = dict(inspection)
+            raise
+        except Exception:
+            fail('workflow_query_failed', 'Workflow run query failed')
+        inspection['pagesRead'] += 1
+        if not isinstance(listing, dict):
+            fail('invalid_run_listing', 'Invalid workflow run listing')
         runs = listing.get('workflow_runs')
         total = listing.get('total_count')
         if (not isinstance(runs, list) or len(runs) > RUN_PAGE_SIZE
                 or type(total) is not int or total < 0):
-            raise ValueError('Invalid workflow run listing')
+            fail('invalid_run_listing', 'Invalid workflow run listing')
         if expected_total is None:
             expected_total = total
+            inspection['expectedRuns'] = total
         elif total != expected_total:
-            raise ValueError('Workflow run listing changed during inspection')
+            fail('run_history_changed', 'Workflow run listing changed during inspection')
         for run in runs:
             if (not isinstance(run, dict) or type(run.get('id')) is not int or run['id'] <= 0
-                    or run.get('repository', {}).get('full_name') != REPO
-                    or run['id'] in found):
-                raise ValueError('Untrusted or duplicate workflow run')
+                    or not isinstance(run.get('repository'), dict)
+                    or run['repository'].get('full_name') != REPO):
+                fail('invalid_run_provenance', 'Untrusted workflow run')
+            if run['id'] in found:
+                fail('duplicate_run_id', 'Untrusted or duplicate workflow run')
             found[run['id']] = run
+            inspection['observedRuns'] = len(found)
             if run.get('head_branch') != 'main':
                 continue
             if (run.get('path') != '.github/workflows/'+filename
-                    or type(run.get('run_attempt')) is not int or run['run_attempt'] < 1
-                    or run.get('status') not in ACTIVE | {'completed'}):
-                raise ValueError('Untrusted workflow run')
-            started(run)
-            clock(run['created_at'])
+                    or not isinstance(run.get('head_repository'), dict)
+                    or run['head_repository'].get('full_name') != REPO):
+                fail('invalid_run_provenance', 'Untrusted workflow run')
+            if type(run.get('run_attempt')) is not int or run['run_attempt'] < 1:
+                fail('invalid_run_attempt', 'Untrusted workflow run attempt')
+            if not isinstance(run.get('status'), str) or run['status'] not in ACTIVE | {'completed'}:
+                fail('invalid_run_status', 'Untrusted workflow run status')
+            try:
+                started(run)
+                clock(run['created_at'])
+            except (KeyError, ValueError, TypeError, AttributeError):
+                fail('invalid_run_clock', 'Invalid workflow attempt or creation clock')
+            main.append(run)
+            inspection['mainRuns'] = len(main)
         if len(runs) < RUN_PAGE_SIZE or total <= len(found):
             if total != len(found):
-                raise ValueError('Incomplete workflow run listing')
-            return sorted((r for r in found.values() if r.get('head_branch') == 'main'),
-                          key=started, reverse=True)
-    raise ValueError('Workflow run history exceeds inspection budget')
+                fail('run_history_incomplete', 'Incomplete workflow run listing')
+            inspection['complete'] = True
+            return {'runs':sorted(main, key=started, reverse=True), 'inspection':inspection}
+    fail('run_history_budget_exceeded', 'Workflow run history exceeds inspection budget')
+
+
+def workflow_runs(filename, getter=None, max_pages=MAX_RUN_PAGES, *, inspection=None):
+    """Compatibility list API for the unchanged set of recoverable workflows."""
+    if not isinstance(filename, str) or filename not in {spec[0] for spec in SPECS.values()}:
+        raise InspectionError('unapproved_workflow', 'Unapproved workflow')
+    result = read_workflow_runs(filename, getter, max_pages)
+    if inspection is not None:
+        inspection.update(result['inspection'])
+    return result['runs']
 
 
 def require_trusted_completion(getter=None):
@@ -323,7 +489,9 @@ def inspect_batch(kind, at, getter=None):
         row['state'] = 'night_pause' if kind == 'albums' else 'not_due'
         return row
     row['dueAt'] = due.isoformat()
-    runs = workflow_runs(filename, getter)
+    inspection = {}
+    runs = workflow_runs(filename, getter, inspection=inspection)
+    row['inspection'] = inspection
     row['inspectedRuns'] = len(runs)
     if runs:
         last = runs[0]
@@ -420,7 +588,7 @@ def main():
             or not os.getenv('GH_TOKEN')):
         raise ValueError('Main-only watchdog')
     at = datetime.now(UTC)
-    report = {'checkedAt':at.isoformat(),'mode':'apply' if args.apply else 'audit','batches':[]}
+    report = {'schemaVersion':2, 'checkedAt':at.isoformat(),'mode':'apply' if args.apply else 'audit','batches':[]}
     if os.getenv('PRODUCTION_PAUSED') == 'true':
         report['state'] = 'paused'
     else:
@@ -428,6 +596,7 @@ def main():
             require_trusted_completion()
         except Exception as exc:
             report.update(state='inspection_failed', triggerError=type(exc).__name__)
+            report['triggerFailure'] = error_details(exc)
             (ROOT/'batch-watchdog.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n')
             print(json.dumps(report, ensure_ascii=False))
             return 1
@@ -435,8 +604,7 @@ def main():
             try:
                 row = recover_batch(kind, args.apply)
             except Exception as exc:
-                row = {'batch':kind, 'workflow':filename, 'state':'inspection_failed',
-                       'error':type(exc).__name__}
+                row = {'batch':kind, 'workflow':filename, 'state':'inspection_failed', **error_details(exc)}
             report['batches'].append(row)
         report['state'] = report_state(report['batches'])
         if args.apply:
@@ -453,6 +621,7 @@ def main():
                     api('issues/'+str(issue['number']),'PATCH',{'state':'closed','body':body})
             except Exception as exc:
                 report['incidentError']=type(exc).__name__
+                report['incidentFailure']=error_details(exc)
     (ROOT/'batch-watchdog.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(report,ensure_ascii=False))
     if os.getenv('GITHUB_STEP_SUMMARY'):

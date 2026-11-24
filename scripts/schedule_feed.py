@@ -11,9 +11,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit, urljoin, urlencode
 from urllib.request import Request, build_opener, HTTPRedirectHandler
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.robotparser import RobotFileParser
-import hashlib, json, os, re, time, xml.etree.ElementTree as ET
+import hashlib, json, os, re, socket, ssl, time, xml.etree.ElementTree as ET
 import notice_policy
 import berriz_feed
 from notice_highlights import highlights
@@ -35,6 +35,59 @@ SOURCES=[
 ]
 SOURCES += berriz_feed.SOURCES
 class FeedError(RuntimeError):pass
+PARABLE_STAGES=frozenset(('robots','newsroom','feed','article'))
+PARABLE_ERROR_CODES=frozenset(('source_not_allowed','credential_destination_not_allowed',
+ 'response_too_large','robots_disallowed','unsafe_xml','feed_schema_changed','feed_xml_invalid',
+ 'no_matching_items','invalid_source_url','request_timeout','connection_reset','connection_aborted',
+ 'connection_refused','tls_error','dns_error','network_error','upstream_unavailable'))
+PARABLE_TRANSIENT_HTTP=frozenset((500,502,503,504))
+PARABLE_RETRY_LIMIT=1
+PARABLE_RETRY_DELAY=1
+
+def safe_parable_code(code):
+ return isinstance(code,str) and (code in PARABLE_ERROR_CODES or re.fullmatch(r'http_[1-5][0-9]{2}',code) is not None)
+
+class HTTPFeedError(FeedError):
+ """Preserve only a bounded HTTP status, never its URL, headers or response."""
+ def __init__(self,status):
+  if type(status) is not int or not 100<=status<=599:raise ValueError('invalid_http_status')
+  self.status=status
+  super().__init__('http_'+str(status))
+
+class ParableSourceError(FeedError):
+ def __init__(self,stage,code,retry_count=0):
+  if stage not in PARABLE_STAGES or not safe_parable_code(code) or type(retry_count) is not int or not 0<=retry_count<=PARABLE_RETRY_LIMIT:
+   raise ValueError('invalid_parable_failure')
+  self.stage=stage;self.code=code;self.retry_count=retry_count
+  super().__init__(code)
+
+def parable_error(err):
+ """Classify exception types; exception messages cannot authorize a retry."""
+ if isinstance(err,(HTTPFeedError,HTTPError)):
+  status=err.status if isinstance(err,HTTPFeedError) else err.code
+  if type(status) is int and 100<=status<=599:return 'http_'+str(status),status in PARABLE_TRANSIENT_HTTP
+  return 'upstream_unavailable',False
+ if isinstance(err,URLError):
+  return parable_error(err.reason) if isinstance(err.reason,Exception) else ('network_error',False)
+ if isinstance(err,TimeoutError):return 'request_timeout',True
+ if isinstance(err,ConnectionResetError):return 'connection_reset',True
+ if isinstance(err,ConnectionAbortedError):return 'connection_aborted',True
+ if isinstance(err,ConnectionRefusedError):return 'connection_refused',False
+ if isinstance(err,ssl.SSLError):return 'tls_error',False
+ if isinstance(err,socket.gaierror):return 'dns_error',False
+ if isinstance(err,ET.ParseError):return 'feed_xml_invalid',False
+ if isinstance(err,FeedError) and len(err.args)==1 and safe_parable_code(err.args[0]):return err.args[0],False
+ return 'upstream_unavailable',False
+
+def source_failure_diagnostics(source):
+ """Select only safe Parable diagnostics, including for previous snapshots."""
+ if source.get('id')!='parable-web' or source.get('state')!='error' or not safe_parable_code(source.get('errorCode')):return {}
+ result={'errorCode':source['errorCode']}
+ if isinstance(source.get('errorStage'),str) and source['errorStage'] in PARABLE_STAGES:result['stage']=source['errorStage']
+ count=source.get('retryCount')
+ if type(count) is int and 0<=count<=PARABLE_RETRY_LIMIT:result['retryCount']=count
+ return result
+
 class NoRedirect(HTTPRedirectHandler):
  def redirect_request(self,*args):return None
 
@@ -76,9 +129,12 @@ def request(url,headers=None):
   with build_opener(NoRedirect).open(req,timeout=20) as response:
    raw=response.read(LIMIT+1)
    if len(raw)>LIMIT:raise FeedError('response_too_large')
-   if response.status!=200:raise FeedError('http_'+str(response.status))
+   if response.status!=200:raise FeedError('http_'+str(response.status)) if hub else HTTPFeedError(response.status)
    return raw
  except HTTPError as err:
+  if not hub:
+   status=err.code;err.close()
+   raise HTTPFeedError(status) from None
   reason='http_'+str(err.code)
   if hub:
    # Gateway errors are nested; Search errors are flat. Keep only safe codes.
@@ -244,17 +300,34 @@ def merge(previous,current):
  return validate(current)
 
 def parable(fetch,now):
- robots=fetch('https://parable-asia.com/robots.txt').decode('utf-8',errors='replace')
+ """At most one extra GET across this source; never retry parsing or policy failures."""
+ stage='robots';retries=0
+ def read(next_stage,url,robots=None):
+  nonlocal stage,retries
+  stage=next_stage
+  if robots is not None and not robots.can_fetch(AGENT,url):raise FeedError('robots_disallowed')
+  while True:
+   try:return fetch(url)
+   except Exception as err:
+    code,transient=parable_error(err)
+    if not transient or retries>=PARABLE_RETRY_LIMIT:
+     raise ParableSourceError(stage,code,retries) from None
+    retries+=1
+    # This is a request-count budget, not a claim of a hard wall-clock deadline.
+    time.sleep(PARABLE_RETRY_DELAY)
+ try:return _parable(read,now)
+ except ParableSourceError:raise
+ except Exception as err:raise ParableSourceError(stage,parable_error(err)[0],retries) from None
+
+def _parable(read,now):
+ robots=read('robots','https://parable-asia.com/robots.txt').decode('utf-8',errors='replace')
  rp=RobotFileParser();rp.parse(robots.splitlines())
- def read(u):
-  if not rp.can_fetch(AGENT,u):raise FeedError('robots_disallowed')
-  return fetch(u)
- html=HTML(read('https://parable-asia.com/newsroom/').decode('utf-8',errors='replace'))
+ html=HTML(read('newsroom','https://parable-asia.com/newsroom/',rp).decode('utf-8',errors='replace'))
  feeds=[urljoin('https://parable-asia.com/',u) for u in html.feeds]
  feeds=[u for u in feeds if urlsplit(u).hostname=='parable-asia.com' and '/comments/' not in u]
  articles=[]
  if feeds:
-  raw=read(feeds[0])
+  raw=read('feed',feeds[0],rp)
   if b'<!DOCTYPE' in raw.upper() or b'<!ENTITY' in raw.upper():raise FeedError('unsafe_xml')
   root=ET.fromstring(raw)
   if root.tag!='rss':raise FeedError('feed_schema_changed')
@@ -272,7 +345,7 @@ def parable(fetch,now):
    u=source_url(urljoin('https://parable-asia.com/',u))
    if not u or u in seen or not members_in(title) or '/category/' in u or '/tag/' in u:continue
    seen.add(u)
-   detail=HTML(read(u).decode('utf-8',errors='replace'))
+   detail=HTML(read('article',u,rp).decode('utf-8',errors='replace'))
    articles.append((title,u,detail.published,detail.plain))
    if len(articles)>=8:break
  if not articles:raise FeedError('no_matching_items')
@@ -351,8 +424,9 @@ def collect(previous=None,fetch=request,now=None,berriz_reader=None,cafe_review=
     else:data['news']+=naver_search(fetch,now)
     s.update(state='ok',lastSuccessAt=now,detail='자동 수집 완료')
    except Exception as err:
-    reason=str(err) if isinstance(err,FeedError) else 'upstream_unavailable'
+    reason=err.code if isinstance(err,ParableSourceError) else str(err) if isinstance(err,FeedError) else 'upstream_unavailable'
     s.update(state='needs_setup' if reason=='api_key_required' else 'error',detail='네이버 검색 API 설정 필요' if reason=='api_key_required' else '이번 수집 실패 · 이전 자료 유지',errorCode=reason)
+    if isinstance(err,ParableSourceError):s.update(errorStage=err.stage,retryCount=err.retry_count)
   data['sources'].append(s)
  # Seed and search result for same URL must not overwrite inspected authorship
  # or claim the old calendar date was reverified via a short search snippet.
@@ -365,4 +439,4 @@ if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--output',default='schedule/snapshot.json');parser.add_argument('--previous');args=parser.parse_args()
  previous=json.loads(Path(args.previous).read_text()) if args.previous and Path(args.previous).exists() else None
  data=collect(previous);Path(args.output).parent.mkdir(parents=True,exist_ok=True);Path(args.output).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
- print(json.dumps({'sourceStates':{s['id']:s['state'] for s in data['sources']},'events':len(data['events']),'news':len(data['news']),'forecasts':len(data['forecasts'])}))
+ print(json.dumps({'sourceStates':{s['id']:s['state'] for s in data['sources']},'sourceFailures':{s['id']:source_failure_diagnostics(s) for s in data['sources'] if source_failure_diagnostics(s)},'events':len(data['events']),'news':len(data['news']),'forecasts':len(data['forecasts'])}))

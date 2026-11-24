@@ -41,9 +41,9 @@
     "home-review/presentation.css": "8a340d64f0f21dc601a154bc373208dd1a91f9a45c2243a8badeed44ce35e6f7",
     "scripts/cafe_runtime.py": "9ee60017a54cd6a34a5aec79bbb64f762b0bf53318e6ef75e3ece18e7e509944",
     "scripts/refresh_reviewed_cafe.py": "f56247089a764667aac030b8f2bfbab02139fab0666dee45c551adf14f84bf67",
-    "scripts/schedule_health.py": "f9ebbd7b908afe9f03f163c6bf37b241978389d0183eeefb50fb5b369adc6b1c",
-    "scripts/schedule_feed.py": "2b75be5d0bb0871d37a2ffcb1726be545357cdf331d53f0e29b56b884e487c35",
-    "scripts/publish_schedule_feed.py": "d2d5795b1ee6341f181161bcd06847fb366e4f88999626d2cf56e22680d621de",
+    "scripts/schedule_health.py": "919495f7fc872f05daa701f4f9b6da30a41174d2b9b12148c5631155136bb35a",
+    "scripts/schedule_feed.py": "caa745ed55c24302787fa7ed89934fa6e88ae39204d74884a22d12e8e8be4a58",
+    "scripts/publish_schedule_feed.py": "81066dee78c6ae56fcc701aa679993d864144f86d4cec3e2cd3d66500fe447ca",
     "scripts/gallery_cache.py": "411894a0c81275a69d01806d2bd7633491280794a9d04be9c2f2002f612f255b",
     "home-review/gallery-cache.json": "dd09da4e45dae7d2ad50b9b73a013acc15736739f5bb74ce3ce8b8ab1846000a",
     "home-review/gallery-cache/christmas.webp": "b8b7ad64c95da60b5007c6ee38e3cc14bb90a77c3047c05cfb41478e00782738",
@@ -149,6 +149,10 @@
     {
       "requestedAt": "2026-11-15",
       "scope": "User-authorized reviewed batch reliability hardening: update only the exact schedule publisher source hash for report-only evidenceVersion, publishedAt, readbackAt and verifiedReadback fields. Preserve byte-level readback checks, stored feed schema, all other source hashes, public source rules, authentication, production locks and deployment boundaries."
+    },
+    {
+      "requestedAt": "2026-11-24",
+      "scope": "User-authorized collection reliability improvement: update only exact schedule feed, health and publisher source hashes for one bounded transient retry across the Parable collection and safe per-source failure diagnostics. Preserve previous data and last-success timestamps on failure, source authorization, partial-health failure, byte-level publication/readback verification, production pauses and shared locks."
     }
   ]
 }

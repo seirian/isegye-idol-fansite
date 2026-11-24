@@ -9,6 +9,7 @@ MAX_AGE_SECONDS = 3 * 60 * 60
 
 
 def assess(snapshot, now=None):
+    from schedule_feed import source_failure_diagnostics
     now = now or snapshot.get('generatedAt')
     clock = datetime.fromisoformat(now.replace('Z', '+00:00'))
     if clock.tzinfo is None:
@@ -35,6 +36,8 @@ def assess(snapshot, now=None):
         state = 'complete' if not reasons else 'stale' if 'stale' in reasons else 'partial'
         rows[sid] = {'state': state, 'lastSuccessAt': at, 'lastAttemptAt': s.get('lastAttemptAt'),
                      'ageSeconds': round(age) if age is not None else None, 'reasons': reasons}
+        failure = source_failure_diagnostics(s)
+        if failure: rows[sid]['failure'] = failure
         if reasons: problems.append(sid)
     return {'state': 'complete' if not problems else 'partial', 'assessedAt': now,
             'maxAgeSeconds': MAX_AGE_SECONDS, 'sources': rows, 'incompleteSources': problems,
@@ -51,7 +54,7 @@ def publication_result(report):
               'verified': published and health['state'] == 'complete'}
     if not published:
         result['publicationFailure'] = {key: report[key] for key in
-            ('errorType', 'stage', 'errorCode', 'field', 'articleId', 'sourceId', 'location') if key in report}
+            ('errorType', 'stage', 'errorCode', 'sourceStage', 'retryCount', 'field', 'articleId', 'sourceId', 'location') if key in report}
     return result
 
 
