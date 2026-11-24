@@ -1,0 +1,27 @@
+name: Playground - isolated maintenance checks
+on:
+  push:
+    branches: ['fix/playground-growth-editorial-20261124']
+permissions: {contents: read}
+concurrency:
+  group: playground-maintenance-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Export tracked public source for isolated regression testing
+        run: git archive --format=zip --output=playground-maintenance-source.zip HEAD
+      - name: Run question bank regression tests
+        run: |
+          python -m unittest discover -s tests -p 'test_playground*.py' -v
+          node --test tests/playground*.test.js
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: playground-maintenance-source-${{ github.run_id }}
+          path: playground-maintenance-source.zip
+          retention-days: 1
