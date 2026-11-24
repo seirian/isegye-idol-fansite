@@ -9,6 +9,7 @@ import hashlib
 import http.server
 import json
 import os
+import re
 from pathlib import Path
 import socketserver
 import subprocess
@@ -71,6 +72,38 @@ def state(page):
     return page.evaluate("() => window.__IPARI_RPG__.snapshot()")
 
 
+def check_korean_fonts(page, screen, samples):
+    """Read Chromium's actual painted glyph sources for a few visible Korean UI elements."""
+    loaded = page.evaluate("""async () => {
+      await document.fonts.ready;
+      return [...document.fonts].filter(face => face.status === 'loaded').map(face => face.family);
+    }""")
+    def font_key(name):
+        return re.sub(r"[^a-z0-9]", "", name.lower())
+
+    cdp = page.context.new_cdp_session(page)
+    try:
+        cdp.send("DOM.enable")
+        cdp.send("CSS.enable")
+        root = cdp.send("DOM.getDocument")["root"]["nodeId"]
+        for selector, expected in samples:
+            element = page.locator(selector).first
+            assert element.is_visible(), f"{screen}: hidden font sample {selector}"
+            direct_text = element.evaluate("""n => [...n.childNodes]
+                .filter(c => c.nodeType === Node.TEXT_NODE).map(c => c.textContent).join('')""")
+            hangul = len(re.findall(r"[가-힣]", direct_text))
+            assert hangul, f"{screen}: missing Korean text in {selector}"
+            node = cdp.send("DOM.querySelector", {"nodeId": root, "selector": selector})["nodeId"]
+            fonts = cdp.send("CSS.getPlatformFontsForNode", {"nodeId": node})["fonts"]
+            family = font_key(expected)
+            painted = sum(font["glyphCount"] for font in fonts if font["isCustomFont"]
+                          and any(family in font_key(font.get(key, "")) for key in ("familyName", "postScriptName")))
+            check(any(family in font_key(face) for face in loaded) and painted >= hangul,
+                  f"{screen} {selector} paints Korean with bundled {expected} (glyphs {painted}, Hangul {hangul}, {fonts})")
+    finally:
+        cdp.detach()
+
+
 def fits(page, label):
     dimensions = page.evaluate("({width:innerWidth,scroll:document.documentElement.scrollWidth})")
     check(dimensions["scroll"] <= dimensions["width"] + 1, label + " " + str(dimensions))
@@ -110,8 +143,10 @@ def dialogue(page):
     raise AssertionError("Dialogue did not finish")
 
 
-def start(page):
+def start(page, verify_fonts=False):
     page.locator('[data-action="start"]').click()
+    if verify_fonts:
+        check_korean_fonts(page, "field dialogue", [(".story-text", "Gowun Dodum"), (".speaker", "Jua")])
     dialogue(page)
     check(state(page)["mode"] == "explore", "start and prologue lead to exploration")
 
@@ -173,9 +208,12 @@ def solve(page, chapter):
         actions = [(0, "toggle"), (2, "toggle")]
     else:
         actions = list(enumerate(chapter["puzzle"]["solution"]))
-    for control, answer in actions:
+    for step, (control, answer) in enumerate(actions):
         interact(page, "control-" + str(control))
         check(state(page)["mode"] == "choice", chapter["id"] + " puzzle offers a real choice")
+        if chapter["index"] == 0 and step == 0:
+            check_korean_fonts(page, "puzzle choice", [(".choice-panel > p:not(.eyebrow)", "Gowun Dodum"),
+                                                        (".choice-button > span:first-child", "Gowun Dodum")])
         choose(page, answer)
     check(chapter["id"] in state(page)["solved"], chapter["id"] + " puzzle solved through public controls")
 
@@ -208,7 +246,7 @@ def battle(page, label, capture=False):
         if capture:
             screenshot(page, label)
             capture = False
-        intent = page.locator(".intent-banner").inner_text()
+        intent = page.locator(".tac-intent").inner_text()
         player = snapshot["player"]
         known = snapshot["met"]
         member = None
@@ -257,8 +295,70 @@ def playthrough(browser, origin):
         start(page)
         for index, chapter in enumerate(CONTENT["chapters"]):
             check(state(page)["chapter"] == index, "entered " + chapter["year"])
-            read_object(page, "member")
+            if index == 0:
+                member = page.locator('.map-object[data-id="member"]')
+                member.hover()
+                check(page.locator('.field-route').evaluate(
+                    "node => node.getContext('2d').getImageData(0,0,node.width,node.height).data.some(n=>n)"),
+                      "pointing at the first companion previews a walkable route")
+                member.click()
+                page.locator(".meeting-screen").wait_for()
+            else:
+                interact(page, "member")
+            meeting = page.locator("main .meeting-screen")
+            check(meeting.is_visible() and not page.locator(".map-board").count(),
+                  chapter["member"] + " enters a separate first-meeting scene")
+            check(meeting.get_by_role("heading", name=chapter["meeting"]["title"]).is_visible(),
+                  chapter["member"] + " scene has its own title")
+            check(meeting.locator(".meeting-illustration").evaluate(
+                "node => getComputedStyle(node).backgroundImage.includes('data:image/webp;base64,')"),
+                  chapter["member"] + " scene uses embedded event art")
+            next_line = meeting.locator('[data-action="dialogue-next"]')
+            next_line.click()
+            next_line.click()
+            if index == 0:
+                page.set_viewport_size({"width": 390, "height": 844})
+                fits(page, "first meeting fits 390px")
+                check_korean_fonts(page, "mobile cutscene", [(".meeting-heading h1", "Jua"),
+                                    (".meeting-speaker h2", "Jua"), (".meeting-line", "Gowun Dodum"),
+                                    (".meeting-reply", "Gowun Dodum")])
+                screenshot(page, "meeting-390")
+                page.set_viewport_size({"width": 1440, "height": 1000})
+            screenshot(page, "meeting-" + chapter["member"])
+            reply = index % 2
+            meeting.locator(f'[data-reply="{reply}"]').click()
+            expected_reply = chapter["meeting"]["choices"][reply]["reply"]
+            check(meeting.locator(".meeting-line").inner_text() == expected_reply,
+                  chapter["member"] + " responds to the chosen action")
+            if index == 0:
+                restored(page, origin)
+                check(meeting.locator(".meeting-line").inner_text() == expected_reply,
+                      "reload preserves the chosen cutscene response")
+            dialogue(page)
             check(chapter["member"] in state(page)["met"], chapter["member"] + " joined")
+            if index == 0:
+                before_replay = state(page)
+                page.locator('[data-action="replay"][data-id="jingburger"]').click()
+                replay = page.locator("dialog .meeting-screen")
+                replay_next = replay.locator('[data-action="dialogue-next"]')
+                replay_next.click()
+                replay_next.click()
+                replay.locator('[data-reply="1"]').click()
+                check(replay.locator(".meeting-line").inner_text() == chapter["meeting"]["choices"][1]["reply"],
+                      "companion replay offers the alternate response")
+                replay_next.click()
+                replay_next.click()
+                check(not page.locator("dialog").is_visible(), "companion replay closes on completion")
+                page.locator("#journal-button").click()
+                page.locator('[data-modal-action="replay"][data-id="jingburger"]').click()
+                for _ in chapter["intro"]:
+                    replay_next.click()
+                check(page.get_by_role("heading", name="우리의 기록첩").is_visible(),
+                      "journal replay returns to the journal")
+                page.keyboard.press("Escape")
+                after_replay = state(page)
+                check(all(before_replay[k] == after_replay[k] for k in ("mode", "player", "room", "chapter", "position", "met", "records")),
+                      "both replay entry points preserve gameplay and earned powers")
             read_object(page, "record-0")
             read_object(page, "memory")
             interact(page, "rest")
@@ -267,10 +367,31 @@ def playthrough(browser, origin):
                 screenshot(page, "explore-1440")
             interact(page, "forward")
             read_object(page, "clue")
+            if index == 1:
+                screenshot(page, "winter-spring-garden")
             solve(page, chapter)
             read_object(page, "memory")
             begin_battle(page, "guardian")
             if index == 0:
+                leader_before = state(page)["battle"]["field"]["leader"]
+                page.locator('.tac-roll-unit[data-id="jingburger"]').click()
+                destination = page.locator('.tac-destination[data-x="2"][data-y="2"]')
+                destination.focus()
+                page.keyboard.press("Enter")
+                field = state(page)["battle"]["field"]
+                check(field["active"] == "jingburger" and field["allies"][1]["x"] == field["allies"][1]["y"] == 2,
+                      "keyboard places the selected companion on a reachable cell")
+                check(page.locator(".tac-destination").count() == 0, "a unit cannot move twice before acting")
+                support(page, "jingburger")
+                snapshot = state(page)
+                check(snapshot["battle"]["field"]["acted"] == ["jingburger"] and snapshot["battle"]["turn"] == 0
+                      and snapshot["battle"]["hp"] < snapshot["battle"]["maxHp"], "a companion's skill hits before the enemy phase")
+                restored(page, origin)
+                check(state(page)["battle"]["field"] == snapshot["battle"]["field"], "mid-turn reload preserves deployment and spent actions")
+                page.locator('[data-action="battle"][data-move="defend"]').click()
+                snapshot = state(page)
+                check(snapshot["battle"]["turn"] == 1 and snapshot["battle"]["field"]["leader"] != leader_before
+                      and snapshot["player"]["hp"] < snapshot["player"]["maxHp"], "the enemy advances and hits when Ipari ends the round")
                 # Deliberately poor public choices produce a real defeat and retry.
                 for _ in range(80):
                     if state(page)["mode"] != "battle":
@@ -293,12 +414,22 @@ def playthrough(browser, origin):
                 for width, height in ((320, 720), (390, 844), (768, 1024), (1440, 1000)):
                     page.set_viewport_size({"width": width, "height": height})
                     fits(page, f"battle fits {width}px")
+                    if width == 320:
+                        check_korean_fonts(page, "mobile battle", [(".tac-pennant", "Gowun Dodum"),
+                                            (".tac-action b", "Gowun Dodum"), (".battle-log p", "Gowun Dodum")])
                     screenshot(page, f"battle-{width}")
-            battle(page, chapter["id"] + "-guardian")
+            battle(page, chapter["id"] + "-guardian", capture=index == 1)
             interact(page, "forward")
             read_object(page, "record-1")
             interact(page, "rest")
             begin_battle(page, "boss")
+            if index == 0:
+                leader_hp = state(page)["battle"]["hp"]
+                page.locator('.tac-unit[data-id="echo"]').click()
+                check(state(page)["battle"]["field"]["target"] == "echo", "the boss's echo can be targeted on the field")
+                support(page, "jingburger")
+                check(state(page)["battle"]["hp"] == leader_hp and state(page)["battle"]["field"]["echo"]["hp"] == 0,
+                      "a targeted skill disperses the echo without damaging the boss")
             battle(page, chapter["id"] + "-boss", capture=index in (2, 5))
             read_object(page, "exit")
             check(state(page)["mode"] == "victory", chapter["id"] + " completed")
@@ -322,6 +453,8 @@ def playthrough(browser, origin):
             fits(page, f"ending fits {width}px")
             screenshot(page, f"ending-{width}")
         page.locator("#journal-button").click()
+        check_korean_fonts(page, "journal", [(".journal-intro", "Gowun Dodum"),
+                                             (".journal-entry p", "Gowun Dodum")])
         check(page.locator(".journal-entry a").count() >= 12, "completed journal exposes source links")
         check(page.locator(".journal-entry a").evaluate_all("links=>links.every(a=>a.href.startsWith('https://'))"), "all source links use HTTPS")
         page.keyboard.press("Escape")
@@ -338,6 +471,8 @@ def layouts_and_storage(browser, origin):
         context, page = open_game(browser, origin, width, height)
         try:
             if width == 1440:
+                check_korean_fonts(page, "cover", [("#cover-title", "Jua"), (".cover-desc", "Gowun Dodum"),
+                                                   ("[data-action=start]", "Gowun Dodum")])
                 skip = page.locator('.skip-link')
                 check(skip.evaluate("node=>getComputedStyle(node).opacity==='0'"), 'skip link stays hidden outside keyboard focus')
                 page.keyboard.press('Tab')
@@ -350,7 +485,7 @@ def layouts_and_storage(browser, origin):
                 page.locator("#settings-button").click()
                 page.locator('[data-setting="help"]').check()
                 page.keyboard.press("Escape")
-            start(page)
+            start(page, verify_fonts=width == 1440)
             if width == 320:
                 check(state(page)["help"] is True, "new adventure preserves help selected before starting")
             fits(page, f"exploration fits {width}px")
@@ -365,6 +500,18 @@ def layouts_and_storage(browser, origin):
             page.locator("#settings-button").click()
             page.locator("#rpg-dialog").wait_for(state="visible")
             if width == 1440:
+                check_korean_fonts(page, "settings", [(".settings-row small", "Gowun Dodum")])
+                credits = page.locator("details.font-licenses")
+                credits.locator("summary").click()
+                for name, filename in (("고운돋움 (Gowun Dodum)", "GowunDodum-OFL.txt"),
+                                       ("주아체 (Jua)", "Jua-OFL.txt")):
+                    heading = credits.get_by_role("heading", name=name, exact=True)
+                    license_text = heading.locator("xpath=following-sibling::pre[1]")
+                    expected = (ROOT / "rpg/fonts" / filename).read_text(encoding="utf-8-sig").strip()
+                    check(heading.is_visible() and license_text.is_visible() and
+                          license_text.text_content().replace("\r\n", "\n").strip() == expected,
+                          f"settings shows {name} with its complete upstream OFL notice")
+                credits.locator("summary").click()
                 page.locator('[data-setting="dark"]').check()
                 page.locator('[data-setting="reduceMotion"]').check()
                 check(page.locator("html").get_attribute("data-theme") == "dark", "dark setting changes the rendered theme")

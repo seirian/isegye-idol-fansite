@@ -7,7 +7,7 @@ on:
       - 'rpg/**'
       - 'scripts/build_rpg.py'
       - 'scripts/serve_rpg.py'
-      - 'tests/rpg-engine.test.js'
+      - 'tests/rpg-*.test.js'
       - 'tests/test_rpg_build.py'
       - 'tests/rpg_browser.py'
       - 'visuals/history.json'
@@ -32,10 +32,8 @@ jobs:
           node-version: '22'
       - name: Verify logic and package the offline game
         run: |
-          node --check rpg/content.js
-          node --check rpg/engine.js
-          node --check rpg/app.js
-          node --test tests/rpg-engine.test.js
+          for module in rpg/*.js; do node --check "$module"; done
+          node --test tests/rpg-*.test.js
           python scripts/build_rpg.py
           python -m unittest discover -s tests -p test_rpg_build.py -v
       - name: Install isolated browser test tools

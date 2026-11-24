@@ -19,8 +19,11 @@ ROOT = Path(__file__).resolve().parents[1]
 BRANCH = "feature/ipari-rpg"
 GAME = "ipari-chronicle"
 STORAGE_KEY = "isegye:rpg:v1"
-SOURCES = ("rpg/content.js", "rpg/engine.js", "rpg/app.js")
-ART_NAMES = ("worlds", "members", "cast")
+SOURCES = ("rpg/fonts.js", "rpg/content.js", "rpg/tactics.js", "rpg/engine.js", "rpg/field.js",
+           "rpg/tactics-view.js", "rpg/story.js", "rpg/app.js")
+STYLES = ("rpg/styles.css", "rpg/field.css", "rpg/tactics.css", "rpg/story.css")
+ART_NAMES = ("worlds", "members", "cast", "meetings", "scenery")
+FONT_FAMILIES = {"Gowun Dodum": "GowunDodum", "Jua": "Jua"}
 MAX_ART_BYTES = 4 * 1024 * 1024
 MAX_HTML_BYTES = 8 * 1024 * 1024
 MARKERS = ("<!--CSP-->", "<!--STYLE-->", "<!--SCRIPT-->")
@@ -57,7 +60,7 @@ def flatten_modules(modules: dict[str, str]) -> str:
     for relative, source in modules.items():
         def strip_import(match: re.Match) -> str:
             imported = match.group("path")
-            if imported not in ("./content.js", "./engine.js"):
+            if imported not in {"./" + Path(path).name for path in SOURCES}:
                 raise ValueError("Unsupported RPG import: " + imported)
             dependency = (Path(relative).parent / imported).as_posix()
             if dependency not in available:
@@ -93,9 +96,9 @@ def assemble(root: Path = ROOT) -> tuple[bytes, dict]:
     """Return reproducible HTML and its source manifest without writing output."""
     root = Path(root).resolve()
     data: dict[str, bytes] = {}
-    for relative in ("rpg/index.html", "rpg/styles.css", *SOURCES, "visuals/history.json", "catalog/album-releases.json"):
+    for relative in ("rpg/index.html", *STYLES, *SOURCES, "visuals/history.json", "catalog/album-releases.json"):
         data[relative] = source_bytes(root, relative)
-    shell = data["rpg/index.html"].decode()
+    shell = data["rpg/index.html"].decode().replace("\r\n", "\n")
     for marker in MARKERS:
         if shell.count(marker) != 1:
             raise ValueError("Expected one RPG build marker: " + marker)
@@ -105,7 +108,8 @@ def assemble(root: Path = ROOT) -> tuple[bytes, dict]:
     history = json.loads(data["visuals/history.json"])
     if not isinstance(history.get("events"), list) or not history.get("checkedAt"):
         raise ValueError("Expected the existing dated activity archive")
-    css = data["rpg/styles.css"].decode()
+    # HTML parsing normalizes CRLF before the browser computes its CSP hash.
+    css = "\n".join(data[relative].decode().replace("\r\n", "\n") for relative in STYLES)
     if re.search(r"@import\b|url\s*\(", css, re.I):
         raise ValueError("RPG CSS resources must be supplied by packed artwork")
     art: dict[str, str] = {}
@@ -119,8 +123,24 @@ def assemble(root: Path = ROOT) -> tuple[bytes, dict]:
     prompt_path = "rpg/art-source/PROMPTS.md"
     if (root / prompt_path).exists() or (root / prompt_path).is_symlink():
         data[prompt_path] = source_bytes(root, prompt_path)
-    modules = {relative: data[relative].decode() for relative in SOURCES}
+    modules = {relative: data[relative].decode().replace("\r\n", "\n") for relative in SOURCES}
     js = "const RPG_ART = Object.freeze(" + json.dumps(art, separators=(",", ":")) + ");\n"
+    fonts, notices = {}, {}
+    for family, basename in FONT_FAMILIES.items():
+        font_path = f"rpg/fonts/{basename}-Regular.woff2"
+        notice_path = f"rpg/fonts/{basename}-OFL.txt"
+        raw = source_bytes(root, font_path)
+        if len(raw) <= 48 or raw[:4] != b"wOF2" or int.from_bytes(raw[8:12], "big") != len(raw):
+            raise ValueError("Unexpected RPG WOFF2 font: " + font_path)
+        data[font_path] = raw
+        data[notice_path] = source_bytes(root, notice_path)
+        notice = data[notice_path].decode("utf-8-sig").replace("\r\n", "\n")
+        if "SIL OPEN FONT LICENSE" not in notice or "copyright" not in notice.lower():
+            raise ValueError("Expected the RPG font's copyright and OFL notice: " + notice_path)
+        fonts[family] = base64.b64encode(raw).decode("ascii")
+        notices[family] = notice
+    js += "const RPG_FONT = Object.freeze(" + json.dumps(fonts, separators=(",", ":")) + ");\n"
+    js += "const RPG_FONT_NOTICES = Object.freeze(" + json.dumps(notices, separators=(",", ":")) + ");\n"
     js += flatten_modules(modules)
     if STORAGE_KEY not in js:
         raise ValueError("RPG save namespace missing")
