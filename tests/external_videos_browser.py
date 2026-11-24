@@ -59,7 +59,7 @@ try:
                       route=='/music' and parse_qs(query)=={'tab':['videos'],'q':['REBELS'],'page':[str(number+1)]},href=href)
                 next_link.click()
                 expect(page).to_have_url(url+href)
-                page.evaluate('render()')
+                page.wait_for_function('hash => renderedHash === hash && location.hash === hash',arg=href)
                 number+=1
             check(label+' all reported results rendered',len(keys)==total,expected=total,actual=len(keys),pages=len(pages))
             check(label+' complete DOM agrees with music eligibility',Counter(keys)==Counter(expected),
