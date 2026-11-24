@@ -1,0 +1,87 @@
+{
+  "sourceRunId": 45304369606,
+  "sourceCommit": "898ae6a63c2c2baffbcf13e83cd5c0018250e717",
+  "from": "2026-11-21",
+  "checkedAt": "2026-11-24T01:21:46.195628+00:00",
+  "generatedAt": "2026-11-24T01:23:00+00:00",
+  "notice": {
+    "articleId": 22233393,
+    "menuId": 345,
+    "author": "gosegu",
+    "members": [
+      "gosegu"
+    ],
+    "title": "[고세구] 하이빵가루~! >ㅁ<",
+    "publishedAt": "2026-11-21T11:21:02.230+00:00",
+    "verifiedRole": "staff",
+    "public": true,
+    "titleGeneralized": false
+  },
+  "titleCases": [
+    {
+      "name": "real_failed_emoticon",
+      "input": "[고세구] 하이빵가루~! >ㅁ<",
+      "expected": "[고세구] 하이빵가루~! ＞ㅁ＜"
+    },
+    {
+      "name": "literal_angle_notice",
+      "input": "<공지> 오늘 방송",
+      "expected": "＜공지＞ 오늘 방송"
+    },
+    {
+      "name": "literal_heart",
+      "input": "오늘도 사랑해요 <3",
+      "expected": "오늘도 사랑해요 ＜3"
+    },
+    {
+      "name": "literal_emoticon",
+      "input": "오늘 >_<",
+      "expected": "오늘 ＞_＜"
+    },
+    {
+      "name": "html_entities",
+      "input": "A &amp; B &lt;공지&gt;",
+      "expected": "A & B ＜공지＞"
+    },
+    {
+      "name": "nested_html_entities",
+      "input": "&amp;amp;lt;공지&amp;amp;gt; &amp;#62;ㅁ&amp;#60;",
+      "expected": "＜공지＞ ＞ㅁ＜"
+    },
+    {
+      "name": "numeric_html_entities",
+      "input": "&#x3C;공지&#62; &#38; 안녕",
+      "expected": "＜공지＞ & 안녕"
+    },
+    {
+      "name": "whitespace",
+      "input": "  오늘\t 방송\n 공지  ",
+      "expected": "오늘 방송 공지"
+    },
+    {
+      "name": "markup_as_display_text",
+      "input": "<script>alert('text')</script>",
+      "expected": "＜script＞alert('text')＜/script＞"
+    },
+    {
+      "name": "existing_length_bound",
+      "input": "가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가",
+      "expected": "가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가가"
+    },
+    {
+      "name": "supplementary_emoji_bound",
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "expected": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "name": "mixed_utf16_bound",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀😀😀😀😀😀",
+      "expected": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀😀😀😀😀"
+    },
+    {
+      "name": "utf16_boundary_whitespace",
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀 😀",
+      "expected": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    }
+  ]
+}

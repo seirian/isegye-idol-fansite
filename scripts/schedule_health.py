@@ -41,17 +41,32 @@ def assess(snapshot, now=None):
             'scope': 'current approved public windows; fan references are not confirmed schedules or an exhaustive history'}
 
 
+def publication_result(report):
+    """Distinguish an aborted publication from observed source failures."""
+    published = report.get('status') == 'published'
+    health = report.get('collectionHealth') or {
+        'state': 'unknown', 'incompleteSources': [], 'unassessedSources': list(REQUIRED),
+        'reason': 'source_assessment_not_recorded', 'sources': {}}
+    result = {'publicationStatus': report.get('status', 'not_published'), 'collectionHealth': health,
+              'verified': published and health['state'] == 'complete'}
+    if not published:
+        result['publicationFailure'] = {key: report[key] for key in
+            ('errorType', 'stage', 'errorCode', 'field', 'articleId', 'sourceId', 'location') if key in report}
+    return result
+
+
 def main():
     path = Path('schedule-publication.json')
     report = json.loads(path.read_text()) if path.exists() else {}
-    published = report.get('status') == 'published'
-    health = report.get('collectionHealth') or {'state': 'partial', 'incompleteSources': list(REQUIRED)}
-    result = {'publicationStatus': report.get('status', 'not_published'), 'collectionHealth': health,
-              'verified': published and health['state'] == 'complete'}
+    result = publication_result(report)
+    published = result['publicationStatus'] == 'published'
+    health = result['collectionHealth']
     Path('schedule-health.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
     message = ('게시: ' + ('성공' if published else '실패') + ' / 필수 출처 갱신: ' +
-               ('완료' if result['verified'] else '미완료') + '\n')
+               ('완료' if result['verified'] else '평가 불가' if health['state'] == 'unknown' else '미완료') + '\n')
     print(message)
+    if health['state'] == 'unknown':
+        print('::warning::no source assessment is recorded; individual source failures are not established')
     for sid in health.get('incompleteSources', []):
         print('::warning::' + sid + ' — collection incomplete; previous verified data retained')
     summary = os.getenv('GITHUB_STEP_SUMMARY')

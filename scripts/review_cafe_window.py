@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 import notice_policy as policy
+from cafe_title import normalize_reviewed_title
 KST=timezone(timedelta(hours=9))
 NAMES={'아이네':'ine','아이네 INE':'ine','징버거':'jingburger','릴파 LILPA':'lilpa','릴파':'lilpa','주르르':'jururu','고세구':'gosegu','비챤':'viichan'}
 GROUP=re.compile('이세계|이세돌|ISEGYE',re.I)
@@ -14,7 +15,7 @@ def approved(x, menu, lo, until):
     w=x.get('writerInfo') or {}; name=str(w.get('nickName','')).strip(); member=NAMES.get(name)
     if menu==345 and not (member and w.get('staff') is True): return
     if menu==1250 and not (name=='parable' and (w.get('staff') is True or w.get('manager') is True)): return
-    aid=x.get('articleId'); title=' '.join(str(x.get('subject') or '').split())[:220]
+    aid=x.get('articleId'); title=normalize_reviewed_title(x.get('subject'))
     if type(aid) is not int or not title or f'https://cafe.naver.com/steamindiegame/{aid}' in policy.EXCLUDED_URLS: return
     published=datetime.fromtimestamp(x['writeDateTimestamp']/1000,timezone.utc)
     if not lo<=published<=until: return

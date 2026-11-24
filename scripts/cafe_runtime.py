@@ -19,6 +19,27 @@ MAX_FANS = 100
 CARD_STATUS = {'rest': '휴방 예상', 'expected': '방송 예정 · 팬 정리', 'unknown': '방송 여부 미확인'}
 
 
+class CafeEvidenceError(ValueError):
+    """Allowlisted diagnostic metadata, never raw titles or upstream values."""
+
+    FIELDS_BY_CODE = {
+        'invalid_cafe_title': {'title'},
+        'invalid_cafe_timestamp': {'publishedAt', 'checkedAt'},
+        'invalid_cafe_observation': {'publishedAt', 'checkedAt'},
+    }
+
+    def __init__(self, code, field, item):
+        if code not in self.FIELDS_BY_CODE or field not in self.FIELDS_BY_CODE[code]:
+            raise ValueError('invalid cafe evidence diagnostic')
+        super().__init__(code)
+        self.code = code
+        self.field = field
+        aid = item.get('articleId') if isinstance(item, dict) else None
+        menu = item.get('menuId') if isinstance(item, dict) else None
+        self.articleId = aid if type(aid) is int and aid > 0 else None
+        self.sourceId = cb.IDS.get(menu) if type(menu) is int else None
+
+
 def safe_text(value):
     return isinstance(value, str) and 0 < len(value) <= 220 and not re.search(r'[<>\x00-\x1f]', value)
 
@@ -39,9 +60,19 @@ def validate_evidence(value, now):
             if not isinstance(item, dict) or set(item) != fields | {'checkedAt'}:
                 raise ValueError('unexpected cafe evidence fields')
             row = {k: v for k, v in item.items() if k != 'checkedAt'}
-            checked, published = cb.timestamp(item['checkedAt']), cb.timestamp(item['publishedAt'])
-            if not published <= checked <= until or not safe_text(row['title']):
-                raise ValueError('invalid cafe evidence observation')
+            if not safe_text(row['title']):
+                raise CafeEvidenceError('invalid_cafe_title', 'title', item)
+            times = {}
+            for field in ('checkedAt', 'publishedAt'):
+                try:
+                    times[field] = cb.timestamp(item[field])
+                except (ValueError, TypeError, AttributeError):
+                    raise CafeEvidenceError('invalid_cafe_timestamp', field, item) from None
+            checked, published = times['checkedAt'], times['publishedAt']
+            if published > checked:
+                raise CafeEvidenceError('invalid_cafe_observation', 'publishedAt', item)
+            if checked > until:
+                raise CafeEvidenceError('invalid_cafe_observation', 'checkedAt', item)
             aid = row['articleId']
             if type(aid) is not int or aid <= 0 or aid in used or cb.PREFIX + str(aid) in policy.EXCLUDED_URLS:
                 raise ValueError('invalid cafe evidence article')
@@ -85,6 +116,11 @@ def matches(row, approved):
 
 def validate_packet(packet, now):
     cb.validate(packet)
+    # Supplied packets must meet the same strict title contract as stored
+    # evidence. Only the approved public reviewer normalizes source text.
+    for row in packet['notices']:
+        if not safe_text(row['title']):
+            raise CafeEvidenceError('invalid_cafe_title', 'title', row)
     allowed = {'schemaVersion', 'from', 'checkedAt', 'boards', 'notices', 'fan', 'fanSeries',
                'fanCheckedAt', 'fanCards', 'cardCheckedAt', 'fanWindowComplete'}
     if not set(packet) <= allowed:
