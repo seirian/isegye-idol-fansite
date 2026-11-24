@@ -1,8 +1,10 @@
 """Read-only browser checks of the exact composed operating bundle."""
 from pathlib import Path
+from collections import Counter
 from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlsplit
 import json, os, threading
 from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
@@ -12,9 +14,12 @@ class Handler(SimpleHTTPRequestHandler):
 server=ThreadingHTTPServer(('127.0.0.1',0),partial(Handler,directory=str(ROOT/'dist')))
 threading.Thread(target=server.serve_forever,daemon=True).start()
 url=f'http://127.0.0.1:{server.server_port}/';checks=[]
-def check(name,value):
-    checks.append({'name':name,'passed':bool(value)})
-    if not value:raise AssertionError(name)
+def check(name,value,**details):
+    checks.append({'name':name,'passed':bool(value),**details})
+    if not value:raise AssertionError(name+(' '+json.dumps(details,ensure_ascii=False) if details else ''))
+def video_count(name,keys,video_id,expected=1):
+    actual=keys.count('video:'+video_id)
+    check(name,actual==expected,videoId=video_id,expected=expected,actual=actual)
 try:
     with sync_playwright() as pw:
         browser=pw.chromium.launch(headless=True,executable_path=os.getenv('BROWSER_PATH') or None)
@@ -26,8 +31,61 @@ try:
         def go(route):
             page.goto(url+'#/'+route,wait_until='domcontentloaded');expect(page.locator('#main h1')).to_be_visible()
             page.evaluate('render()')
+        def music_results(label):
+            # The contract is about the complete search result, not which page a
+            # growing, newest-first catalog puts an approved performance on.
+            # Stay in this document so the isolated regression fixture survives
+            # even when the preceding check happened to finish on page one.
+            page.evaluate("() => {location.hash='#/music?tab=videos&q=REBELS';render();}")
+            expect(page.locator('#main h1')).to_be_visible()
+            expected=page.evaluate("""() => filtered(
+                D.videos.filter(v=>v.category==='group'||v.type==='external_performance'),
+                new URLSearchParams('tab=videos&q=REBELS')).map(v=>v.key)""")
+            total=int(page.locator('#main .result-bar strong').inner_text())
+            keys=[];pages=[];visited=set();number=1
+            while True:
+                current=urlsplit(page.url).fragment
+                check(label+' pagination advances without cycles',current not in visited and number<=max(1,total),page=number)
+                visited.add(current)
+                cards=page.locator('#main .grid > [data-item-key^="video:"]').evaluate_all('(cards)=>cards.map(card=>card.dataset.itemKey)')
+                pages.append(cards);keys.extend(cards)
+                next_link=page.locator('#main .pagination').get_by_role('link',name='다음',exact=True)
+                if next_link.count()==0:break
+                check(label+' one next-page link',next_link.count()==1,actual=next_link.count())
+                href=next_link.get_attribute('href')
+                target=urlsplit(href)
+                route,_,query=target.fragment.partition('?')
+                check(label+' next page preserves the search',not target.scheme and not target.netloc and not target.path and
+                      route=='/music' and parse_qs(query)=={'tab':['videos'],'q':['REBELS'],'page':[str(number+1)]},href=href)
+                next_link.click()
+                expect(page).to_have_url(url+href)
+                page.wait_for_function('hash => renderedHash === hash && location.hash === hash',arg=href)
+                number+=1
+            check(label+' all reported results rendered',len(keys)==total,expected=total,actual=len(keys),pages=len(pages))
+            check(label+' complete DOM agrees with music eligibility',Counter(keys)==Counter(expected),
+                  missing=list((Counter(expected)-Counter(keys)).elements())[:10],
+                  extra=list((Counter(keys)-Counter(expected)).elements())[:10])
+            for video_id,name in [('mkJRSPYjX8k','M2 relay'),('sy40EGkSfRA','Music Core stage'),('Mj7q8HU8ZXg','full performance')]:
+                video_count(label+' '+name+' exactly once in search data',expected,video_id)
+                video_count(label+' '+name+' exactly once across pages',keys,video_id)
+            video_count(label+' teaser excluded from search data',expected,'_E9ZHH9R7o4',0)
+            video_count(label+' teaser excluded from every music page',keys,'_E9ZHH9R7o4',0)
+            return pages
         go('content?tab=videos&category=external')
+        selected=page.evaluate("() => D.videos.filter(v=>['_E9ZHH9R7o4','Mj7q8HU8ZXg','sy40EGkSfRA','mkJRSPYjX8k'].includes(v.id)).map(v=>({id:v.id,type:v.type,category:v.category,channelKey:v.channelKey,channelName:v.channelName,relatedSong:v.relatedSong}))")
+        for video_id,kind,channel_key,channel_name in [
+            ('_E9ZHH9R7o4','external_teaser','studio-choom-selected','STUDIO CHOOM [스튜디오 춤]'),
+            ('Mj7q8HU8ZXg','external_performance','studio-choom-selected','STUDIO CHOOM [스튜디오 춤]'),
+            ('sy40EGkSfRA','external_performance','mbc-music-core-selected','MBCkpop'),
+            ('mkJRSPYjX8k','external_performance','m2-relay-selected','M2'),
+        ]:
+            rows=[v for v in selected if v['id']==video_id]
+            check(video_id+' exactly once in complete catalog',len(rows)==1,expected=1,actual=len(rows))
+            expected={'id':video_id,'type':kind,'category':'external','channelKey':channel_key,'channelName':channel_name,'relatedSong':'rebels'}
+            check(video_id+' retains its source and classification',rows[0]==expected,expected=expected,actual=rows[0])
         check('five selected external videos',page.locator('[data-item-key^="video:"]').count()==5)
+        for video_id in ('Mj7q8HU8ZXg','_E9ZHH9R7o4'):
+            check(video_id+' in external contents exactly once',page.locator(f'#main .grid > [data-item-key="video:{video_id}"]').count()==1)
         check('source-labelled cards',page.locator('#main').inner_text().count('외부 채널 · STUDIO CHOOM')==2)
         check('newest collaboration first',page.locator('[data-item-key^="video:"]').first.get_attribute('data-item-key')=='video:P15VglxEkss')
         check('MBC source-labelled card',page.locator('#main').inner_text().count('외부 채널 · MBCkpop')==1)
@@ -61,15 +119,37 @@ try:
             check('IRISE not '+category+' owned',page.locator('[data-item-key="video:P15VglxEkss"]').count()==0)
         go('music?tab=videos&q=아이리제')
         check('collaboration not in music performance videos',page.locator('[data-item-key="video:P15VglxEkss"]').count()==0)
-        go('music?tab=videos&q=REBELS')
-        check('M2 relay in music videos',page.locator('[data-item-key="video:mkJRSPYjX8k"]').count()==1)
-        check('Music Core stage in music videos',page.locator('[data-item-key="video:sy40EGkSfRA"]').count()==1)
-        check('full performance in music videos',page.locator('[data-item-key="video:Mj7q8HU8ZXg"]').count()==1)
-        check('external teaser not a full music video',page.locator('[data-item-key="video:_E9ZHH9R7o4"]').count()==0)
+        music_results('current catalog')
+        # Add only in-memory, newer group uploads. Keep the selected source rows
+        # untouched and restore the original array before any following checks.
+        original_video_count=page.evaluate('D.videos.length')
+        page.evaluate("""() => {
+            const original=D.videos, template=original.find(v=>v.category==='group');
+            if(!template)throw new Error('Missing official group fixture template');
+            const newer=Array.from({length:24},(_,i)=>{
+                const id='pageguard'+String(i).padStart(2,'0');
+                if(original.some(v=>v.id===id))throw new Error('Pagination fixture ID collision');
+                return {...template,id,key:'video:'+id,title:'REBELS pagination regression '+i,
+                    date:'2099-01-01',publishedAt:'2099-01-01T00:00:00Z'};
+            });
+            window.restoreExternalVideoPaginationFixture=()=>{
+                D.videos=original;
+                delete window.restoreExternalVideoPaginationFixture;
+                render();
+            };
+            D.videos=[...original,...newer];
+        }""")
+        try:
+            pages=music_results('catalog with 24 newer matches')
+            check('all 24 added matches participate in the regression',sum(key.startswith('video:pageguard') for cards in pages for key in cards)==24)
+            check('pagination regression actually crosses the first 24 cards',len(pages)>1 and len(pages[0])==24 and 'video:Mj7q8HU8ZXg' not in pages[0],pages=len(pages))
+        finally:
+            page.evaluate('restoreExternalVideoPaginationFixture()')
+        check('pagination fixture restores the original catalog',page.evaluate('D.videos.length')==original_video_count)
         go('song/rebels')
         related=page.locator('section[aria-label="관련 퍼포먼스 영상"]')
         expect(related).to_be_visible()
-        check('both attached to existing song',related.locator('a[href="#/video/Mj7q8HU8ZXg"]').count()>0 and related.locator('a[href="#/video/_E9ZHH9R7o4"]').count()>0)
+        check('both attached to existing song exactly once',related.locator('a[href="#/video/Mj7q8HU8ZXg"]').count()==1 and related.locator('a[href="#/video/_E9ZHH9R7o4"]').count()==1)
         check('M2 linked to existing song',related.locator('a[href="#/video/mkJRSPYjX8k"]').count()>0)
         check('M2 publisher labelled','M2' in related.locator('.ai-muted').inner_text())
         check('MBC linked to existing song',related.locator('a[href="#/video/sy40EGkSfRA"]').count()>0)
@@ -93,6 +173,11 @@ try:
                 check('MBC publication date visible','2026.11.14' in page.locator('.detail-meta').inner_text().replace(' ',''))
             check(vid+' existing song link',page.locator('a[href="#/song/rebels"]').count()>0)
             check(vid+' paired video link',page.locator('section[aria-label="관련 퍼포먼스 영상"] a[href^="#/video/"]').count()>0)
+            if vid in ('_E9ZHH9R7o4','Mj7q8HU8ZXg'):
+                paired='Mj7q8HU8ZXg' if vid=='_E9ZHH9R7o4' else '_E9ZHH9R7o4'
+                related=page.locator('section[aria-label="관련 퍼포먼스 영상"]')
+                check(vid+' links to the exact STUDIO CHOOM counterpart',related.locator(f'a[href="#/video/{paired}"]').count()==1)
+                check(vid+' excludes itself from related performances',related.locator(f'a[href="#/video/{vid}"]').count()==0)
         go('video/P15VglxEkss')
         check('IRISE exact title',page.locator('#main h1').inner_text()=='[IRISÉ LIVE] 오늘은 릴파 선배님과 함께! 🩵💙')
         check('collaboration replay badge','합방 다시보기' in page.locator('#main .badges').first.inner_text())
