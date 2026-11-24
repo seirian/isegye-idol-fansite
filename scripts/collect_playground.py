@@ -19,7 +19,7 @@ def read(url,headers=None):
     if len(raw)>1048576:raise ValueError('Response size')
     return json.loads(raw)
 
-def rows():
+def rows(diagnostics=None):
     from enhance_catalog import load_music
     from daily_music import validate,CHANNELS
     channels=json.loads((ROOT/'catalog/video-sources.json').read_text())['channels']
@@ -36,13 +36,20 @@ def rows():
         if binding:k=binding[3]
         if k not in CHANNELS:continue
         choices.append({'videoId':binding[1] if binding else r.get('videoId'),'channelKey':k,'title':r['title'],'type':r['type'],'members':r['members']})
+    stats=diagnostics if diagnostics is not None else {}
+    stats.update(inputRows=len(choices),unsupportedChannel=0,unsupportedFact=0,duplicateInput=0,eligibleRows=0)
     seen=set();result=[]
     for r in choices:
         k=r['channelKey'];owner=CHANNELS.get(k,(None,None))[1]
-        if owner is None or r['members']!=[owner] or r['type'] not in ('cover','original','remake','official_track') or channels.get(k,{}).get('role')!='official':continue
+        if owner is None or channels.get(k,{}).get('role')!='official':
+            stats['unsupportedChannel']+=1;continue
+        if r['members']!=[owner] or r['type'] not in ('cover','original','remake','official_track'):
+            stats['unsupportedFact']+=1;continue
         key=bank.digest([bank.norm(r['title']),owner,r['type']])
-        if key in seen:continue
+        if key in seen:
+            stats['duplicateInput']+=1;continue
         seen.add(key);result.append({**r,'factKey':key,'channelUrl':channels[k]['url'],'owner':owner})
+    stats['eligibleRows']=len(result)
     return result
 
 def verify(row,fetch=read):
@@ -110,26 +117,64 @@ def check_reference_bodies(found,previous,now):
     return dict(list(results.items())[-200:]),states
 
 def collect(now=None):
+    from playground_pipeline import DAILY_TARGET, reserve_proposals, growth_report, editorial_manifest
     now=now or datetime.now(timezone.utc);WORK.mkdir(exist_ok=True)
     previous=json.loads((WORK/'previous.json').read_text()) if (WORK/'previous.json').exists() else None
     if previous:bank.validate_stored_feed(previous)
-    existing={q.get('provenance',{}).get('factKey') for q in (previous['catalog'] if previous else bank.seed())['questions']}
+    catalog=(previous['catalog'] if previous else bank.seed())
+    today=now.astimezone(bank.KST).date().isoformat()
+    used=previous.get('addedToday',0) if previous and previous.get('batchDate')==today else 0
+    budget=max(0,min(DAILY_TARGET,bank.MAX_DAILY)-used)
+    existing={q.get('provenance',{}).get('factKey') for q in catalog['questions']}
+    diagnostics={};eligible=rows(diagnostics)
+    pending=[r for r in eligible if r['factKey'] not in existing]
+    diagnostics.update(alreadyUsed=len(eligible)-len(pending),unusedOfficial=len(pending))
+    # Change the starting point daily so permanently failing candidates do not
+    # starve all later candidates. At most 20 public source reads per run.
+    if pending:
+        offset=now.astimezone(bank.KST).date().toordinal()%len(pending)
+        pending=pending[offset:]+pending[:offset]
     proposals=[];checks=[]
-    for row in [r for r in rows() if r['factKey'] not in existing][:20]:
-        if len(proposals)>=bank.MAX_DAILY:break
+    for row in pending[:20] if budget else []:
+        if len(proposals)>=budget:break
         try:
             verified=verify(row);item=bank.auto_question(row,verified,now)
             if item:proposals.append(item)
             checks.append({'videoId':row['videoId'],'state':'verified' if item else 'excluded'})
         except Exception as e:checks.append({'videoId':row['videoId'],'state':'deferred','errorType':type(e).__name__})
-    found,search_errors=discover_references()
+    selection_catalog={**catalog,'questions':catalog['questions']+[q for q,_,_ in proposals]}
+    reserved,reserve_stats=reserve_proposals(selection_catalog,now,max(0,budget-len(proposals)))
+    # Live verified facts and exact reviewed reserve items share one daily cap.
+    proposals+=reserved
     oldrefs=json.loads((WORK/'references-before.json').read_text()) if (WORK/'references-before.json').exists() else {}
-    references,reference_checks=check_reference_bodies(found,oldrefs,now)
+    if budget:
+        found,search_errors=discover_references()
+        references,reference_checks=check_reference_bodies(found,oldrefs,now)
+    else:
+        references,reference_checks,search_errors=oldrefs,[],[]
     value,added=bank.assemble(previous,proposals,now)
-    # Meaningful failure is reported instead of marking complete when every new source failed.
-    essential_ok=not checks or any(c['state']=='verified' for c in checks)
-    report={'schemaVersion':1,'generatedAt':now.isoformat(),'status':'checked' if essential_ok else 'sources_unavailable','reviewedAdded':value.get('reviewedAdded',0),'automaticAdded':len(added),'addedIds':added,'questionCount':len(value['catalog']['questions']),'sourceChecks':checks,'referenceChecks':reference_checks,'referenceWarnings':search_errors,'communityAutoPublished':False,'previousSha256':previous['sha256'] if previous else None}
+    _,after=reserve_proposals(value['catalog'],now,0)
+    reserve_added=sum(ident.startswith('reserve-') for ident in added)
+    diagnostics.update(verified=sum(c['state']=='verified' for c in checks),
+        deferred=sum(c['state']=='deferred' for c in checks),dailyBudget=budget,
+        reserveTotal=reserve_stats['reviewedTotal'],reserveUsedOrDuplicate=reserve_stats['duplicateOrUsed'])
+    value['growth']=growth_report(previous,value,added,after['readyBefore'],now,diagnostics)
+    value['editorialRevision']=editorial_manifest()['revision']
+    # External outages do not discard already reviewed questions; outages remain
+    # visible separately. A zero-change execution is never called growth success.
+    essential_ok=not checks or any(c['state']=='verified' for c in checks) or bool(reserve_added)
+    report={'schemaVersion':1,'generatedAt':now.isoformat(),'status':'checked' if essential_ok else 'sources_unavailable',
+        'reviewedAdded':value.get('reviewedAdded',0),'automaticAdded':len(added)-reserve_added,
+        'reserveAdded':reserve_added,'totalAdded':len(added),'addedIds':added,
+        'questionCount':len(value['catalog']['questions']),'sourceChecks':checks,
+        'candidateCounts':diagnostics,'growth':value['growth'],'referenceChecks':reference_checks,
+        'referenceWarnings':search_errors,'communityAutoPublished':False,
+        'previousSha256':previous['sha256'] if previous else None}
     (WORK/'candidate.json').write_bytes(bank.encoded(value));(WORK/'references.json').write_bytes(bank.encoded(references));(ROOT/'playground-discovery.json').write_bytes(bank.encoded(report))
+    # References remain a review inbox, never unverified automatic answers.
+    inbox={'schemaVersion':1,'generatedAt':now.isoformat(),'automaticPublication':False,
+        'references':reference_checks,'readyByCategory':after['readyByCategory']}
+    (ROOT/'playground-review-inbox.json').write_bytes(bank.encoded(inbox))
     print(json.dumps({k:v for k,v in report.items() if k not in ('sourceChecks','referenceChecks')},ensure_ascii=False))
     return 0 if essential_ok else 1
 if __name__=='__main__':sys.exit(collect())

@@ -25,12 +25,16 @@ def validate_catalog(d,base=None):
     if any(byid.get(q['id'])!=q for q in base['questions']) or any(d['sources'].get(k)!=v for k,v in base['sources'].items()):raise ValueError('Reviewed facts changed')
     facts=[]
     approved={q['id'] for q in base['questions']}
+    from playground_pipeline import reserve_index, validate_reserve_question
+    reserve=reserve_index()
     for q in (q for q in d['questions'] if q['id'] not in approved):
         p=q.get('provenance',{})
-        if q['status']!='reviewed' or p.get('template')!='official-channel-v1' or not re.fullmatch('[0-9a-f]{64}',p.get('factKey','')):raise ValueError('Unverified automatic question')
+        if p.get('template')=='reviewed-reserve-v1':
+            validate_reserve_question(q,d['sources'],reserve)
+        elif q['status']!='reviewed' or p.get('template')!='official-channel-v1' or not re.fullmatch('[0-9a-f]{64}',p.get('factKey','')):raise ValueError('Unverified automatic question')
         if p['factKey'] in facts:raise ValueError('Duplicate fact')
         facts.append(p['factKey']);datetime.fromisoformat(q['eligibleFrom'])
-        if any(d['sources'][s]['kind']!='primary' for s in q['sources']):raise ValueError('Auto question needs primary evidence')
+        if p.get('template')!='reviewed-reserve-v1' and any(d['sources'][s]['kind']!='primary' for s in q['sources']):raise ValueError('Auto question needs primary evidence')
     if len(encoded(d))>4500000:raise ValueError('Bank too large')
     return d
 

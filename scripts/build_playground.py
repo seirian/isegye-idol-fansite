@@ -36,6 +36,13 @@ def build():
     if os.getenv('DEPLOY_ENV')=='production' or os.getenv('GITHUB_REF') in ('refs/heads/main','refs/heads/develop'):raise ValueError('Preview branch/local only')
     src=ROOT/'playground';d=validate(json.loads((src/'catalog.json').read_text()))
     serial=json.dumps(d,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026').replace('\u2028','\\u2028').replace('\u2029','\\u2029')
+    from playground_pipeline import editorial_manifest
+    editorial=editorial_manifest()
+    edits={e['id']:e['after'] for e in editorial['edits']}
+    display=json.loads(serial)
+    for q in display['questions']:
+        q.update(edits.get(q['id'],{}))
+    serial=json.dumps(display,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     core=re.sub(r'^export ','',(src/'core.js').read_text(),flags=re.M)
     js='const PLAYGROUND_DATA='+serial+';\n'+core+'\n'+(src/'app.js').read_text();css=(src/'styles.css').read_text()
     if '</script' in js.lower() or '</style' in css.lower():raise ValueError('Unsafe closing tag')

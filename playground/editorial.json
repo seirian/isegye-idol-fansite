@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-24.1",
+  "reviewedAt": "2026-11-24",
+  "note": "표현만 교정합니다. 문제 ID·보기·정답·출처·공개 답안의 한계는 바꾸지 않습니다.",
+  "edits": [
+    {
+      "id": "stories-greeting",
+      "before": {
+        "stem": "주르르 방송의 인사 표현으로 참고 문제집에 정리된 것은?"
+      },
+      "after": {
+        "stem": "주르르가 방송에서 사용하는 인사말은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-hacker",
+      "before": {
+        "stem": "RURU CLOSET 공개 답안 기준, 〈Be My Light〉 MV 속 주르르의 역할은?"
+      },
+      "after": {
+        "stem": "〈Be My Light〉 뮤직비디오에서 주르르가 맡은 역할은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-cider",
+      "before": {
+        "stem": "RURU CLOSET 답안에 등장하는 〈CIDER BANG!〉 3인 무대의 조합은?"
+      },
+      "after": {
+        "stem": "이세페2에서 〈CIDER BANG!〉 무대를 함께한 세 멤버는 누구일까요?"
+      }
+    },
+    {
+      "id": "stories-orchestra",
+      "before": {
+        "stem": "RURU CLOSET 답안 기준, 이세페2에서 오케스트라 편곡으로 선보인 두 곡은?"
+      },
+      "after": {
+        "stem": "이세페2에서 오케스트라 편곡으로 선보인 두 곡은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-ear-heart",
+      "before": {
+        "stem": "RURU CLOSET 답안에서 주르르 귀걸이의 필수 요소로 꼽은 모양은?"
+      },
+      "after": {
+        "stem": "주르르의 귀걸이에 공통으로 들어가는 모양은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-white-challenge",
+      "before": {
+        "stem": "공개 행사 답안에 기록된 주르르의 2인 〈화이트〉 챌린지 상대는?"
+      },
+      "after": {
+        "stem": "주르르와 둘이서 〈화이트〉 챌린지를 함께한 멤버는 누구일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-nameless-guest",
+      "before": {
+        "stem": "주르르와 〈Nameless〉 챌린지를 함께한 솔로 가수로 행사 답안에 나온 이름은?"
+      },
+      "after": {
+        "stem": "주르르와 〈Nameless〉 챌린지를 함께한 솔로 가수는 누구일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-pepero",
+      "before": {
+        "stem": "이세돌 빼빼로 협업에서 주르르 담당으로 행사 답안에 기록된 맛은?"
+      },
+      "after": {
+        "stem": "이세계아이돌 빼빼로 협업에서 주르르가 맡은 맛은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-ribbon",
+      "before": {
+        "stem": "구르르에서 뉴르르로 바뀐 리본 색상으로 행사 답안에 기록된 조합은?"
+      },
+      "after": {
+        "stem": "구르르에서 뉴르르로 바뀌면서 리본 색상은 어떻게 달라졌을까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-hair",
+      "before": {
+        "stem": "〈Nameless〉 속 주르르 헤어를 행사 답안은 어떻게 표현했을까요?"
+      },
+      "after": {
+        "stem": "〈Nameless〉에서 주르르가 선보인 헤어스타일은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-boy-group",
+      "before": {
+        "stem": "참고 문제집에서 주르르 산하 남성 그룹으로 소개한 이름은?"
+      },
+      "after": {
+        "stem": "주르르 산하 남성 그룹의 이름은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-festival-solo",
+      "before": {
+        "stem": "참고 문제집이 이세페2 주르르 솔로 무대곡으로 꼽은 곡은?"
+      },
+      "after": {
+        "stem": "이세페2에서 주르르가 솔로 무대로 선보인 곡은 무엇일까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-april-avatar",
+      "before": {
+        "stem": "2022년 만우절, 참고 문제집에 기록된 주르르의 방송 아바타는 어느 멤버였을까요?"
+      },
+      "after": {
+        "stem": "2022년 만우절에 주르르는 어느 멤버의 아바타로 방송했을까요?"
+      }
+    },
+    {
+      "id": "stories-ruru-cosplay",
+      "before": {
+        "stem": "참고 문제집에서 주르르가 무기를 만들어 코스프레했다고 소개한 LoL 챔피언은?"
+      },
+      "after": {
+        "stem": "주르르가 직접 무기를 만들어 코스프레한 리그 오브 레전드 챔피언은 누구일까요?"
+      }
+    },
+    {
+      "id": "music-light-genre",
+      "before": {
+        "stem": "공식 소개에서 피아노·밴드 사운드·현악이 어우러진 〈Be My Light〉의 장르는?"
+      },
+      "after": {
+        "stem": "피아노와 밴드 사운드, 현악이 어우러진 〈Be My Light〉의 장르는 무엇일까요?"
+      }
+    },
+    {
+      "id": "music-smile-lyrics",
+      "before": {
+        "stem": "〈Smile For You〉의 공식 소개에서 직접 작사에 참여했다고 밝힌 이들은?"
+      },
+      "after": {
+        "stem": "〈Smile For You〉의 작사에 직접 참여한 이들은 누구일까요?"
+      }
+    },
+    {
+      "id": "music-smile-message",
+      "before": {
+        "stem": "공식 소개에서 〈Smile For You〉가 고마운 마음을 전하는 대상은?"
+      },
+      "after": {
+        "stem": "〈Smile For You〉가 감사의 마음을 전하는 대상은 누구일까요?"
+      }
+    },
+    {
+      "id": "members-color-ine",
+      "before": {
+        "stem": "멤버 소개 자료에서 아이네의 상징색으로 기록된 색은?"
+      },
+      "after": {
+        "stem": "아이네의 상징색은 무엇일까요?"
+      }
+    },
+    {
+      "id": "members-color-lilpa",
+      "before": {
+        "stem": "멤버 소개 자료에서 릴파의 상징색으로 기록된 색은?"
+      },
+      "after": {
+        "stem": "릴파의 상징색은 무엇일까요?"
+      }
+    },
+    {
+      "id": "members-color-jururu",
+      "before": {
+        "stem": "멤버 소개 자료에서 주르르의 상징색으로 기록된 색은?"
+      },
+      "after": {
+        "stem": "주르르의 상징색은 무엇일까요?"
+      }
+    },
+    {
+      "id": "members-color-gosegu",
+      "before": {
+        "stem": "멤버 소개 자료에서 고세구의 상징색으로 기록된 색은?"
+      },
+      "after": {
+        "stem": "고세구의 상징색은 무엇일까요?"
+      }
+    },
+    {
+      "id": "covers-new-era",
+      "before": {
+        "stem": "〈신시대〉의 이세돌 개인 커버를 부른 멤버는?"
+      },
+      "after": {
+        "stem": "〈신시대〉를 개인 커버한 이세계아이돌 멤버는 누구일까요?"
+      }
+    }
+  ]
+}
