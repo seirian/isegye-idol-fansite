@@ -29,6 +29,8 @@ def failure_report(err, stage):
         result['field']=err.field
         if err.articleId is not None:result['articleId']=err.articleId
         if err.sourceId is not None:result['sourceId']=err.sourceId
+    elif isinstance(err,feed.ParableSourceError):
+        result.update(errorCode=err.code,sourceId='parable-web',sourceStage=err.stage,retryCount=err.retry_count)
     elif isinstance(err,(d.Stop,feed.FeedError)):
         # These application exceptions already contain fixed, credential-free reasons.
         result['reason']=str(err)
