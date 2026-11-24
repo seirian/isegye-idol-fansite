@@ -21,7 +21,7 @@ from html.parser import HTMLParser
 import inour_sftp as d
 import auth_routing as a
 from production_release import EXISTING
-from build_courier_production import HTML_PATH as COURIER_HTML, ROUTE as COURIER_ROUTE, STORAGE_KEY as COURIER_STORAGE, ACCEPTED_COMMIT as COURIER_ACCEPTED
+from build_courier_production import HTML_PATH as COURIER_HTML, ROUTE as COURIER_ROUTE, STORAGE_KEY as COURIER_STORAGE, BASE_COMMIT as COURIER_BASE, render as render_courier
 
 
 class CourierPolicy(HTMLParser):
@@ -54,10 +54,10 @@ def courier_artifact(payload):
     if game is None and COURIER_HTML not in payload:return None
     d.require(isinstance(game,dict) and COURIER_HTML in payload,'Courier metadata/document missing')
     raw=payload[COURIER_HTML]
-    d.require(game.get('game')=='starlight-courier' and game.get('version')==2 and game.get('acceptedCommit')==COURIER_ACCEPTED and
+    d.require(game.get('game')=='starlight-courier' and game.get('version')==3 and game.get('baseCommit')==COURIER_BASE and
               game.get('route')==COURIER_ROUTE and game.get('htmlPath')==COURIER_HTML and
               game.get('storageKey')==COURIER_STORAGE and game.get('generatedArtwork') is True and
-              game.get('counts')=={'games':1,'characters':6,'stages':3},'Courier identity mismatch')
+              game.get('counts')=={'games':1,'characters':6,'stages':10,'bosses':3},'Courier identity mismatch')
     d.require(game.get('htmlSha256')==d.digest(raw) and game.get('htmlBytes')==len(raw),'Courier artifact mismatch')
     text=raw.decode()
     d.require(COURIER_STORAGE in text and 'isegye:review:courier:' not in text and
@@ -82,6 +82,11 @@ def courier_artifact(payload):
     cards=game.get('cardAssets',{})
     d.require(set(cards)=={'assets/courier/characters.webp','assets/courier/plaza.webp'},'Courier card inventory mismatch')
     d.require(all(path in payload and d.digest(payload[path])==value for path,value in cards.items()),'Courier card image mismatch')
+    reference,sources=render_courier()
+    d.require(raw==reference and game.get('sourceHashes')=={path:d.digest(data) for path,data in sources.items()},
+              'Courier source manifest mismatch')
+    d.require(all(value==d.digest(sources[path.replace('assets/courier/','fangames/assets/')]) for path,value in cards.items()),
+              'Courier card source mismatch')
     return game
 
 
@@ -320,7 +325,7 @@ def deploy(remote, payload, commit, client_id, report):
         if courier:
             for name in (COURIER_HTML,*courier['cardAssets']):
                 d.require(remote.read(release_parent+'/'+release+'/'+name)==payload[name],'Published Courier readback mismatch')
-            report['courierGame']={'url':d.ORIGIN+COURIER_ROUTE,'acceptedCommit':courier['acceptedCommit'],'htmlSha256':courier['htmlSha256'],
+            report['courierGame']={'url':d.ORIGIN+COURIER_ROUTE,'version':courier['version'],'baseCommit':courier['baseCommit'],'htmlSha256':courier['htmlSha256'],
                 'htmlBytes':courier['htmlBytes'],'counts':courier['counts'],'publishedBytesVerified':True,
                 'cardImagesVerified':True,'existingAccessPolicyPreserved':True,'previewStorageUnchanged':True}
         if rpg:

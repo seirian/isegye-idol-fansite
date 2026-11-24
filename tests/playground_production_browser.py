@@ -65,11 +65,13 @@ def rpg_integration(page):
  expect(page.locator('[data-action=next]')).to_be_visible()
 
 def ready_courier(page):
- page.wait_for_function('()=>window.CourierApp?.ready===true',timeout=20000)
- expect(page.locator('#start-button')).to_be_enabled()
+ expect(page.locator('#start-button')).to_be_enabled(timeout=20000)
+ assert page.evaluate('CourierApp.ready')
 def courier_start(page):
  page.locator('#start-button').click()
- page.wait_for_function('()=>CourierApp.state?.elapsed>0',timeout=7000)
+ expect(page.locator('#arena')).to_be_visible()
+ expect(page.locator('#stage-arrival')).to_be_hidden(timeout=7000)
+ assert page.evaluate("CourierApp.state?.mode==='playing' && !CourierApp.paused")
 def courier_position(page):
  return page.evaluate('()=>({x:CourierApp.state.x,y:CourierApp.state.y,elapsed:CourierApp.state.elapsed})')
 def courier_touch(page):
