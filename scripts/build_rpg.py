@@ -92,6 +92,28 @@ class ShellAudit(HTMLParser):
                 raise ValueError("Unsafe navigation link in RPG shell")
 
 
+def packed_game_fonts(root: Path, data: dict[str, bytes]) -> str:
+    """Pack the two licensed offline fonts used by the standalone games."""
+    fonts, notices = {}, {}
+    for family, basename in FONT_FAMILIES.items():
+        font_path = f"rpg/fonts/{basename}-Regular.woff2"
+        notice_path = f"rpg/fonts/{basename}-OFL.txt"
+        raw = source_bytes(root, font_path)
+        if len(raw) <= 48 or raw[:4] != b"wOF2" or int.from_bytes(raw[8:12], "big") != len(raw):
+            raise ValueError("Unexpected RPG WOFF2 font: " + font_path)
+        data[font_path] = raw
+        data[notice_path] = source_bytes(root, notice_path)
+        notice = data[notice_path].decode("utf-8-sig").replace("\r\n", "\n")
+        if "SIL OPEN FONT LICENSE" not in notice or "copyright" not in notice.lower():
+            raise ValueError("Expected the RPG font's copyright and OFL notice: " + notice_path)
+        fonts[family] = base64.b64encode(raw).decode("ascii")
+        notices[family] = notice
+    return (
+        "const RPG_FONT = Object.freeze(" + json.dumps(fonts, separators=(",", ":")) + ");\n"
+        + "const RPG_FONT_NOTICES = Object.freeze(" + json.dumps(notices, separators=(",", ":")) + ");\n"
+    )
+
+
 def assemble(root: Path = ROOT) -> tuple[bytes, dict]:
     """Return reproducible HTML and its source manifest without writing output."""
     root = Path(root).resolve()
@@ -125,22 +147,7 @@ def assemble(root: Path = ROOT) -> tuple[bytes, dict]:
         data[prompt_path] = source_bytes(root, prompt_path)
     modules = {relative: data[relative].decode().replace("\r\n", "\n") for relative in SOURCES}
     js = "const RPG_ART = Object.freeze(" + json.dumps(art, separators=(",", ":")) + ");\n"
-    fonts, notices = {}, {}
-    for family, basename in FONT_FAMILIES.items():
-        font_path = f"rpg/fonts/{basename}-Regular.woff2"
-        notice_path = f"rpg/fonts/{basename}-OFL.txt"
-        raw = source_bytes(root, font_path)
-        if len(raw) <= 48 or raw[:4] != b"wOF2" or int.from_bytes(raw[8:12], "big") != len(raw):
-            raise ValueError("Unexpected RPG WOFF2 font: " + font_path)
-        data[font_path] = raw
-        data[notice_path] = source_bytes(root, notice_path)
-        notice = data[notice_path].decode("utf-8-sig").replace("\r\n", "\n")
-        if "SIL OPEN FONT LICENSE" not in notice or "copyright" not in notice.lower():
-            raise ValueError("Expected the RPG font's copyright and OFL notice: " + notice_path)
-        fonts[family] = base64.b64encode(raw).decode("ascii")
-        notices[family] = notice
-    js += "const RPG_FONT = Object.freeze(" + json.dumps(fonts, separators=(",", ":")) + ");\n"
-    js += "const RPG_FONT_NOTICES = Object.freeze(" + json.dumps(notices, separators=(",", ":")) + ");\n"
+    js += packed_game_fonts(root, data)
     js += flatten_modules(modules)
     if STORAGE_KEY not in js:
         raise ValueError("RPG save namespace missing")

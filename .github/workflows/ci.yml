@@ -81,6 +81,7 @@ jobs:
           /tmp/release-tools/bin/python tests/playground_maintenance_browser.py
           python scripts/build_playground_production_host.py
           /tmp/release-tools/bin/python tests/courier_host_browser.py
+          /tmp/release-tools/bin/python tests/courier_campaign_browser.py --html dist/games/starlight-courier/index.html
           /tmp/release-tools/bin/python tests/rpg_host_browser.py
           RPG_TEST_DIST=dist/games/ipari-chronicle /tmp/release-tools/bin/python tests/rpg_browser.py
           /tmp/release-tools/bin/python tests/playground_bank_host_browser.py
