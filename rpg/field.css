@@ -1,0 +1,126 @@
+﻿.field-board {
+  aspect-ratio: 760 / 440;
+  background: radial-gradient(ellipse at 48% 48%, #505f53, #1a2a30 76%);
+  overflow: hidden;
+  border-bottom: 1px solid #a9ad8760;
+}
+.field-board .field-horizon {
+  opacity: .27;
+  filter: saturate(.55) blur(5px);
+  transform: scale(1.035);
+  pointer-events: none;
+}
+.field-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #152a3566, #21353035 50%, #192b30a8);
+  pointer-events: none;
+}
+.field-ground, .field-route, .field-tiles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.field-ground {
+  z-index: 2;
+  pointer-events: none;
+  image-rendering: auto;
+  filter: drop-shadow(0 12px 9px #12201f94);
+}
+.field-route { z-index: 3; pointer-events: none; }
+.field-tiles { z-index: 4; pointer-events: none; }
+.field-tile {
+  position: absolute;
+  width: 7.764%;
+  height: 6.591%;
+  transform: translate(-50%,-50%);
+  clip-path: polygon(45.76% 0,100% 44.83%,54.24% 100%,0 55.17%);
+  border: 0;
+  pointer-events: auto;
+  padding: 0;
+  background: transparent;
+}
+.field-tile:hover { background: #fff1b444; }
+.field-board .field-object, .field-board .field-player {
+  position: absolute;
+  width: 5.3%; height: 7.5%;
+  transform: translate(-50%, -85%);
+  transition: none;
+  isolation: isolate;
+  outline-offset: 1px;
+}
+.field-board .field-object { pointer-events: none; }
+.field-board .field-object > .sprite, .field-board .field-object .field-prop,
+.field-board .field-object .field-label, .field-board .field-object .field-ensemble { cursor: pointer; }
+.field-board .field-target {
+  width: 4.1%; height: 5%;
+  min-width: 20px; min-height: 17px;
+  transform: translate(-50%, -62%); border-radius: 50%;
+  transition: none; background: transparent;
+}
+.field-board .field-target::after { display: none; }
+.field-board .field-object::after,
+.field-board .field-player::after,
+.field-board .field-player::before { display: none; }
+.field-board .field-object:disabled { opacity: 1; cursor: default; }
+.field-object .field-base, .field-board .field-player::before {
+  position: absolute; bottom: 9%; left: 9%; width: 82%; height: 25%;
+  border-radius: 50%; background: #273d3b55;
+  box-shadow: 0 1px 2px #273d3b44;
+  pointer-events: none;
+}
+.field-board .field-player::before {
+  display: block;
+  content: "";
+  border: 1.6px solid #ffdf7c; background: #dfc07777;
+}
+.field-goal .field-base, .field-near .field-base {
+  background: #e4c47466; box-shadow: 0 0 0 1.5px #ffe0a4bb;
+}
+.field-done .field-base, .field-lit .field-base {
+  background: #9cd0a966; box-shadow: 0 0 0 1px #cce7b8cc;
+}
+.field-locked .field-base { background: #403d4455; }
+.field-object .field-prop {
+  position: absolute; width: 160%; height: auto; left: 50%; bottom: 0;
+  transform: translateX(-50%); pointer-events: none; image-rendering: pixelated;
+}
+.field-board .field-object > .sprite, .field-board .field-player > .sprite {
+  position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
+  width: 159%; height: auto; aspect-ratio: 1;
+  filter: drop-shadow(1px 3px 1px #24323252); pointer-events: none;
+}
+.field-board .field-player > .sprite { width: 150%; }
+.field-board .field-object > .sprite, .field-object .field-prop,
+.field-object .field-label, .field-object .field-ensemble { pointer-events: auto; }
+.field-ensemble {
+  position: absolute; left: -52%; right: -52%; bottom: 14%; height: 150%;
+  display: flex; justify-content: center; align-items: flex-end;
+  pointer-events: none;
+}
+.field-board .field-ensemble .sprite {
+  position: relative; left: auto; bottom: auto; flex: none; width: 63%;
+  height: auto; aspect-ratio: 1; margin: 0 -19%; filter: drop-shadow(0 2px 1px #22362d66);
+}
+.field-board .field-ensemble .sprite:nth-child(2n) { transform: translateY(-18%); }
+.field-label {
+  position: absolute; top: 95%; left: 50%; transform: translateX(-50%);
+  max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-radius: 3px; padding: 2px 5px 3px; line-height: 1.2;
+  background: #203438eb; border: 1px solid #ccbca077; color: #fff3d4;
+  font-weight: 600; font-size: clamp(.75rem, .86vw, .875rem);
+}
+.field-goal .field-label { color: #ffe4a0; border-color: #f1c47b; }
+.field-object:has(+ .field-target:focus-visible), .field-object:hover { z-index: 600 !important; }
+.field-object:has(+ .field-target:focus-visible) .field-label, .field-object:hover .field-label {
+  color: #fff; border-color: #ffe39a; box-shadow: 0 2px 6px #11251f77;
+}
+@media (max-width: 640px) {
+  .field-board .field-label { display: none; font-size: .75rem; max-width: 7rem; }
+  .field-board .field-goal .field-label, .field-board .field-near .field-label,
+  .field-board .field-object:has(+ .field-target:focus-visible) .field-label { display: block; }
+  .field-board .field-object { min-width: 22px; min-height: 22px; }
+}

@@ -150,16 +150,27 @@ test('all eighteen chapter rooms have distinct walkable layouts', () => {
 test('first-review saves survive changed scenery without losing battle or chapter progress', () => {
   const old = structuredClone(battleSnapshots[1]);
   delete old.mapRevision;
-  old.position = {x:7,y:3};
+  old.position = {x:8,y:6};
   old.checkpoint.position = {...old.position};
   const migrated = restore(JSON.stringify(old));
   assert.ok(migrated);
-  assert.equal(migrated.mapRevision, 2);
-  assert.equal(Math.abs(migrated.position.x-7)+Math.abs(migrated.position.y-3), 1);
+  assert.equal(migrated.mapRevision, 3);
+  assert.equal(Math.abs(migrated.position.x-8)+Math.abs(migrated.position.y-6), 1);
   assert.deepEqual(migrated.checkpoint.position, migrated.position);
   for (const key of ['battle','chapter','room','met','records','solved','upgrades','stats']) assert.deepEqual(migrated[key],old[key]);
   assert.deepEqual(restore(serialize(migrated)), migrated);
-  assert.equal(restore(JSON.stringify({...old,mapRevision:2})), null, 'new saves cannot place the player inside a wall');
+  assert.equal(restore(JSON.stringify({...old,mapRevision:3})), null, 'new saves cannot place the player inside a wall');
+  assert.equal(restore(JSON.stringify({...old,mapRevision:2})), null, 'a wall on the second map is invalid in that save');
+  old.mapRevision = 2;
+  old.position = {x:1,y:1};
+  old.checkpoint.position = {x:13,y:7};
+  const previous = restore(JSON.stringify(old));
+  assert.ok(previous);
+  assert.equal(previous.mapRevision, 3);
+  assert.notDeepEqual(previous.position, old.position);
+  assert.notDeepEqual(previous.checkpoint.position, old.checkpoint.position);
+  assert.deepEqual(restore(serialize(previous)),previous);
+  delete old.mapRevision;
   assert.equal(restore(JSON.stringify({...old,position:{x:6,y:3}})), null, 'invalid old wall saves are still rejected');
 });
 

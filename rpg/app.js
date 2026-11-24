@@ -1,6 +1,14 @@
 import { CONTENT, CHAPTERS, MEMBERS, UPGRADES, FINALE, ALL_FACTS } from './content.js';
 import { createGame, dispatch, currentScene, describeObjective, enemyIntent, availableSupports, serialize, restore, SAVE_KEY } from './engine.js';
 
+import { renderField, paintField, loadFieldArt, fieldRoute } from './field.js';
+import { renderTacticalBattle, mountTacticalBattle } from './tactics-view.js';
+import { renderMeeting, meetingSpeaker, createMeetingReplay, relicActionLabel } from './story.js';
+
+import { activateGameFonts, gameFontNotices } from './fonts.js';
+
+activateGameFonts();
+
 const uiMain = document.getElementById('game-main');
 const uiDialog = document.getElementById('rpg-dialog');
 const uiDialogContent = document.getElementById('dialog-content');
@@ -20,11 +28,13 @@ let uiNoticeTimer = null;
 let uiAudio = null;
 let uiPathTimer = null;
 let uiWalking = false;
+let uiDestination = null;
 let uiLastTime = performance.now();
 let uiDialogKind = '';
+let uiReplay = null;
+let uiReplayFromJournal = false;
 let uiPreviousFocus = null;
 let uiLastAnnouncement = '';
-let uiAnimationTimer = null;
 
 function uiNotice(message, persistent = false) {
   clearTimeout(uiNoticeTimer);
@@ -56,7 +66,7 @@ function uiApplySettings() {
   document.documentElement.dataset.theme = uiSettings.dark ? 'dark' : 'light';
   document.documentElement.dataset.reducedMotion = String(uiSettings.reduceMotion);
 }
-for (const key of ['worlds', 'members', 'cast']) {
+for (const key of ['worlds', 'members', 'cast', 'meetings']) {
   if (typeof RPG_ART !== 'undefined' && /^data:image\/webp;base64,/.test(RPG_ART[key] || '')) document.documentElement.style.setProperty('--art-' + key, 'url("' + RPG_ART[key] + '")');
 }
 uiApplySettings();
@@ -85,10 +95,10 @@ function uiSound(kind = 'step') {
     oscillator.connect(gain); gain.connect(uiAudio.destination); oscillator.start(now); oscillator.stop(now + .21);
   } catch { /* Sound is optional; an unavailable audio device never blocks play. */ }
 }
-function uiStopWalking() { clearTimeout(uiPathTimer); uiWalking = false; }
+function uiStopWalking() { clearTimeout(uiPathTimer); uiWalking = false; uiDestination = null; }
 function uiAct(action, quiet = false) {
   if (!uiStarted || uiDialog.open) return;
-  if (action.type !== 'move') uiStopWalking();
+  if (action.type !== 'move' && action.type !== 'tick') uiStopWalking();
   const previous = uiState;
   try { uiState = dispatch(uiState, action); }
   catch { uiNotice('이 행동을 진행하지 못했어요. 현재 장면은 유지됩니다.'); return; }
@@ -98,10 +108,7 @@ function uiAct(action, quiet = false) {
   uiSave();
   if (!quiet && action.type !== 'move') uiSound(uiState.mode === 'victory' || uiState.mode === 'ending' ? 'win' : action.type === 'support' ? 'support' : action.type === 'battle' ? 'battle' : 'talk');
   uiRender();
-  if (action.type === 'battle' || action.type === 'support') {
-    const actor = uiMain.querySelector('.battle-actor.enemy');
-    if (actor && !uiSettings.reduceMotion) { actor.classList.add('hit'); clearTimeout(uiAnimationTimer); uiAnimationTimer = setTimeout(() => actor.classList.remove('hit'), 320); }
-  }
+
 }
 function uiSprite(kind, id, extra = '') { return `<span class="sprite ${kind}-sprite ${kind}-${uiEscape(id)} ${extra}" aria-hidden="true"></span>`; }
 function uiWorld(index, extra = '') { return `<div class="world-art world-${index >= 6 ? 4 : Math.max(0, index)} ${extra}" aria-hidden="true"></div>`; }
@@ -117,24 +124,20 @@ function uiPlayerStats() {
 }
 function uiRenderCover() {
   const completed = uiState.mode === 'ending';
-  return `<section class="cover" aria-labelledby="cover-title"><div class="cover-copy"><p class="eyebrow">A little adventure for every leaf</p><h1 id="cover-title" class="serif">이파리 연대기<span>마지막 앙코르</span></h1><p class="cover-desc">오래된 티켓 한 장, 여섯 해의 풍경.<br>이파리의 작은 발걸음으로 기록의 길을 잇고<br>당신을 기다리는 마지막 무대에 도착하세요.</p><div class="cover-meta"><span>이야기 RPG</span><span>여섯 개의 장</span><span>언제든 이어하기</span></div><div class="button-row">${uiHasSession ? `<button class="primary" data-action="continue">${completed ? '앙코르 다시 보기' : '이어서 모험하기'} <span aria-hidden="true">→</span></button><button class="secondary" data-action="new-confirm">새 모험</button>` : '<button class="primary" data-action="start">모험 시작하기 <span aria-hidden="true">→</span></button><button class="secondary" data-action="how-to">플레이 안내</button>'}</div>${uiHasSession ? `<p class="continue-note">${completed ? '모든 장을 완료했어요.' : `${uiEscape(uiChapter().year)} · ${uiEscape(uiChapter().title)}`} · 플레이 ${uiTime(uiState.stats.seconds)}<br>${uiSavingAvailable && uiHasSave ? '이 기기에 저장된 모험입니다.' : '현재 탭에 남아 있는 모험입니다. 탭을 닫지 마세요.'}</p>` : ''}<span class="cover-tag">주인공은 당신, 이파리</span></div><div class="cover-art">${uiWorld(0)}<div class="cover-orbit"></div><div class="cover-hero">${uiSprite('cast', 0)}</div><div class="cover-caption"><span>PROLOGUE / 첫 번째 티켓</span><span>2021 — 2026</span></div></div></section><section aria-label="여섯 해의 여정"><div class="chapter-heading"><h2>당신이 지나갈 여섯 개의 풍경</h2><span>각 장에서 새로운 동료와 능력을 만나요</span></div><div class="chapter-strip">${CHAPTERS.map((chapter, index) => `<article class="chapter-card ${uiState.chapter > index || completed ? 'is-complete' : ''}"><div class="chapter-art">${uiWorld(index)}</div><span class="chapter-number">CH. 0${index + 1} / ${chapter.year}</span><strong>${uiEscape(chapter.title)}</strong><small>${uiEscape(MEMBERS[chapter.member].name)}와 함께</small></article>`).join('')}</div></section>`;
+  return `<section class="cover" aria-labelledby="cover-title"><div class="cover-copy"><p class="eyebrow">2021 — 2026</p><h1 id="cover-title" class="display-title">이파리 연대기<span>마지막 앙코르</span></h1><p class="cover-desc">오래된 티켓 한 장, 여섯 해의 풍경.<br>이파리의 작은 발걸음으로 기록의 길을 잇고<br>당신을 기다리는 마지막 무대에 도착하세요.</p><div class="cover-meta"><span>턴제 전술 RPG</span><span>여섯 개의 장</span><span>언제든 이어하기</span></div><div class="button-row">${uiHasSession ? `<button class="primary" data-action="continue">${completed ? '앙코르 다시 보기' : '이어서 모험하기'} <span aria-hidden="true">→</span></button><button class="secondary" data-action="new-confirm">새 모험</button>` : '<button class="primary" data-action="start">모험 시작하기 <span aria-hidden="true">→</span></button><button class="secondary" data-action="how-to">플레이 안내</button>'}</div>${uiHasSession ? `<p class="continue-note">${completed ? '모든 장을 완료했어요.' : `${uiEscape(uiChapter().year)} · ${uiEscape(uiChapter().title)}`} · 플레이 ${uiTime(uiState.stats.seconds)}<br>${uiSavingAvailable && uiHasSave ? '이 기기에 저장된 모험입니다.' : '현재 탭에 남아 있는 모험입니다. 탭을 닫지 마세요.'}</p>` : ''}</div><div class="cover-art">${uiWorld(0)}<div class="cover-orbit"></div><div class="cover-hero">${uiSprite('cast', 0)}</div><div class="cover-caption"><span>PROLOGUE / 첫 번째 티켓</span><span>2021 — 2026</span></div></div></section><section aria-label="여섯 해의 여정"><div class="chapter-heading"><h2>당신이 지나갈 여섯 개의 풍경</h2><span>각 장에서 새로운 동료와 능력을 만나요</span></div><div class="chapter-strip">${CHAPTERS.map((chapter, index) => `<article class="chapter-card ${uiState.chapter > index || completed ? 'is-complete' : ''}"><div class="chapter-art">${uiWorld(index)}</div><span class="chapter-number">CH. 0${index + 1} / ${chapter.year}</span><strong>${uiEscape(chapter.title)}</strong><small>${uiEscape(MEMBERS[chapter.member].name)}와 함께</small></article>`).join('')}</div></section>`;
 }
 function uiNearby(scene = currentScene(uiState)) {
   return (scene.objects || []).filter(obj => Math.abs(obj.x - uiState.position.x) + Math.abs(obj.y - uiState.position.y) <= 1);
 }
 function uiMap(scene) {
   const near = uiNearby(scene);
-  return `<div class="stage-wrap"><div class="stage-topline"><span class="place-pill">${uiEscape(scene.title)}</span><span class="room-mark">${uiState.chapter < 6 ? `장소 ${uiState.room + 1} / 3` : 'THE LAST ENCORE'}</span></div><div class="map-board room-${uiState.room}" tabindex="0" role="group" aria-label="${uiEscape(scene.title)} 탐험 지도. 방향키로 이동하고 E로 상호작용합니다.">${uiWorld(uiState.chapter)}<div class="map-shade"></div><div class="tiles" aria-hidden="true">${scene.tiles.flatMap((row, y) => [...row].map((tile, x) => `<button class="tile ${tile === '#' ? 'wall' : 'floor'}" data-action="walk" data-x="${x}" data-y="${y}" tabindex="-1" ${tile === '#' ? 'disabled' : ''}></button>`)).join('')}</div>${(scene.objects || []).map(obj => {
-    const sprite = obj.type === 'member' ? uiSprite('member', obj.member || uiChapter().member) : obj.type === 'battle' ? uiSprite('cast', uiState.chapter < 6 ? uiState.chapter + 1 : 7) : null;
-    return `<button class="map-object ${near.some(o => o.id === obj.id) ? 'is-near' : ''} ${obj.done ? 'is-done' : ''} ${obj.locked ? 'is-locked' : ''}" data-action="object" data-id="${uiEscape(obj.id)}" data-x="${obj.x}" data-y="${obj.y}" aria-label="${uiEscape(obj.name)}${obj.done ? ' · 완료' : ''}${obj.locked ? ' · 조건 필요' : ''}" title="${uiEscape(obj.name)}">${sprite || `<span class="object-icon" aria-hidden="true">${obj.done ? '✓' : uiEscape(obj.icon || '◇')}</span>`}<span class="object-label">${uiEscape(obj.name)}</span></button>`;
-  }).join('')}<div class="map-player" data-x="${uiState.position.x}" data-y="${uiState.position.y}">${uiSprite('cast', 0)}</div></div><div class="stage-foot"><span class="keyboard-note"><kbd>W A S D</kbd> / <kbd>↑ ↓ ← →</kbd> 이동　<kbd>E</kbd> 대화·조사</span><span class="touch-note">장소를 누르면 이동 · 인물을 누르면 대화</span><span class="save-indicator">${uiSavingAvailable ? '◌ 자동 저장' : '저장 불가 · 탭 유지'}</span></div>${uiState.mode === 'explore' ? `<div class="mobile-controls"><div class="dpad" role="group" aria-label="이동 버튼"><button class="up" data-action="move" data-dx="0" data-dy="-1" aria-label="위로 이동">↑</button><button class="left" data-action="move" data-dx="-1" data-dy="0" aria-label="왼쪽으로 이동">←</button><button class="down" data-action="move" data-dx="0" data-dy="1" aria-label="아래로 이동">↓</button><button class="right" data-action="move" data-dx="1" data-dy="0" aria-label="오른쪽으로 이동">→</button></div><button class="primary interact-button" data-action="interact-near" ${near.length ? '' : 'disabled'}>${near.length ? uiEscape(near[0].name) + ' ↗' : '대상 옆으로 이동'}</button></div>` : ''}</div>`;
+  return `<div class="stage-wrap"${uiState.mode === 'explore' ? '' : ' inert'}><div class="stage-topline"><span class="place-pill">${uiEscape(scene.title)}</span><span class="room-mark">${uiState.chapter < 6 ? `장소 ${uiState.room + 1} / 3` : 'THE LAST ENCORE'}</span></div>${renderField(scene, uiState, uiSprite)}<div class="stage-foot"><span class="keyboard-note"><kbd>W A S D</kbd> / <kbd>↑ ↓ ← →</kbd> 이동　<kbd>E</kbd> 대화·조사</span><span class="touch-note">장소를 누르면 이동 · 인물을 누르면 대화</span><span class="save-indicator">${uiSavingAvailable ? '◌ 자동 저장' : '저장 불가 · 탭 유지'}</span></div>${uiState.mode === 'explore' ? `<div class="mobile-controls"><div class="dpad" role="group" aria-label="이동 버튼"><button class="up" data-action="move" data-dx="0" data-dy="-1" aria-label="위로 이동">↑</button><button class="left" data-action="move" data-dx="-1" data-dy="0" aria-label="왼쪽으로 이동">←</button><button class="down" data-action="move" data-dx="0" data-dy="1" aria-label="아래로 이동">↓</button><button class="right" data-action="move" data-dx="1" data-dy="0" aria-label="오른쪽으로 이동">→</button></div><button class="primary interact-button" data-action="interact-near" ${near.length ? '' : 'disabled'}>${near.length ? uiEscape(near[0].name) + ' ↗' : '대상 옆으로 이동'}</button></div>` : ''}</div>`;
 }
 function uiCompanions() {
-  return `<section class="companions-card" aria-label="함께하는 동료"><h2>함께하는 여섯 빛 · ${uiState.met.length} / 6</h2><div class="companion-row">${uiMemberOrder.map(id => uiState.met.includes(id) ? `<div class="companion-chip" title="${uiEscape(MEMBERS[id].name)} · ${uiEscape(MEMBERS[id].skill.name)}" aria-label="${uiEscape(MEMBERS[id].name)} 합류">${uiSprite('member', id)}</div>` : '<div class="companion-chip locked" aria-label="아직 만나지 않은 동료">?</div>').join('')}</div></section>`;
+  return `<section class="companions-card" aria-label="함께하는 동료"><h2>함께하는 여섯 빛 · ${uiState.met.length} / 6</h2><div class="companion-row">${uiMemberOrder.map(id => uiState.met.includes(id) ? `<button class="companion-chip" data-action="replay" data-id="${uiEscape(id)}" title="${uiEscape(MEMBERS[id].name)} 첫 만남 다시 보기" aria-label="${uiEscape(MEMBERS[id].name)} 첫 만남 다시 보기">${uiSprite('member', id)}</button>` : '<div class="companion-chip locked" aria-label="아직 만나지 않은 동료">?</div>').join('')}</div></section>`;
 }
 function uiSidebar(scene) {
-  const chapter = uiChapter();
-  return `<aside class="side-panel"><section class="quest-card"><p class="eyebrow">YOUR NEXT STEP</p><h2>${uiEscape(chapter.title)}</h2><p>${uiEscape(scene.description || chapter.description || '')}</p><p class="objective">${uiEscape(describeObjective(uiState))}</p><div class="chapter-progress" aria-label="${Math.min(uiState.chapter, 6)}개 장 완료">${CHAPTERS.map((_, i) => `<span class="${i < uiState.chapter ? 'done' : ''}"></span>`).join('')}</div>${uiState.help ? '<span class="help-tag">도움 모드 적용 중</span>' : ''}${uiState.mode === 'explore' ? `<div class="explore-actions">${uiNearby(scene).map(obj => `<button data-action="interact" data-id="${uiEscape(obj.id)}">${uiEscape(obj.name)} ↗</button>`).join('')}</div>` : ''}</section>${uiCompanions()}<div class="journey-log" aria-label="최근 모험 기록">${(uiState.log || []).slice(0,2).reverse().map(line => `<p>${uiEscape(line)}</p>`).join('')}</div></aside>`;
+  return `<aside class="side-panel"><section class="quest-card"><h2>지금 할 일</h2><p class="objective">${uiEscape(describeObjective(uiState))}</p><p class="place-description">${uiEscape(scene.description || '')}</p><div class="chapter-progress" aria-label="${Math.min(uiState.chapter, 6)}개 장 완료">${CHAPTERS.map((_, i) => `<span class="${i < uiState.chapter ? 'done' : ''}"></span>`).join('')}</div>${uiState.help ? '<span class="help-tag">도움 모드 적용 중</span>' : ''}${uiState.mode === 'explore' ? `<div class="explore-actions">${uiNearby(scene).map(obj => `<button data-action="interact" data-id="${uiEscape(obj.id)}">${uiEscape(obj.name)} ↗</button>`).join('')}</div>` : ''}</section>${uiCompanions()}<div class="journey-log" aria-label="최근 모험 기록">${(uiState.log || []).slice(0,2).reverse().map(line => `<p>${uiEscape(line)}</p>`).join('')}</div></aside>`;
 }
 function uiDialogue() {
   const d = uiState.dialogue;
@@ -142,7 +145,7 @@ function uiDialogue() {
   const member = d.member || (Object.values(MEMBERS).find(m => m.name === d.speaker) || {}).id;
   const portrait = member ? uiSprite('member', member) : uiSprite('cast', String(d.speaker || '').includes('우왁굳') ? 7 : 0);
   const line = d.lines[d.index] || '';
-  return `<section class="story-panel" aria-label="대화"><div class="story-portrait">${portrait}</div><div><p class="speaker">${uiEscape(d.speaker || '이파리')}<span>STORY</span></p><p class="story-text">${uiEscape(typeof line === 'string' ? line : line.text)}</p><div class="story-footer"><small>${d.index + 1} / ${d.lines.length} · ${String(d.speaker).includes('실제 자료') ? '실제 활동 기록' : '창작 이야기'}</small><button class="primary" data-action="dialogue-next">${d.index + 1 === d.lines.length ? '계속하기' : '다음'} <span aria-hidden="true">→</span></button></div></div></section>`;
+  return `<section class="story-panel" aria-label="대화"><div class="story-portrait">${portrait}</div><div><p class="speaker">${uiEscape(d.speaker || '이파리')}<span>STORY</span></p><p class="story-text">${uiEscape(typeof line === 'string' ? line : line.text)}</p><div class="story-footer"><small>${d.index + 1} / ${d.lines.length} · ${String(d.speaker).includes('실제 자료') ? '실제 활동 기록' : '창작 이야기'}</small><button class="primary" data-action="dialogue-next">${d.index + 1 === d.lines.length ? '계속하기' : uiEscape(relicActionLabel(uiState) || '다음')} <span aria-hidden="true">→</span></button></div></div></section>`;
 }
 function uiChoice() {
   const choice = uiState.choice;
@@ -154,12 +157,10 @@ function uiSupportList() {
   return `<section class="support-picker" aria-label="멤버 지원기"><h3>함께하는 힘 <span>응원을 사용해 지원을 받아요</span></h3><div class="support-options">${supports.map(member => { const m = member.skill ? member : MEMBERS[member.id]; return `<button class="support-option" data-action="support" data-id="${uiEscape(m.id)}" ${uiState.player.focus < m.skill.cost ? 'disabled' : ''}><strong>${uiEscape(m.name)}<span>✦ ${m.skill.cost}</span></strong><span>${uiEscape(m.skill.name)}</span><small>${uiEscape(m.skill.description)}</small></button>`; }).join('')}</div>${supports.length ? '' : '<p class="dialog-copy">첫 동료를 만나면 지원기를 사용할 수 있어요.</p>'}</section>`;
 }
 function uiBattle() {
-  const battle = uiState.battle;
-  if (!battle) return '';
-  const intent = enemyIntent(uiState) || {};
-  const phase = battle.phase || 0;
-  const name = battle.name || '기록의 수호자';
-  return `<div class="stage-wrap"><div class="battle-board">${uiWorld(uiState.chapter)}<div class="battle-hud"><div><small>${uiState.chapter >= 6 ? uiEscape(FINALE.phases[phase] || '마지막 시험') : battle.id.includes('boss') ? 'CHAPTER GUARDIAN' : 'A LITTLE CHALLENGE'}</small><h2>${uiEscape(name)}</h2><div class="enemy-health"><div class="stat-label"><span>수호자의 기운</span><b>${battle.hp} / ${battle.maxHp}</b></div>${uiMeter(battle.hp, battle.maxHp)}</div></div><span class="turn-label">TURN ${(battle.turn || 0) + 1}</span></div><div class="battle-actor hero">${uiSprite('cast', 0)}</div><div class="battle-actor enemy ${uiState.chapter >= 6 ? 'final-enemy' : ''}">${uiSprite('cast', uiState.chapter < 6 ? uiState.chapter + 1 : 7)}</div><div class="intent-banner"><b>다음 행동</b><span>${uiEscape([intent.name,intent.text].filter(Boolean).join(' · ') || '다음 행동을 살펴보세요.')}</span></div></div><div class="stage-foot"><span>차례는 기다려 줍니다. 예고를 읽고 천천히 선택하세요.</span><span class="save-indicator">${uiSavingAvailable ? '◌ 자동 저장' : '저장 불가'}</span></div></div>${uiState.mode === 'battle' ? `<div class="battle-actions" role="group" aria-label="전투 행동"><button class="battle-action" data-action="battle" data-move="attack"><span class="action-symbol" aria-hidden="true">⚔</span><span>공격 <kbd>1</kbd></span><small>빈틈에 피해</small></button><button class="battle-action" data-action="battle" data-move="defend"><span class="action-symbol" aria-hidden="true">◇</span><span>방어 <kbd>2</kbd></span><small>피해를 줄이고 응원</small></button><button class="battle-action" data-action="battle" data-move="cheer"><span class="action-symbol" aria-hidden="true">✧</span><span>응원 <kbd>3</kbd></span><small>지원기의 힘을 모아요</small></button><button class="battle-action support-action" data-action="support-toggle" aria-expanded="${uiSupportOpen}"><span class="action-symbol" aria-hidden="true">❧</span><span>멤버 지원 <kbd>4</kbd></span><small>동료의 특별한 능력</small></button></div>${uiSupportOpen ? uiSupportList() : ''}` : ''}<div class="battle-log" aria-label="전투 기록">${(uiState.log || []).slice(0,4).reverse().map(line => `<p>${uiEscape(line)}</p>`).join('')}</div>`;
+  return renderTacticalBattle(uiState, {
+    sprite: uiSprite, world: uiWorld, escape: uiEscape,
+    supportOpen: uiSupportOpen, supportList: uiSupportOpen ? uiSupportList() : ''
+  });
 }
 function uiResult() {
   if (uiState.mode === 'defeat') return `<section class="result-panel"><p class="eyebrow">TAKE A BREATH</p><h2>잠깐, 숨을 고르고</h2><p>걷던 길과 만난 동료들은 그대로 기다립니다.<br>이 전투의 시작부터 다시 도전할 수 있어요.</p><div class="button-row"><button class="primary" data-action="retry">다시 도전하기 ↗</button><button class="secondary" data-action="help-retry">도움받고 재도전</button></div><p class="map-help">도움 모드는 받는 피해를 줄여 줍니다. 설정에서 언제든 바꿀 수 있어요.</p></section>`;
@@ -168,74 +169,104 @@ function uiResult() {
   return '';
 }
 function uiEnding() {
-  return `<section class="ending"><p class="eyebrow">YOUR SEAT WAS ALWAYS HERE</p><h1 class="serif">당신의 자리에서, 앙코르.</h1><p>처음 켠 작은 불빛이 마지막 객석까지 이어졌습니다.<br>여섯 해를 걸어온 이파리의 모험이 완성되었어요.</p><div class="ending-cast">${uiMemberOrder.slice(0,3).map(id => uiSprite('member', id)).join('')}${uiSprite('cast',0)}${uiMemberOrder.slice(3).map(id => uiSprite('member', id)).join('')}</div><div class="ending-stats"><div><b>6 / 6</b>함께한 동료</div><div><b>${uiState.records.length} / ${ALL_FACTS.length}</b>발견한 기록</div><div><b>${Math.floor((uiState.stats.seconds || 0) / 60)}분</b>실제 플레이</div></div><p>${uiEscape(CONTENT.ending[CONTENT.ending.length - 1])}</p><div class="button-row"><button class="primary" data-action="journal">우리의 기록첩 펼치기 ↗</button><button class="secondary" data-action="ending-story">엔딩 이야기 다시 읽기</button><button class="text-button" data-action="home">시작 화면으로</button></div><div class="ending-messages">${uiMemberOrder.map(id => `<article><h2>${uiEscape(MEMBERS[id].name)}</h2><p>${uiEscape(MEMBERS[id].ending)}</p></article>`).join('')}</div><p class="ending-credits">${uiEscape(CONTENT.fictionNotice)}<br>기록의 출처는 기록첩에서 확인할 수 있습니다. 이파리와 세계의 그림은 이 게임을 위해 새로 제작했습니다.</p></section>`;
+  return `<section class="ending"><p class="eyebrow">YOUR SEAT WAS ALWAYS HERE</p><h1 class="display-title">당신의 자리에서, 앙코르.</h1><p>처음 켠 작은 불빛이 마지막 객석까지 이어졌습니다.<br>여섯 해를 걸어온 이파리의 모험이 완성되었어요.</p><div class="ending-cast">${uiMemberOrder.slice(0,3).map(id => uiSprite('member', id)).join('')}${uiSprite('cast',0)}${uiMemberOrder.slice(3).map(id => uiSprite('member', id)).join('')}</div><div class="ending-stats"><div><b>6 / 6</b>함께한 동료</div><div><b>${uiState.records.length} / ${ALL_FACTS.length}</b>발견한 기록</div><div><b>${Math.floor((uiState.stats.seconds || 0) / 60)}분</b>실제 플레이</div></div><p>${uiEscape(CONTENT.ending[CONTENT.ending.length - 1])}</p><div class="button-row"><button class="primary" data-action="journal">우리의 기록첩 펼치기 ↗</button><button class="secondary" data-action="ending-story">엔딩 이야기 다시 읽기</button><button class="text-button" data-action="home">시작 화면으로</button></div><div class="ending-messages">${uiMemberOrder.map(id => `<article><h2>${uiEscape(MEMBERS[id].name)}</h2><p>${uiEscape(MEMBERS[id].ending)}</p></article>`).join('')}</div><p class="ending-credits">${uiEscape(CONTENT.fictionNotice)}<br>기록의 출처는 기록첩에서 확인할 수 있습니다. 이파리와 세계의 그림은 이 게임을 위해 새로 제작했습니다.</p></section>`;
 }
 function uiRender() {
   const active = document.activeElement;
   const focusAction = active?.dataset?.action;
-  const focusId = active?.dataset?.id;
-  const focusMove = active?.dataset?.move;
-  const focusDx = active?.dataset?.dx;
-  const focusDy = active?.dataset?.dy;
   uiMain.dataset.mode = uiStarted ? uiState.mode : 'cover';
+  const meeting = uiStarted && uiState.mode === 'dialogue' && uiState.pending?.kind === 'meet';
+  uiMain.classList.toggle('in-meeting', meeting);
+  document.body.classList.toggle('in-adventure', uiStarted);
   uiMain.dataset.chapter = String(uiState.chapter);
   uiMain.dataset.room = String(uiState.room);
   document.getElementById('pause-button').disabled = !uiStarted;
   if (!uiStarted) uiMain.innerHTML = uiRenderCover();
   else if (uiState.mode === 'ending') uiMain.innerHTML = uiEnding();
+  else if (meeting) uiMain.innerHTML = renderMeeting(uiState, {escape:uiEscape});
   else {
     const chapter = uiChapter(), scene = currentScene(uiState);
     const battleVisible = (uiState.mode === 'battle' || uiState.mode === 'defeat') && uiState.battle;
-    uiMain.innerHTML = `<div class="journey-bar"><div class="journey-title"><p class="eyebrow">${uiState.chapter < 6 ? `CHAPTER 0${uiState.chapter + 1} / ${uiEscape(chapter.year)}` : 'FINAL CHAPTER'}</p><h1>${uiEscape(chapter.title)}</h1><p>${uiState.chapter < 6 ? `${uiEscape(MEMBERS[chapter.member].name)}와 함께 걷는 기록의 길` : '우왁굳의 마지막 시험 · 함께하는 앙코르'}</p></div>${uiPlayerStats()}</div><div class="game-layout"><div class="game-column">${battleVisible ? uiBattle() : uiMap(scene)}${uiState.mode === 'dialogue' ? uiDialogue() : uiState.mode === 'choice' ? uiChoice() : uiResult()}${uiState.mode === 'explore' ? '<p class="map-caption">지도의 인물·표지를 누르면 가까이 이동합니다. 기록은 선택해서 읽고, 진행 목표는 오른쪽 안내에서 확인하세요.</p>' : ''}</div>${uiSidebar(scene)}</div>`;
-  }
-  for (const node of uiMain.querySelectorAll('[data-fill]')) node.style.width = node.dataset.fill + '%';
-  for (const node of uiMain.querySelectorAll('.map-object,.map-player')) { node.style.left = ((Number(node.dataset.x) + .5) / 15 * 100) + '%'; node.style.top = ((Number(node.dataset.y) + .5) / 9 * 100) + '%'; }
-  if (focusAction && !uiWalking && focusAction !== 'walk' && focusAction !== 'object') {
-    const candidate = [...uiMain.querySelectorAll('[data-action]')].find(node => node.dataset.action === focusAction && (!focusId || node.dataset.id === focusId) && (focusMove === undefined || node.dataset.move === focusMove) && (focusDx === undefined || node.dataset.dx === focusDx) && (focusDy === undefined || node.dataset.dy === focusDy));
-    if (candidate && !candidate.disabled) candidate.focus({preventScroll:true});
-  }
-  const announcement = uiStarted ? uiState.mode === 'dialogue' ? `${uiState.dialogue?.speaker || '이야기'}. ${uiState.dialogue?.lines[uiState.dialogue.index] || ''}` : uiState.mode === 'battle' ? `${(uiState.log || []).slice(0,2).reverse().join(' ')} 다음 행동: ${enemyIntent(uiState)?.text || ''}` : describeObjective(uiState) : '이파리 연대기. 마지막 앙코르.';
-  if (announcement !== uiLastAnnouncement) { uiAnnouncer.textContent = announcement; uiLastAnnouncement = announcement; }
-}
-function uiPathTo(x, y, adjacent = false) {
-  const scene = currentScene(uiState), start = uiState.position;
-  const queue = [{x:start.x,y:start.y,path:[]}], seen = new Set([`${start.x},${start.y}`]);
-  while (queue.length) {
-    const at = queue.shift();
-    if (adjacent ? Math.abs(at.x - x) + Math.abs(at.y - y) <= 1 : at.x === x && at.y === y) return at.path;
-    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nx = at.x + dx, ny = at.y + dy, key = `${nx},${ny}`;
-      if (!seen.has(key) && scene.tiles[ny]?.[nx] && scene.tiles[ny][nx] !== '#') { seen.add(key); queue.push({x:nx,y:ny,path:[...at.path,{dx,dy}]}); }
+    const hud = `<div class="journey-bar"><div class="journey-title"><p class="eyebrow">${uiState.chapter < 6 ? `${uiEscape(chapter.year)} · 제${uiState.chapter + 1}장` : '종장'}</p><h1>${uiEscape(chapter.title)}</h1></div>${uiPlayerStats()}</div>`;
+    const panel = uiState.mode === 'dialogue' ? uiDialogue() : uiState.mode === 'choice' ? uiChoice() : uiResult();
+    if (battleVisible) {
+      uiMain.innerHTML = hud + uiBattle() + panel;
+      mountTacticalBattle(uiMain, uiState);
+    } else {
+      uiMain.innerHTML = hud + `<div class="game-layout"><div class="game-column"><div class="field-scene">${uiMap(scene)}${panel ? `<div class="scene-dialog">${panel}</div>` : ''}</div></div>${uiSidebar(scene)}</div>`;
+      paintField(uiMain, scene, uiState, uiDestination);
     }
   }
-  return null;
+  for (const node of uiMain.querySelectorAll('[data-fill]')) node.style.width = node.dataset.fill + '%';
+  if (active?.classList.contains('field-board') && uiState.mode === 'explore') {
+    uiMain.querySelector('.field-board')?.focus({preventScroll:true});
+  }
+  if (focusAction && !uiWalking && focusAction !== 'walk') {
+    const keys = ['action','id','move','command','x','y','dx','dy','reply'];
+    const candidate = [...uiMain.querySelectorAll('button[data-action]')].find(node =>
+      keys.every(key => node.dataset[key] === active.dataset[key]));
+    if (candidate && !candidate.disabled) candidate.focus({preventScroll:true});
+  }
+  if (!uiDialog.open && !uiMain.contains(document.activeElement) && (meeting || uiMain.querySelector('.scene-dialog'))) {
+    uiMain.querySelector('.scene-dialog button:not(:disabled), [data-action="dialogue-next"]')?.focus({preventScroll:true});
+  }
+  const announcement = uiStarted ? uiState.mode === 'dialogue' ? `${(meeting ? meetingSpeaker(uiState) : uiState.dialogue?.speaker) || '이야기'}. ${uiState.dialogue?.lines[uiState.dialogue.index] || ''}` : uiState.mode === 'battle' ? `${(uiState.log || []).slice(0,2).reverse().join(' ')} 다음 행동: ${enemyIntent(uiState)?.text || ''}` : describeObjective(uiState) : '이파리 연대기. 마지막 앙코르.';
+  if (announcement !== uiLastAnnouncement) { uiAnnouncer.textContent = announcement; uiLastAnnouncement = announcement; }
 }
 function uiWalk(x, y, objectId = null) {
   if (uiState.mode !== 'explore' || uiDialog.open || !uiStarted) return;
   uiStopWalking();
-  const path = uiPathTo(x, y, !!objectId);
+  const destination = {x, y, adjacent: !!objectId};
+  const path = fieldRoute(currentScene(uiState), uiState.position, destination);
   if (!path) { uiNotice('이쪽에서는 닿을 수 없어요. 다른 길을 찾아보세요.'); return; }
   uiWalking = true;
+  uiDestination = destination;
   const chapter = uiState.chapter, room = uiState.room;
   const next = () => {
     if (!uiWalking || uiState.mode !== 'explore' || uiDialog.open || uiState.chapter !== chapter || uiState.room !== room) { uiStopWalking(); return; }
     const step = path.shift();
-    if (step) { uiAct({type:'move',...step},true); uiPathTimer = setTimeout(next, uiSettings.reduceMotion ? 45 : 95); }
+    if (step) { uiAct({type:'move',dx:step.x - uiState.position.x,dy:step.y - uiState.position.y},true); uiPathTimer = setTimeout(next, uiSettings.reduceMotion ? 45 : 95); }
     else { uiStopWalking(); if (objectId) uiAct({type:'interact',id:objectId}); }
   };
   next();
 }
 function uiDialogFrame(title, body) { return `<div class="dialog-inner"><div class="dialog-heading"><h2 id="dialog-title">${uiEscape(title)}</h2><button class="close-dialog" data-modal-action="close" aria-label="닫기">×</button></div>${body}</div>`; }
+function uiShowReplay(member) {
+  if (!uiState.met.includes(member)) return;
+  const chapterIndex = CHAPTERS.findIndex(chapter => chapter.member === member);
+  uiReplay = createMeetingReplay(uiState, chapterIndex);
+  uiReplayFromJournal = uiDialog.open && uiDialogKind === 'journal';
+  uiOpenDialog('replay');
+}
+function uiAdvanceReplay(reply) {
+  uiReplay = dispatch(uiReplay, {type:'dialogueNext', reply});
+  if (uiReplay.mode === 'dialogue' && uiReplay.pending?.kind === 'meet') {
+    uiOpenDialog('replay');
+  } else if (uiReplayFromJournal) {
+    uiOpenDialog('journal');
+  } else {
+    uiCloseDialog();
+  }
+}
 function uiOpenDialog(kind) {
   uiStopWalking(); uiSave(); uiDialogKind = kind;
   if (!uiDialog.open) uiPreviousFocus = document.activeElement;
   let title, body;
-  if (kind === 'journal') {
+  if (kind === 'replay') {
+    title = '첫 만남 다시 보기';
+    body = renderMeeting(uiReplay, {escape:uiEscape, replay:true});
+  } else if (kind === 'journal') {
     title = '우리의 기록첩';
-    body = `<p class="journal-intro">모험 속에서 발견한 실제 활동 기록입니다. 엔딩 이후에는 놓친 기록도 모두 열립니다. 멤버 대사와 퍼즐은 창작이며, 아래 날짜·활동과 구분됩니다. 기존 아카이브의 확인 자료를 사용했습니다.</p><div class="journal-list">${ALL_FACTS.map(fact => (uiState.records.includes(fact.id) || uiState.mode === 'ending') ? `<article class="journal-entry"><span class="record-date">${uiEscape(fact.date)}${!uiState.records.includes(fact.id) ? ' · 엔딩 후 열린 기록' : ''}</span><h3>${uiEscape(fact.title)}</h3><p>${uiEscape(fact.text)}</p><a href="${uiEscape(fact.url)}" target="_blank" rel="noopener noreferrer">${uiEscape(fact.sourceTitle)} ↗</a></article>` : `<article class="journal-entry locked"><span class="record-date">아직 펼치지 않은 페이지</span><h3>${uiEscape(fact.date.slice(0,4))}년의 기록</h3><p>탐험 지도에서 ▤ 기록 표지를 찾아보세요.</p></article>`).join('')}</div><p class="dialog-note">주요 연혁 확인 기준: 2026-10-23. Across Dimensions는 별도 앨범 카탈로그의 2026-11-09 확인 기록입니다. 공지일·발매일·공연일은 구분하며 이 목록은 전체 활동의 완전한 연표가 아닙니다.</p>`;
+    const memories = CHAPTERS.filter(chapter => uiState.met.includes(chapter.member));
+    const replays = memories.length ? `<section class="journal-replays"><h3>첫 만남 다시 보기</h3><div class="button-row">${memories.map(chapter => `<button class="secondary" data-modal-action="replay" data-id="${chapter.member}">${uiEscape(MEMBERS[chapter.member].name)}</button>`).join('')}</div></section>` : '';
+    body = `${replays}<p class="journal-intro">모험 속에서 발견한 실제 활동 기록입니다. 엔딩 이후에는 놓친 기록도 모두 열립니다. 멤버 대사와 퍼즐은 창작이며, 아래 날짜·활동과 구분됩니다. 기존 아카이브의 확인 자료를 사용했습니다.</p><div class="journal-list">${ALL_FACTS.map(fact => (uiState.records.includes(fact.id) || uiState.mode === 'ending') ? `<article class="journal-entry"><span class="record-date">${uiEscape(fact.date)}${!uiState.records.includes(fact.id) ? ' · 엔딩 후 열린 기록' : ''}</span><h3>${uiEscape(fact.title)}</h3><p>${uiEscape(fact.text)}</p><a href="${uiEscape(fact.url)}" target="_blank" rel="noopener noreferrer">${uiEscape(fact.sourceTitle)} ↗</a></article>` : `<article class="journal-entry locked"><span class="record-date">아직 펼치지 않은 페이지</span><h3>${uiEscape(fact.date.slice(0,4))}년의 기록</h3><p>장소마다 남겨진 물건을 조사하면 그 안의 기억이 펼쳐집니다.</p></article>`).join('')}</div><p class="dialog-note">주요 연혁 확인 기준: 2026-10-23. Across Dimensions는 별도 앨범 카탈로그의 2026-11-09 확인 기록입니다. 공지일·발매일·공연일은 구분하며 이 목록은 전체 활동의 완전한 연표가 아닙니다.</p>`;
   } else if (kind === 'settings') {
     title = '모험 설정';
     body = `<label class="settings-row"><span><strong>작은 효과음</strong><small>행동과 전투에 짧은 소리를 더합니다.</small></span><input type="checkbox" data-setting="sound" ${uiSettings.sound ? 'checked' : ''}></label><label class="settings-row"><span><strong>어두운 화면</strong><small>종이와 메뉴의 밝기를 낮춥니다.</small></span><input type="checkbox" data-setting="dark" ${uiSettings.dark ? 'checked' : ''}></label><label class="settings-row"><span><strong>움직임 줄이기</strong><small>반짝임과 화면 효과를 줄입니다.</small></span><input type="checkbox" data-setting="reduceMotion" ${uiSettings.reduceMotion ? 'checked' : ''}></label><label class="settings-row"><span><strong>도움 모드</strong><small>전투에서 받는 피해를 줄입니다. 진행 기록은 유지됩니다.</small></span><input type="checkbox" data-setting="help" ${uiState.help ? 'checked' : ''}></label><p class="dialog-note">저장은 이 브라우저에서만 유지됩니다. 기기를 바꾸거나 사이트 데이터를 지우면 이어할 수 없습니다. 다른 놀이터 게임의 기록에는 영향을 주지 않습니다.</p><div class="button-row"><button class="text-button" data-modal-action="new-confirm">이 게임의 모험을 처음부터 시작</button></div>`;
+    const labels = {'Gowun Dodum':'고운돋움 (Gowun Dodum)', Jua:'주아체 (Jua)'};
+    const notices = Object.entries(gameFontNotices()).map(([family, notice]) =>
+      `<h3>${uiEscape(labels[family])}</h3><pre lang="en">${uiEscape(notice)}</pre>`).join('');
+    body += `<details class="font-licenses"><summary>게임 글꼴과 라이선스</summary>${notices}</details>`;
   } else if (kind === 'new-confirm') {
     title = '새 티켓을 펼칠까요?';
     body = '<p class="dialog-copy">새 모험을 시작하면 이 게임에 저장된 현재 여정이 새 기록으로 바뀝니다.</p><div class="button-row"><button class="primary" data-modal-action="new-game">새 모험 시작</button><button class="secondary" data-modal-action="close">지금 여정 유지</button></div>';
@@ -247,10 +278,12 @@ function uiOpenDialog(kind) {
     body = CONTENT.ending.map(line => `<p class="dialog-copy">${uiEscape(line)}</p>`).join('');
   } else {
     title = '모험을 시작하기 전에';
-    body = '<p class="dialog-copy">이파리가 되어 여섯 시대의 작은 장소를 탐험합니다. 인물과 기록 표지 옆에서 대화하고, 단서를 읽어 길을 열어 주세요.</p><p class="dialog-copy">PC: 방향키 또는 WASD로 이동, E로 조사합니다. 화면의 장소와 인물을 눌러 이동할 수도 있어요.<br>모바일: 지도를 누르거나 방향 버튼을 사용하세요.</p><p class="dialog-copy">전투는 공격 · 방어 · 응원 · 멤버 지원 중 하나를 선택합니다. 적의 다음 행동이 아래에 표시됩니다. 큰 공격을 방어하고, 응원으로 동료의 지원기를 사용하세요.</p><p class="dialog-copy">여섯 장과 마지막 시험을 지나면 엔딩에 도착합니다. 장면마다 자동 저장하며, 전투에 실패해도 그 전투부터 재도전할 수 있습니다.</p><p class="dialog-note">30~60분 분량을 목표로 설계한 게임입니다. 실제 소요 시간은 탐색과 선택 속도에 따라 달라집니다. 대사·모험은 팬 창작이며, 실제 활동 기록은 기록첩에서 볼 수 있습니다.</p><button class="primary" data-modal-action="close">알겠어요 →</button>';
+    body = '<p class="dialog-copy">이파리가 되어 여섯 시대의 작은 장소를 탐험합니다. 길 위의 물건을 조사하고, 동료와 힘을 모아 다음 장소로 가는 문을 여세요.</p><p class="dialog-copy">PC: 방향키 또는 WASD로 이동, E로 조사합니다. 화면의 장소와 인물을 눌러 이동할 수도 있어요.<br>모바일: 지도를 누르거나 방향 버튼을 사용하세요.</p><p class="dialog-copy">전투에서는 아군을 고르고 이동할 칸을 누르세요. 사정거리와 엄폐 지형을 살피고, 동료를 움직인 뒤 이파리의 공격·방어·응원으로 차례를 마칩니다.</p><p class="dialog-copy">여섯 장과 마지막 시험을 지나면 엔딩에 도착합니다. 장면마다 자동 저장하며, 전투에 실패해도 그 전투부터 재도전할 수 있습니다.</p><p class="dialog-note">30~60분 분량을 목표로 설계한 게임입니다. 실제 소요 시간은 탐색과 선택 속도에 따라 달라집니다. 대사·모험은 팬 창작이며, 실제 활동 기록은 기록첩에서 볼 수 있습니다.</p><button class="primary" data-modal-action="close">알겠어요 →</button>';
   }
+  uiDialog.classList.toggle('replay-dialog', kind === 'replay');
   uiDialogContent.innerHTML = uiDialogFrame(title, body);
   if (!uiDialog.open) uiDialog.showModal();
+  if (kind === 'replay') uiDialogContent.querySelector('[data-action="dialogue-next"]')?.focus({preventScroll:true});
 }
 function uiCloseDialog() { uiDialog.close(); uiDialogKind = ''; uiLastTime = performance.now(); if (uiPreviousFocus?.isConnected) uiPreviousFocus.focus({preventScroll:true}); }
 function uiStart(newGame) {
@@ -262,6 +295,7 @@ uiMain.addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button || button.disabled) return;
   const action = button.dataset.action;
+  if (action === 'replay') return uiShowReplay(button.dataset.id);
   if (action === 'start') return uiStart(true);
   if (action === 'continue') return uiStart(false);
   if (action === 'home') return uiHome();
@@ -272,7 +306,8 @@ uiMain.addEventListener('click', event => {
   if (action === 'interact-near') { const object = uiNearby()[0]; if (object) uiAct({type:'interact',id:object.id}); return; }
   if (action === 'move') { uiStopWalking(); return uiAct({type:'move',dx:Number(button.dataset.dx),dy:Number(button.dataset.dy)},true); }
   if (action === 'interact') return uiAct({type:'interact',id:button.dataset.id});
-  if (action === 'dialogue-next') return uiAct({type:'dialogueNext'});
+  if (action === 'dialogue-next' || action === 'dialogue-reply') return uiAct({type:'dialogueNext', reply:Number(button.dataset.reply)});
+  if (action === 'tactic') return uiAct({type:'tactic', command:button.dataset.command, id:button.dataset.id, x:Number(button.dataset.x), y:Number(button.dataset.y)});
   if (action === 'choose') return uiAct({type:'choose',id:button.dataset.id});
   if (action === 'battle') return uiAct({type:'battle',move:button.dataset.move});
   if (action === 'support') { uiSupportOpen = false; return uiAct({type:'support',id:button.dataset.id}); }
@@ -282,10 +317,13 @@ uiMain.addEventListener('click', event => {
   if (action === 'help-retry') { uiAct({type:'help',enabled:true},true); return uiAct({type:'retry'}); }
 });
 uiDialogContent.addEventListener('click', event => {
+  const next = event.target.closest('[data-action="dialogue-next"],[data-action="dialogue-reply"]');
+  if (next && uiDialogKind === 'replay') return uiAdvanceReplay(Number(next.dataset.reply));
   const button = event.target.closest('[data-modal-action]');
   if (!button) return;
   const action = button.dataset.modalAction;
-  if (action === 'close') uiCloseDialog();
+  if (action === 'replay') uiShowReplay(button.dataset.id);
+  else if (action === 'close') uiCloseDialog();
   else if (action === 'home') { uiCloseDialog(); uiHome(); }
   else if (action === 'new-confirm') uiOpenDialog('new-confirm');
   else if (action === 'new-game') { uiCloseDialog(); uiStart(true); }
@@ -308,7 +346,7 @@ window.addEventListener('keydown', event => {
     const directions = {arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1],arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0]};
     if (directions[key]) { event.preventDefault(); uiStopWalking(); const [dx,dy] = directions[key]; uiAct({type:'move',dx,dy},true); }
     else if (key === 'e') { event.preventDefault(); const obj = uiNearby()[0]; if (obj) uiAct({type:'interact',id:obj.id}); }
-  } else if (uiState.mode === 'dialogue' && (key === 'e' || key === ' ')) { event.preventDefault(); if (!event.repeat) uiAct({type:'dialogueNext'}); }
+  } else if (uiState.mode === 'dialogue' && (key === 'e' || key === ' ')) { event.preventDefault(); if (!event.repeat) uiAct({type:'dialogueNext', reply:Number(event.target.dataset.reply)}); }
   else if (uiState.mode === 'battle' && !event.repeat && ['1','2','3','4'].includes(key)) { event.preventDefault(); if (key === '4') { uiSupportOpen = !uiSupportOpen; uiRender(); } else uiAct({type:'battle',move:({1:'attack',2:'defend',3:'cheer'})[key]}); }
 });
 document.addEventListener('visibilitychange', () => { uiStopWalking(); uiSave(); uiLastTime = performance.now(); if (document.hidden && uiStarted && !uiDialog.open) uiOpenDialog('pause'); });
@@ -320,3 +358,6 @@ setInterval(() => {
 },5000);
 Object.defineProperty(window, '__IPARI_RPG__', {value:Object.freeze({snapshot:() => JSON.parse(JSON.stringify(uiState)),scene:() => JSON.parse(JSON.stringify(currentScene(uiState))),intent:() => JSON.parse(JSON.stringify(enemyIntent(uiState) || {}))}),writable:false,configurable:false});
 uiRender();
+loadFieldArt(RPG_ART.scenery).then(() => {
+  if (uiStarted && (uiMain.querySelector('.field-board') || uiMain.querySelector('.tac-art'))) uiRender();
+}).catch(() => uiNotice('지형 그림을 읽지 못해 기본 지형으로 표시합니다.'));
