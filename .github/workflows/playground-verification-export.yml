@@ -1,0 +1,28 @@
+name: Playground - exact verification source export
+on:
+  push:
+    branches: [ops/playground-verification-20261124]
+    paths: [.github/workflows/playground-verification-export.yml]
+permissions:
+  contents: read
+jobs:
+  export:
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/ops/playground-verification-20261124'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: e77225f4e8cc917493fcc8d46d5c715a09c42d53
+          persist-credentials: false
+      - run: |
+          test "$(git rev-parse HEAD)" = e77225f4e8cc917493fcc8d46d5c715a09c42d53
+          git archive HEAD -o verification-source.tar
+          sha256sum verification-source.tar > verification-source.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playground-verification-source
+          path: |
+            verification-source.tar
+            verification-source.sha256
+          retention-days: 1
