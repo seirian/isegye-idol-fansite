@@ -44,7 +44,8 @@ def build():
         q.update(edits.get(q['id'],{}))
     serial=json.dumps(display,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     core=re.sub(r'^export ','',(src/'core.js').read_text(),flags=re.M)
-    js='const PLAYGROUND_DATA='+serial+';\n'+core+'\n'+(src/'app.js').read_text();css=(src/'styles.css').read_text()
+    app=(src/'app.js').read_text().replace('<!--PREVIEW-QUIZ-OPTIONS-->',(src/'preview-quiz-options.html').read_text().rstrip('\n'))
+    js='const PLAYGROUND_DATA='+serial+';\n'+core+'\n'+app;css=(src/'styles.css').read_text()
     if '</script' in js.lower() or '</style' in css.lower():raise ValueError('Unsafe closing tag')
     h64=lambda x:base64.b64encode(hashlib.sha256(x.encode()).digest()).decode()
     csp="default-src 'none'; script-src 'sha256-"+h64(js)+"'; style-src 'sha256-"+h64(css)+"'; img-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"

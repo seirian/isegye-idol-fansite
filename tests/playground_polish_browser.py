@@ -48,7 +48,15 @@ try:
      for prop in ('font','size','weight','line','spacing','color'):check(f'{width} {theme} {k} {prop}',content[k][prop]==pg[k][prop])
     check(f'{width} {theme} no overflow',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
     check('top tools removed',page.locator('.pg-tools').count()==0)
-    check('80 baseline visible','80개 문항' in page.locator('.playground-component .card .bottom').first.inner_text())
+    home=page.locator('.playground-component')
+    for selector in ('[data-courier-launch]','[data-rpg-launch]','[data-start=daily]'):
+     expect(home.locator(selector)).to_be_visible()
+    removed_launchers='a[href="#/playground/quiz"], [data-start=order], [data-start=retry]'
+    check(f'{width} {theme} redundant quiz launchers removed',home.locator(removed_launchers).count()==0)
+    home_text=home.locator('#main').inner_text()
+    for label in ('어떤 재미를 골라볼까요?', '취향대로 퀴즈', '먼저일까, 나중일까?', '한 번 더 만나면 기억날 거예요',
+                  '기록은 이 브라우저에만 저장됩니다.', '오늘의 문제는 한국 시간 기준으로 바뀝니다.'):
+     check(f'{width} {theme} removed home text {label}',label not in home_text)
     page.screenshot(path=str(OUT/f'home-{width}-{theme}.png'),full_page=True)
   check('guest has no reference footer',page.locator('.pg-admin-footer').count()==0)
   check('guest never downloaded reference module','/src/playground-admin.js' not in requests)
@@ -57,9 +65,9 @@ try:
   page.evaluate("localStorage.setItem('role','admin');localStorage.setItem('administrator','true');window.dispatchEvent(new Event('focus'))")
   page.wait_for_timeout(200);check('local flags do not grant references',page.locator('.source-grid,.pg-admin-footer').count()==0)
   role['value']='admin';go('playground');page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.pg-admin-footer')).to_be_visible()
-  box=page.locator('.pg-admin-footer a').bounding_box();outer=page.locator('#playground-mount').bounding_box();panel=page.locator('.playground-component .panel').last.bounding_box()
+  box=page.locator('.pg-admin-footer a').bounding_box();outer=page.locator('#playground-mount').bounding_box();daily=page.locator('.playground-component .hero').bounding_box()
   check('admin link right aligned',abs(box['x']+box['width']-outer['x']-outer['width'])<1)
-  check('admin link below game panels',box['y']>panel['y']+panel['height'])
+  check('admin link below daily quiz',box['y']>daily['y']+daily['height'])
   page.screenshot(path=str(OUT/'admin-home-1440.png'),full_page=True)
   page.locator('.pg-admin-footer a').click();expect(page.locator('.source-grid')).to_be_visible();check('admin overview available',page.locator('.source-grid .panel').count()>30)
   role['value']='member';page.evaluate("window.dispatchEvent(new Event('focus'))");expect(page.locator('.playground-component h1')).to_have_text('관리자 전용 페이지입니다');check('revocation removes existing overview',page.locator('.source-grid,.pg-admin-footer').count()==0)

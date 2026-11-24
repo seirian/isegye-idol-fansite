@@ -199,7 +199,25 @@ try:
    expect(page.locator('.playground-component')).to_have_count(0)
    check('existing music still works',page.locator('#music-q').count()==1)
    page.locator('.desktop-nav a[href="#/playground"]').click();expect(page.locator('[data-start=daily]')).to_be_visible()
-   page.locator('[data-start=order]').click();expect(page.locator('[data-answer]')).to_have_count(2);page.locator('[data-answer]').first.click();check('order feedback distinguishes audio dates','국내 음원 발매' in page.locator('.feedback').inner_text())
+   # Restore a round saved by the former order-game launcher, already on question two.
+   page.evaluate("""() => {
+    const key = 'isegye:playground:v1';
+    const state = JSON.parse(localStorage.getItem(key));
+    state.session = {
+     id: 'rlegacy-order', version: '2026-11-16.1', seed: 'saved-order', day: '2026-11-18',
+     title: '먼저일까, 나중일까?', mode: 'order', ids: [], index: 1, hint: false, complete: false,
+     pairs: [['rewind','winter-spring'], ['lockdown','another-world'], ['kidding','rewind'],
+             ['another-world','winter-spring'], ['rewind','lockdown']],
+     answers: [{choice: 0, correct: true, hint: false}]
+    };
+    localStorage.setItem(key, JSON.stringify(state));
+   }""")
+   page.reload()
+   page.get_by_role('link',name='이어서 풀기').click()
+   expect(page.locator('.progress')).to_have_attribute('aria-label','2/5 문제')
+   expect(page.locator('[data-answer]')).to_have_count(2)
+   page.locator('[data-answer]').first.click()
+   check('resumed order feedback distinguishes audio dates','국내 음원 발매' in page.locator('.feedback').inner_text())
    page.goto(url+'/#/playground/quiz');expect(page.locator('[data-category]')).to_have_count(5)
    titles={'playground':'놀이터','playground/quiz':'좋아하는 주제부터','playground/play':'먼저 발매된 곡은 무엇일까요?','playground/records':'내 플레이 기록','playground/sources':'관리자 전용 페이지입니다'}
    for width in (320,390,768,1440):
