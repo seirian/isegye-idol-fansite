@@ -15,6 +15,18 @@ The composition is applied after the hash-pinned reviewed album UI. Archived rev
 
 The owner replaced the first full-video URL `z8AJgnTC52k` with `Mj7q8HU8ZXg` before publication. Only the replacement is registered; its own publication timestamp is used. The teaser is unchanged.
 
+## Pagination-aware release verification — 2026-11-24
+
+Production run [45299926320](https://github.com/seirian/isegye-idol-fansite/actions/runs/45299926320) stopped before upload because the external-video browser check expected the full STUDIO CHOOM performance on the first page of `music?tab=videos&q=REBELS`. The music screen sorts newest first and renders 24 results per page. Replaying the archived source and catalog produced 40 matches, with `Mj7q8HU8ZXg` at position 27 on page two. This exact position describes the archived catalog reproduction; the run's complete post-refresh catalog was not preserved. The original report confirms the preceding 28 checks passed before the first-page assertion failed.
+
+`tests/external_videos_browser.py` now follows the rendered next-page links until the search ends. It checks that the query and page advance correctly, that every reported result is rendered, and that the combined DOM agrees with the eligible search data. Each selected full performance must appear exactly once across all pages; the teaser must appear zero times in the music-performance list. Separate checks verify both STUDIO CHOOM IDs, source labels, types and song relationships in the full catalog and external-content screen.
+
+An isolated browser regression adds 24 newer matching group videos in memory, exercises the same real renderer and navigation, and restores the original catalog in a `finally` block. The song and video-detail checks require the exact full/teaser counterpart links and exclude self-links. These checks run on the composed release before upload; they do not change the public page size, sort order or selected-video catalog.
+
+The owner supplied both original links again on 2026-11-24. The existing read-only two-video verifier was rerun as [43033346225, attempt 2](https://github.com/seirian/isegye-idol-fansite/actions/runs/43033346225/attempts/2). YouTube Data API v3 `videos.list` returned both videos at **2026-11-24T03:10:44.972014+00:00** (12:10:44 KST): the same STUDIO CHOOM channel, matching titles and publication timestamps, full performance `PT3M12S`, teaser `PT31S`, `privacyStatus: public`, and `embeddable: true`. This is a current public-metadata and availability check, not a full audiovisual playback review. The original catalog observation timestamp remains historical.
+
+Reverification artifact: [14885801584](https://github.com/seirian/isegye-idol-fansite/actions/runs/43033346225/artifacts/14885801584), ZIP SHA-256 `2efc460e15b5310c4c3d8a19385aab36556d2c5fc5f8a5474d3097a15c01b4f5`.
+
 
 ## MBC Show! MusicCore — owner-selected stage
 
