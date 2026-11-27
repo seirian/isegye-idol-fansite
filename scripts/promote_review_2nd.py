@@ -19,6 +19,7 @@ import history_cadence
 import compose_member_legal as member_legal
 import compose_community_shortcuts as community
 import compose_content_polish as content_polish
+import compose_music_source_availability as music_availability
 from review_2nd_polish import between, one
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,6 +118,7 @@ def build(baseline):
     app = adapt_app((review/'app.js').read_text())
     legacy = adapt_legacy((review/'production-ui.js').read_text(),baseline)
     app = content_polish.adapt_app(community.adapt_app(member_legal.adapt_app(app)))
+    app = music_availability.adapt_app(app)
     app = (ROOT/'site/notice-details.js').read_text() + '\n' + app
     detail_anchor='<p class="detail-copy">${esc(r.summary)}</p><div class="notice-box"><strong>이 날짜는 공지가 게시된 날짜입니다.</strong>'
     if app.count(detail_anchor)!=1:raise ValueError('Notice detail slot moved')

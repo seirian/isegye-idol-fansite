@@ -34,6 +34,8 @@ def main():
         t.auth_password(d.USER,password);password=None;d.require(t.is_authenticated(),'Authentication failed')
         s=paramiko.SFTPClient.from_transport(t);resources.append(s);s.get_channel().settimeout(30);r=d.Remote(s)
         r.directory(d.ROOT);d.require(r.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Ownership mismatch')
+        from production_lock import assert_no_recovery
+        assert_no_recovery(r)
         d.require(r.info(d.ROOT+'/.deploy-lock') is None,'Another deployment is running')
         wanted_lock=d.ROOT+'/.auth-stage-lock'
         d.require(r.info(wanted_lock) is None,'Another auth staging operation is running')

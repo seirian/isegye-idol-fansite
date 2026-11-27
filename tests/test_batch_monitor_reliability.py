@@ -44,14 +44,14 @@ class HistoryAndHealth(unittest.TestCase):
             row.pop('inspectionError',None)
         doc['batches'][3]['dataState']='unknown'
         result=h.inspection_health(doc)
-        self.assertEqual((result['state'],result['inspected'],result['failed'],result['unresolved']),('ok',8,0,1))
+        self.assertEqual((result['state'],result['inspected'],result['failed'],result['unresolved']),('ok',len(m.META),0,1))
         self.assertIsNone(h.verified_summary(doc['batches'][3],h.clock(doc['checkedAt'])))
     def test_partial_api_failure_is_degraded(self):
         doc=fixture_snapshot()
         for row in doc['batches']:row.update(dataState='healthy',listingComplete=True)
         doc['batches'][0].update(dataState='unknown',inspectionError='execution_query_failed',listingComplete=False)
         quality=h.inspection_health(doc)
-        self.assertEqual((quality['state'],quality['failed'],quality['inspected']),('degraded',1,7))
+        self.assertEqual((quality['state'],quality['failed'],quality['inspected']),('degraded',1,len(m.META)-1))
     def test_current_main_deployment_is_pending_without_old_artifact(self):
         at=datetime.now(timezone.utc);head='a'*40
         current={'id':123,'run_attempt':1,'head_sha':head,'status':'in_progress',
@@ -94,7 +94,7 @@ class HistoryAndHealth(unittest.TestCase):
         with patch.dict(os.environ,{'MONITOR_COMMIT':'a'*40}):
             doc=m.collect(lambda *a,**kw:(_ for _ in ()).throw(RuntimeError('private failure')))
         self.assertEqual(doc['collectorHealth']['state'],'failed')
-        self.assertEqual(doc['collectorHealth']['failed'],8)
+        self.assertEqual(doc['collectorHealth']['failed'],len(m.META))
         self.assertNotIn('private failure',json.dumps(doc))
     def test_main_reports_failure_after_writing_diagnostics(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(m,'ROOT',Path(folder)),patch.dict(os.environ,{'GITHUB_REPOSITORY':m.REPO,'GITHUB_REF':'refs/heads/main','MONITOR_COMMIT':'a'*40}):
@@ -113,7 +113,7 @@ class HistoryAndHealth(unittest.TestCase):
         current['collectorHealth']=h.inspection_health(current)
         report=StorageTransactions().run_refresh(remote,current)
         self.assertEqual(report['collectorHealth']['state'],'failed')
-        self.assertEqual(report['preservedVerifiedResults'],8)
+        self.assertEqual(report['preservedVerifiedResults'],len(m.META))
 
 
 # Import only the existing storage test adapter; never a real server identity.
@@ -126,11 +126,17 @@ class CompletionTrust(unittest.TestCase):
         source={'id':42,'name':name,'head_branch':'main','head_repository':{'full_name':m.REPO}}
         run=dict(source,repository={'full_name':m.REPO},path='.github/workflows/'+t.COMPLETIONS[name],status='completed',event='schedule',conclusion='failure')
         return {'action':'completed','workflow_run':source},run
-    def test_all_eight_completed_workflows_including_failure_and_cancel(self):
+    def test_all_nine_completed_workflows_including_failure_and_cancel(self):
         for name in t.COMPLETIONS:
             event,run=self.event(name)
             for conclusion in ('success','failure','cancelled','timed_out','skipped'):
                 run['conclusion']=conclusion;self.assertTrue(t.validate(event,lambda _:run))
+    def test_independent_capture_wakes_readonly_monitor_with_exact_path(self):
+        name='Melon charts - independent lightweight evidence capture'
+        event,run=self.event(name)
+        self.assertTrue(t.validate(event,lambda _:run))
+        run['path']='.github/workflows/albums-daily.yml'
+        with self.assertRaises(ValueError):t.validate(event,lambda _:run)
     def test_monitor_self_and_untrusted_forks_rejected(self):
         event,run=self.event()
         event['workflow_run']['name']='Batch monitoring - administrator-only production status'

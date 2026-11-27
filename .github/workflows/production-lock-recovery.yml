@@ -1,0 +1,76 @@
+name: Production lock - audit first, explicitly rerun to recover
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/production-lock-recovery.yml
+      - scripts/production_lock.py
+      - scripts/recover_production_lock.py
+      - scripts/production_lock_recovery_request.py
+  workflow_dispatch:
+    inputs:
+      allow_recovery_on_rerun:
+        description: 'Allow an explicit rerun after reviewing a successful audit to apply that exact diagnostic'
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    name: Audit or recover owned production lock
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 15
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Respect existing pause and require exact current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          test "$ISEGYE_MONITOR_PAUSED" != true
+          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+      - name: Install isolated pinned inspection dependencies
+        run: |
+          python -m venv /tmp/production-lock-tools
+          /tmp/production-lock-tools/bin/pip install paramiko==5.0.0 PyYAML==6.0.3 pillow==11.3.0
+      - name: Bind explicit rerun to the immediately previous immutable audit
+        id: request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALLOW_RECOVERY_ON_RERUN: ${{ github.event_name == 'push' || inputs.allow_recovery_on_rerun }}
+        run: /tmp/production-lock-tools/bin/python scripts/production_lock_recovery_request.py
+      - name: Inspect safely, or recover only the exact reviewed lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+          RECOVERY_MODE: ${{ steps.request.outputs.mode }}
+          REVIEWED_AUDIT_SHA256: ${{ steps.request.outputs.audit-sha256 }}
+        run: |
+          args=("$RECOVERY_MODE" --expected-main "$GITHUB_SHA" --output production-lock-audit.json)
+          # This explicitly associated incident does not prove legacy lock ownership.
+          args+=(--allow-legacy-empty --legacy-owner-run-id 45938564802 --legacy-owner-attempt 1)
+          if [ "$RECOVERY_MODE" = apply ]; then
+            args+=(--audit-file reviewed-lock-audit.json --audit-sha256 "$REVIEWED_AUDIT_SHA256")
+          fi
+          /tmp/production-lock-tools/bin/python -u scripts/recover_production_lock.py "${args[@]}"
+      - name: Preserve bounded audit or recovery evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: production-lock-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: production-lock-audit.json
+          if-no-files-found: warn
+          retention-days: 90

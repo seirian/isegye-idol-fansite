@@ -19,6 +19,7 @@ import sys
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 import inour_sftp as d
+import production_lock as locks
 import auth_routing as a
 from production_release import EXISTING
 from build_courier_production import HTML_PATH as COURIER_HTML, ROUTE as COURIER_ROUTE, STORAGE_KEY as COURIER_STORAGE, BASE_COMMIT as COURIER_BASE, render as render_courier
@@ -241,8 +242,7 @@ def deploy(remote, payload, commit, client_id, report):
     d.require(remote.read(d.ROOT + '/.isegye-owner') == d.OWNER, 'Ownership marker mismatch')
     d.require(remote.info('/web/.yeop-migration-lock') is None, 'Other project maintenance in progress')
     d.require(remote.info(d.ROOT + '/.auth-stage-lock') is None, 'Auth staging in progress')
-    lock = d.ROOT + '/.deploy-lock'
-    remote.mkdir(lock)
+    lock = locks.acquire(remote, purpose='production', report=report, commit=commit)
     activated = False
     previous = new = None
     entry_path = d.ROOT + '/access.php'
@@ -305,6 +305,7 @@ def deploy(remote, payload, commit, client_id, report):
         elif old_entry != new_entry:
             remote.replace(entry_path, new_entry, old_entry)
         new = a.router(release)
+        locks.checkpoint(remote, lock, 'activation')
         activated = True
         remote.replace(d.ROOT + '/.htaccess', new, previous)
         report['accessRoutingEnabled'] = True
@@ -349,6 +350,7 @@ def deploy(remote, payload, commit, client_id, report):
                       'Catalog report differs from uploaded application')
             report['catalogEvidenceSha256']=d.digest(catalog_raw)
             report['catalogBundleVerified']=True
+        locks.checkpoint(remote, lock, 'verified')
         report['verifiedAt']=datetime.now(timezone.utc).isoformat()
         report.update(status='deployed_and_verified', privatePathsBlocked=True, protectedFilesUnchanged=True,
                       existingSitesUnchanged=unchanged, sharedRouterModified=False, administratorPrecreated=False,
@@ -369,9 +371,8 @@ def deploy(remote, payload, commit, client_id, report):
                 report['manualRecoveryRequired'] = True
         raise
     finally:
-        remote.parents(lock)
-        remote.s.rmdir(lock)
-        report['lockRemoved'] = True
+        locks.release(remote, lock)
+        report['lockRemoved'] = lock.released
 
 
 def main():
@@ -400,6 +401,7 @@ def main():
         client = paramiko.SFTPClient.from_transport(transport); resources.append(client); client.get_channel().settimeout(30)
         deploy(d.Remote(client),payload,commit,client_id,report)
     except Exception as exc:
+        report['status'] = 'failed'
         report['errorType'] = type(exc).__name__
         if isinstance(exc,d.Stop): report['reason'] = str(exc)
     finally:

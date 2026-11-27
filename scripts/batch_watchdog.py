@@ -15,7 +15,11 @@ import os
 import re
 import subprocess
 import stat
+import time
 import zipfile
+from batch_publication_evidence import (EvidenceUnavailable, read_json_artifact,
+                                        read_capture_evidence, production_evidence_ok,
+                                        read_production_evidence)
 
 REPO = 'seirian/isegye-idol-fansite'
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +27,7 @@ KST = timezone(timedelta(hours=9))
 UTC = timezone.utc
 FIRST_WEEKLY = datetime(2026, 11, 15, tzinfo=KST)
 SPECS = {
+    'capture': ('melon-chart-capture.yml', 'melon-chart-capture', 'ISEGYE_ALBUMS_PAUSED'),
     'albums': ('albums-daily.yml', 'daily-albums', 'ISEGYE_ALBUMS_PAUSED'),
     'schedule': ('schedule-refresh.yml', 'schedule-publication', 'ISEGYE_SCHEDULE_PAUSED'),
     'music': ('music-daily.yml', 'daily-music', 'ISEGYE_MUSIC_PAUSED'),
@@ -39,6 +44,7 @@ MAX_RUN_PAGES = 20
 MAX_ARTIFACT_PAGES = 10
 MAX_HTTP_HEADERS = 32_768
 COMPLETION_WORKFLOWS = {
+    'Melon charts - independent lightweight evidence capture': 'melon-chart-capture.yml',
     'Albums - hourly verified metadata and chart refresh': 'albums-daily.yml',
     'Schedule - every 2 hours permitted-source refresh': 'schedule-refresh.yml',
     'Production - isolated inour SFTP deployment': 'production.yml',
@@ -46,9 +52,6 @@ COMPLETION_WORKFLOWS = {
 ACTIVE = {'queued', 'pending', 'in_progress', 'waiting', 'requested'}
 REQUIRED_SCHEDULE = {'cafe-members','cafe-agency','fan-roundup',
                      'parable-web','berriz-notice','berriz-calendar'}
-
-class EvidenceUnavailable(ValueError):
-    """Absent or expired evidence is not success, but permits bounded recollection."""
 
 REASON_CODES = frozenset({
     'unapproved_workflow', 'invalid_run_listing', 'run_history_changed',
@@ -59,6 +62,7 @@ REASON_CODES = frozenset({
     'github_http_error', 'github_response_too_large', 'github_invalid_headers',
     'github_invalid_json', 'inspection_validation_failed', 'inspection_api_unavailable',
     'inspection_internal_error',
+    'inspection_budget_exceeded',
 })
 API_DIAGNOSTIC_LIMITS = {
     'httpStatus': 599, 'rateLimitLimit': 1_000_000_000,
@@ -157,7 +161,7 @@ def clock(value):
 
 def due_slot(kind, at):
     local = at.astimezone(KST)
-    if kind == 'albums':
+    if kind in ('albums', 'capture'):
         if 1 <= local.hour < 7:
             return None
         return local.replace(minute=0, second=0, microsecond=0).astimezone(UTC)
@@ -340,6 +344,147 @@ def started(run):
         raise ValueError('Latest attempt start time required')
     return clock(run.get('run_started_at') or run['created_at'])
 
+
+class EvidenceCache:
+    """Cache immutable artifact bytes only; all mutable decisions are reread."""
+    def __init__(self, getter, max_calls=200):
+        self.getter, self.archives = getter, {}
+        self.calls = self.cacheHits = self.bytes = 0
+        self.max_calls = max_calls
+
+    def __call__(self, path, method='GET', payload=None, binary=False):
+        immutable = method == 'GET' and binary and re.fullmatch(r'actions/artifacts/[1-9][0-9]*/zip', path)
+        if immutable and path in self.archives:
+            self.cacheHits += 1
+            return self.archives[path]
+        if self.calls >= self.max_calls:
+            raise InspectionError('inspection_budget_exceeded', 'Shared inspection call budget exceeded')
+        self.calls += 1
+        result = self.getter(path, method=method, payload=payload, binary=binary)
+        if immutable and isinstance(result, bytes) and self.bytes+len(result) <= 16_000_000:
+            self.archives[path] = result
+            self.bytes += len(result)
+        return result
+
+
+def current_capture_evidence(runs, due, at, getter):
+    """A later failed probe must not erase a real complete current-hour capture."""
+    completed = [run for run in runs if run.get('status') == 'completed']
+    candidates = [run for run in completed if started(run) >= due-timedelta(minutes=15)]
+    if len(candidates) > 8:
+        raise InspectionError('inspection_validation_failed', 'Capture evidence budget exceeded')
+    candidates = candidates or completed[:1]
+    latest = None
+    for candidate in candidates:
+        try:
+            proof = read_capture_evidence(getter, candidate, due, at)
+        except EvidenceUnavailable:
+            continue
+        if latest is None:
+            latest = (candidate, proof)
+        if proof['currentComplete']:
+            return candidate, proof
+    if latest:
+        return latest
+    raise EvidenceUnavailable('No capture evidence in the inspected attempts')
+
+
+def production_failure_block(runs, at, getter):
+    """Only exact, current-code failure evidence may stop repeated deployment.
+
+Two consecutive matching deterministic failures open the circuit. An unknown
+lock mutation blocks immediately. The normal active/cooldown/budget gates are
+still checked first; no failure is relabeled healthy or user-paused.
+"""
+    from batch_failure_evidence import trusted_failure
+    proofs = []
+    for candidate in runs[:2]:
+        if candidate.get('status') != 'completed' or candidate.get('conclusion') not in ('failure', 'cancelled'):
+            return None
+        report = None
+        for prefix in ('isegye-production-evidence', 'isegye-production-prepare-evidence'):
+            try:
+                report = read_json_artifact(getter, candidate, prefix, 'batch-failure.json')
+                break
+            except EvidenceUnavailable:
+                continue
+        if report is None:
+            return None  # Legacy absence does not authorize a fabricated block.
+        proof = trusted_failure(report, candidate, at)
+        if proof is None or proof['retryClass'] == 'transient':
+            return None
+        if proof['retryClass'] == 'unknown':
+            mutation_unknown = proof['reasonCode'] == 'production_lock_request_unknown'
+            return {'state': 'request_unknown' if mutation_unknown else 'inspection_failed',
+                    'failureEvidence': [proof], 'reasonCode': proof['reasonCode'],
+                    'requestOutcome': 'unconfirmed' if mutation_unknown else 'not_attempted'}
+        proofs.append(proof)
+    if len(proofs) != 2:
+        return None
+    fields = ('reasonCode', 'retryClass', 'stage', 'codeIdentity', 'inputIdentity')
+    if any(proofs[0][key] != proofs[1][key] for key in fields):
+        return None
+    return {'state': 'blocked_dependency' if proofs[0]['retryClass'] == 'blocked' else 'blocked_permanent',
+            'reasonCode': proofs[0]['reasonCode'], 'failureEvidence': proofs,
+            'requiresResolutionEvidence': True}
+
+
+def update_incident(getter, title, body, unhealthy, may_close, sleeper=time.sleep):
+    """One bounded reporting retry, without replaying already-issued dispatches.
+
+A create timeout/502 is reconciled by a read and never blindly POSTed again.
+Existing issue PATCHes are idempotent exact-content writes after readback.
+"""
+    retried = False
+
+    def retryable(exc):
+        meta = getattr(exc, 'api_diagnostics', None) or {}
+        return (isinstance(exc, GitHubAPIError) and meta.get('httpStatus') in (500, 502, 503, 504)
+                and meta.get('retryAfterSeconds', 0) <= 2)
+
+    try:
+        issues = getter('issues?state=open&per_page=100')
+    except GitHubAPIError as exc:
+        if not retryable(exc):
+            raise
+        sleeper((exc.api_diagnostics or {}).get('retryAfterSeconds', 0))
+        retried = True
+        issues = getter('issues?state=open&per_page=100')
+    if not isinstance(issues, list):
+        raise ValueError('Invalid incident listing')
+    matching = [item for item in issues if item.get('title') == title and not item.get('pull_request')]
+    if len(matching) > 1:
+        raise ValueError('Ambiguous recovery incident')
+    issue = matching[0] if matching else None
+    if not unhealthy and not (issue and may_close):
+        return {'state': 'unchanged', 'reportRetries': int(retried)}
+    payload = {'body': body}
+    if not unhealthy:
+        payload['state'] = 'closed'
+    elif not issue:
+        payload['title'] = title
+    endpoint = 'issues/'+str(issue['number']) if issue else 'issues'
+    method = 'PATCH' if issue else 'POST'
+    try:
+        getter(endpoint, method, payload)
+    except GitHubAPIError as exc:
+        if retried or not retryable(exc):
+            raise
+        sleeper((exc.api_diagnostics or {}).get('retryAfterSeconds', 0))
+        retried = True
+        if issue:
+            latest = getter(endpoint)
+            if all(latest.get(key) == value for key, value in payload.items()):
+                return {'state': 'recorded', 'reportRetries': 1, 'reconciled': True}
+            getter(endpoint, 'PATCH', payload)
+        else:
+            latest = getter('issues?state=open&per_page=100')
+            matches = [item for item in latest if item.get('title') == title and item.get('body') == body
+                       and not item.get('pull_request')]
+            if len(matches) != 1:
+                raise  # Unknown POST outcome remains unknown; no duplicate issue.
+    return {'state': 'recorded', 'reportRetries': int(retried)}
+
 def recovery_action(runs, at, due, healthy, grace=timedelta(minutes=5)):
     if healthy:
         return 'healthy'
@@ -486,7 +631,7 @@ def inspect_batch(kind, at, getter=None):
         return row
     due = due_slot(kind, at) if kind != 'production' else at-timedelta(days=1)
     if due is None:
-        row['state'] = 'night_pause' if kind == 'albums' else 'not_due'
+        row['state'] = 'night_pause' if kind in ('albums', 'capture') else 'not_due'
         return row
     row['dueAt'] = due.isoformat()
     inspection = {}
@@ -509,13 +654,46 @@ def inspect_batch(kind, at, getter=None):
         return row
     success = next((r for r in runs if r.get('conclusion') == 'success'), None)
     good = False
+    if kind == 'production':
+        head = getter('git/ref/heads/main')['object']['sha']
+        row['expectedHead'] = head
+        # Inspect the latest completed attempt for this release, including an
+        # ancillary monitor failure/cancellation after deployment was verified.
+        success = next((r for r in runs if r.get('status') == 'completed'
+                        and r.get('head_sha') == head), None)
+    elif kind == 'capture':
+        # Failed/partial captures are observed failures, not absent evidence.
+        success = next((r for r in runs if r.get('status') == 'completed'), None)
     if success:
         row['evidenceRun'] = success['id']
         row['evidenceAttempt'] = success['run_attempt']
         if kind == 'production':
-            head = getter('git/ref/heads/main')['object']['sha']
-            row['expectedHead'] = head
-            good = success.get('head_sha') == head
+            evidence_run = success
+            try:
+                pub, evidence_run, lineage = read_production_evidence(getter, success, at)
+                row['publicationLineage'] = lineage
+                row['evidenceAttempt'] = evidence_run['run_attempt']
+            except EvidenceUnavailable:
+                pub = {}
+                row['evidenceState'] = 'unavailable'
+            good = production_evidence_ok(pub, evidence_run, row['expectedHead'], at)
+            row['publicationEvidence'] = {key: pub[key] for key in
+                ('status', 'commit', 'verifiedAt', 'lockRemoved', 'browserVerified', 'privatePathsBlocked')
+                if key in pub}
+            row['publicationVerified'] = good
+            if good and success.get('conclusion') != 'success':
+                row['ancillaryFailure'] = True
+                row['workflowConclusion'] = success.get('conclusion')
+        elif kind == 'capture':
+            try:
+                success, capture = current_capture_evidence(runs, due, at, getter)
+                row['evidenceRun'] = success['id']
+                row['evidenceAttempt'] = success['run_attempt']
+            except EvidenceUnavailable:
+                capture = {'currentComplete': False}
+                row['evidenceState'] = 'unavailable'
+            row['observationEvidence'] = capture
+            good = capture['currentComplete']
         elif kind == 'catalog':
             good = recent(success.get('run_started_at'), due, at)
         else:
@@ -541,6 +719,10 @@ def inspect_batch(kind, at, getter=None):
                 row['missingHours'] = {k:len(v['missingSlots']) for k,v in cov['charts'].items()}
                 row['historicalGapsOnly'] = bool(good and any(row['missingHours'].values()))
     row['state'] = recovery_action(runs, at, due, good)
+    if kind == 'production' and row['state'] == 'dispatch':
+        block = production_failure_block(runs, at, getter)
+        if block:
+            row.update(block)
     return row
 
 
@@ -562,7 +744,7 @@ def recover_batch(kind, apply=False, getter=None, now=None):
             due = due_slot(kind, at) if kind != 'production' else None
             if kind != 'production' and (due is None or due.isoformat() != row['dueAt']):
                 # Do not act on an old decision if an API read crossed a slot/night boundary.
-                row['state'] = ('night_pause' if kind == 'albums' else 'not_due') if due is None else 'slot_changed'
+                row['state'] = ('night_pause' if kind in ('albums', 'capture') else 'not_due') if due is None else 'slot_changed'
                 row['nextDueAt'] = due.isoformat() if due else None
                 return row
             getter('actions/workflows/'+filename+'/dispatches', 'POST', {'ref':'main'})
@@ -572,7 +754,8 @@ def recover_batch(kind, apply=False, getter=None, now=None):
 
 
 def report_state(rows):
-    if any(r['state'] in ('dispatch','dispatched','inspection_failed','retry_budget') for r in rows):
+    if any(r['state'] in ('dispatch','dispatched','inspection_failed','retry_budget',
+                          'blocked_permanent','blocked_dependency','request_unknown') for r in rows):
         return 'attention'
     if any(r['state'] in ('active','cooldown','grace','slot_changed') for r in rows):
         return 'pending'
@@ -589,11 +772,12 @@ def main():
         raise ValueError('Main-only watchdog')
     at = datetime.now(UTC)
     report = {'schemaVersion':2, 'checkedAt':at.isoformat(),'mode':'apply' if args.apply else 'audit','batches':[]}
+    client = EvidenceCache(api)
     if os.getenv('PRODUCTION_PAUSED') == 'true':
         report['state'] = 'paused'
     else:
         try:
-            require_trusted_completion()
+            require_trusted_completion(client)
         except Exception as exc:
             report.update(state='inspection_failed', triggerError=type(exc).__name__)
             report['triggerFailure'] = error_details(exc)
@@ -602,7 +786,7 @@ def main():
             return 1
         for kind,(filename,prefix,pause) in SPECS.items():
             try:
-                row = recover_batch(kind, args.apply)
+                row = recover_batch(kind, args.apply, getter=client)
             except Exception as exc:
                 row = {'batch':kind, 'workflow':filename, 'state':'inspection_failed', **error_details(exc)}
             report['batches'].append(row)
@@ -610,24 +794,22 @@ def main():
         if args.apply:
             try:
                 title='[배치] 예약 누락·게시 지연·배포 복구 점검'
-                issues=api('issues?state=open&per_page=100')
-                issue=next((i for i in issues if i.get('title')==title and not i.get('pull_request')),None)
                 unhealthy=report['state']=='attention'
                 body='실제 성공 산출물 기준 점검입니다. 실행 요청은 게시 성공이 아닙니다.\n\n```json\n'+json.dumps(report,ensure_ascii=False,indent=2)+'\n```\n'
-                if unhealthy:
-                    api('issues/'+str(issue['number']) if issue else 'issues',
-                        'PATCH' if issue else 'POST', {'body':body,**({} if issue else {'title':title})})
-                elif issue and all(r['state'] in ('healthy','night_pause','not_due','paused') for r in report['batches']):
-                    api('issues/'+str(issue['number']),'PATCH',{'state':'closed','body':body})
+                report['incidentOutcome'] = update_incident(client, title, body, unhealthy,
+                    all(r['state'] in ('healthy','night_pause','not_due','paused') for r in report['batches']))
             except Exception as exc:
                 report['incidentError']=type(exc).__name__
                 report['incidentFailure']=error_details(exc)
+    report['apiCalls'] = client.calls
+    report['apiCallBudget'] = client.max_calls
+    report['evidenceCacheHits'] = client.cacheHits
     (ROOT/'batch-watchdog.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(report,ensure_ascii=False))
     if os.getenv('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:
             out.write('```json\n'+json.dumps(report,ensure_ascii=False,indent=2)+'\n```\n')
-    return int(bool(report.get('incidentError')) or any(r.get('state')=='inspection_failed' for r in report['batches']))
+    return int(bool(report.get('incidentError')) or any(r.get('state') in ('inspection_failed', 'request_unknown') for r in report['batches']))
 
 if __name__ == '__main__':
     raise SystemExit(main())

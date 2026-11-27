@@ -40,7 +40,7 @@ def verified_summary(row, at):
     return clean_summary({'observedAt': row.get('checkedAt'), 'dueAt': row.get('dueAt'),
                           'readbackAt': row.get('lastVerifiedAt') or evidence.get('readbackAt'),
                           'runId': run.get('id'), 'attempt': run.get('attempt'),
-                          'commit': run.get('commit'), 'kind': 'inspection' if row['key']=='watchdog' else 'publication'}, at)
+                          'commit': run.get('commit'), 'kind': 'inspection' if row['key']=='watchdog' else 'observation' if row['key']=='capture' else 'publication'}, at)
 
 
 def clean_summary(item, at):
@@ -51,7 +51,7 @@ def clean_summary(item, at):
         if not at-timedelta(days=90) <= observed <= at:
             return None
         result = {'observedAt': observed.isoformat(), 'kind': item.get('kind')}
-        if result['kind'] not in ('publication', 'inspection'):
+        if result['kind'] not in ('publication', 'inspection', 'observation'):
             return None
         for field in ('dueAt', 'readbackAt'):
             value = item.get(field)

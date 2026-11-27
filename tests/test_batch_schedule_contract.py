@@ -49,9 +49,20 @@ class BatchSchedules(unittest.TestCase):
                 self.assertIn('PRODUCTION_PAUSED', text)
 
     def test_shared_write_lock_and_multi_pending_queue(self):
-        for filename in [*EXPECTED, 'production.yml']:
+        for filename in EXPECTED:
             text = (ROOT / '.github/workflows' / filename).read_text()
             self.assertIn('  group: isegye-inour-production\n  cancel-in-progress: false\n  queue: max', text)
+
+    def test_only_publication_jobs_hold_the_production_queue(self):
+        text = (ROOT / '.github/workflows/production.yml').read_text()
+        prepare = text.split('  prepare:\n', 1)[1].split('  deploy:\n', 1)[0]
+        self.assertNotIn('ISEGYE_SFTP_PASSWORD', prepare)
+        self.assertNotIn('group: isegye-inour-production', prepare)
+        for section in (text.split('  deploy:\n', 1)[1].split('  install-monitor:\n', 1)[0],
+                        text.split('  install-monitor:\n', 1)[1]):
+            self.assertIn('      group: isegye-inour-production\n      cancel-in-progress: false\n      queue: max', section)
+            self.assertIn('production_candidate.py unpack', section)
+            self.assertIn('ISEGYE_SFTP_PASSWORD', section)
 
     def test_weekly_mode_and_compatible_history_runner(self):
         text = (ROOT / '.github/workflows/history-monthly.yml').read_text()

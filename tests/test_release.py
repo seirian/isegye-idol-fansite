@@ -1,5 +1,5 @@
 """Release transaction unit tests; no real host connection or credentials."""
-import sys
+import os, sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import TestCase, main
@@ -14,10 +14,10 @@ class MemoryRemote:
         self.files = {d.ROOT + '/.htaccess': d.router()}
         self.dirs = {d.ROOT}
         self.swaps = []
-        self.s = SimpleNamespace(chmod=lambda *a: None, rmdir=self.dirs.remove)
+        self.s = SimpleNamespace(chmod=lambda *a: None, rmdir=self.dirs.remove, mkdir=self.mkdir, rename=self.rename)
     def initialize(self): pass
     def info(self, path): return True if path in self.files or path in self.dirs else None
-    def mkdir(self, path):
+    def mkdir(self, path, mode=0o755):
         d.write_path(path)
         if self.info(path): raise d.Stop('Existing directory')
         self.dirs.add(path)
@@ -37,6 +37,17 @@ class MemoryRemote:
         self.files[path] = data
         self.swaps.append(data)
 
+    def rename(self, old, new):
+        if self.info(new) is not None: raise RuntimeError('Rename replacement refused')
+        if old not in self.dirs: raise FileNotFoundError(old)
+        self.dirs.remove(old); self.dirs.add(new)
+        for path in list(self.files):
+            if path.startswith(old+'/'):
+                self.files[new+path[len(old):]] = self.files.pop(path)
+    def remove_own(self, path, expected):
+        if self.read(path) != expected: raise RuntimeError('Foreign file')
+        del self.files[path]
+
 
 class ReleaseTransactionTests(TestCase):
     def setUp(self):
@@ -52,7 +63,8 @@ class ReleaseTransactionTests(TestCase):
             if path in self.payload: return 200, self.payload[path]
         return 403, b'BLOCKED'
     def run_release(self, verify=lambda _: None, http=None):
-        with patch.object(d, 'http', side_effect=http or self.http):
+        # The remote is in memory; the surrounding PR job is not a deployment identity.
+        with patch.dict(os.environ, GITHUB_ACTIONS='false'), patch.object(d, 'http', side_effect=http or self.http):
             release.deploy_verified(self.remote, self.payload, 'a' * 40, verify, self.report)
     def test_success_preserves_shared_and_mir(self):
         self.run_release()

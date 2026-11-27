@@ -140,6 +140,13 @@ def report_is_current(report, run, at, head, due_slots):
     if report.get('state') == 'paused':
         return False  # A previous pause must not become a current healthy result.
     rows = report.get('batches')
+    # A trusted pre-rollout report legitimately has the old seven targets. It
+    # cannot certify the new independent capture and must not deadlock rollout.
+    if (isinstance(rows, list) and len(rows) == len(policy.SPECS)-1
+            and all(isinstance(row, dict) for row in rows)
+            and {row.get('batch') for row in rows} == set(policy.SPECS)-{'capture'}
+            and all(row.get('workflow') == policy.SPECS[row['batch']][0] for row in rows)):
+        return False
     if not isinstance(rows, list) or len(rows) != len(policy.SPECS):
         raise WakeupError('invalid_controller_report')
     by_kind = {}
@@ -153,7 +160,8 @@ def report_is_current(report, run, at, head, due_slots):
             continue
         row = by_kind[kind]
         if kind == 'production':
-            if row.get('state') != 'healthy' or row.get('expectedHead') != head:
+            if (row.get('state') != 'healthy' or row.get('expectedHead') != head
+                    or row.get('publicationVerified') is not True):
                 return False
             continue
         due_value = due_slots[kind]

@@ -24,10 +24,18 @@ try:
   b=p.chromium.launch(**opts);c=b.new_context(viewport={'width':1440,'height':1000},locale='ko-KR',timezone_id='Asia/Seoul',reduced_motion='reduce');page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   info=c.request.get(URL+'build-info.json').json()
   check('selected commit matches',info['commit']==os.environ.get('GITHUB_SHA',info['commit']))
-  check('all 154 reviewed; 151 connected',info['musicVideoAudit']['songs']==154 and info['musicVideoAudit']['linked']==151)
+  music_audit=info['musicVideoAudit'];availability=music_audit.get('availability')
+  check('all 154 reviewed; 151 selections retained',music_audit['songs']==154 and music_audit.get('selected',music_audit['linked'])==151)
+  if availability:
+   check('unavailable sources remain partial and inactive',availability['available']==music_audit['linked'] and availability['available']+availability['unavailable']==151 and availability['blocked']==0 and availability['state']==('partial' if availability['unavailable'] else 'complete'))
   examples=[('rewind','fgSXAKsq-Vo','official_mv'),('be-my-light','3cEUPoPXz7E','official_mv'),('your-turn','8e1Npb3wKyY','official_audio'),('cat-save-world','zGOzGcEbd-s','official_mv'),('cover-TYB9ScXvq34','IajO_xnbyFE','fan_backup'),('cover-buJjUHSalVA','BD6RZwsTvcs','karaoke_tj')]
   for sid,vid,kind in examples:
    page.goto(URL+'#/song/'+sid,wait_until='networkidle');page.locator('.catalog-song-detail').wait_for()
+   unavailable=page.locator('.music-source-info').get_attribute('data-video-availability')=='unavailable'
+   if unavailable:
+    check(sid+' unavailable playback disabled',page.locator('.catalog-song-detail button.button.primary[disabled]').count()==1 and page.locator('.catalog-song-detail-visual .music-video-art').count()==0)
+    check(sid+' failed selection has no active playback link',page.locator('a[href="https://www.youtube.com/watch?v='+vid+'"]').count()==0)
+    continue
    image=page.locator('.catalog-song-detail-visual .music-video-art>img');image.scroll_into_view_if_needed();image.wait_for()
    page.wait_for_function('(id)=>{const x=document.querySelector(".catalog-song-detail-visual .music-video-art>img");return x&&x.complete&&x.naturalWidth>=320&&!x.hidden;}',arg=vid)
    check(sid+' selected thumbnail',('/vi/'+vid+'/') in image.get_attribute('src'))
@@ -38,9 +46,16 @@ try:
    if sid in ('rewind','cover-TYB9ScXvq34','cover-buJjUHSalVA'):page.screenshot(path=str(OUT/(kind+'-desktop.png')),full_page=True)
   for sid in ('cover-WItY2T5zz1A','cover-7E_cZ9eU3ZE','cover-q8iiUYJsOUM'):
    page.goto(URL+'#/song/'+sid,wait_until='networkidle');check(sid+' no wrong substitution',page.locator('.catalog-song-detail-visual .music-video-art').count()==0 and page.locator('.music-source-info[data-video-kind=unavailable]').count()==1)
+  unavailable_examples=page.evaluate("CATALOG.music.songs.filter(s=>s.videoSource?.availability==='unavailable').slice(0,3).map(s=>({id:s.id,videoId:s.videoSource.reviewedVideoId}))")
+  for row in unavailable_examples:
+   page.goto(URL+'#/song/'+row['id'],wait_until='networkidle')
+   check(row['id']+' unavailable record remains readable',page.locator('.catalog-song-detail h1').count()==1 and page.locator('.music-source-info[data-video-availability=unavailable]').count()==1)
+   check(row['id']+' known failed playback and thumbnail disabled',page.locator('.catalog-song-detail button[disabled]').count()==1 and page.locator('.catalog-song-detail-visual .music-video-art').count()==0 and page.locator('a[href="https://www.youtube.com/watch?v='+row['videoId']+'"]').count()==0)
   page.goto(URL+'#/music?type=original',wait_until='networkidle');page.screenshot(path=str(OUT/'originals-desktop.png'),full_page=True)
-  check('every original linked',page.locator('.music-video-art').count()==20)
-  check('unofficial original labelled',page.locator('.music-video-label').filter(has_text='팬 백업').count()==1)
+  expected_originals=page.evaluate("CATALOG.music.songs.filter(s=>s.type==='original'&&s.videoId).length")
+  check('available originals linked; unavailable records retained',page.locator('.music-video-art').count()==expected_originals and page.locator('.catalog-song').count()==20)
+  expected_backups=page.evaluate("CATALOG.music.songs.filter(s=>s.type==='original'&&s.videoId&&s.videoSource?.kind==='fan_backup').length")
+  check('available unofficial originals labelled',page.locator('.music-video-label').filter(has_text='팬 백업').count()==expected_backups)
   for theme in ('light','dark'):
    page.evaluate('(t)=>document.documentElement.dataset.theme=t',theme)
    for width in (320,390,768,1440):

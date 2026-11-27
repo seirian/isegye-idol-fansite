@@ -8,6 +8,7 @@ from pathlib import Path
 from datetime import datetime,timezone
 import base64,hashlib,json,os,re,socket,stat,sys
 import inour_sftp as d
+import production_lock as locks
 import auth_routing as a
 from build_playground_host import HOOK,patched
 from build_playground_host import baseline_patched as previous_patched
@@ -61,7 +62,7 @@ def publish(remote,commit,report):
     d.require(remote.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Wrong isolated site owner')
     for lock in ('/web/.yeop-migration-lock',d.ROOT+'/.auth-stage-lock'):
         d.require(remote.info(lock) is None,'Other maintenance in progress')
-    lock=d.ROOT+'/.deploy-lock';remote.mkdir(lock)
+    lock = locks.acquire(remote, purpose='deploy_playground', report=report, commit=commit)
     old_entry=new_entry=old_pointer=None;entry_changed=pointer_changed=False
     try:
         router=remote.read(d.ROOT+'/.htaccess');production,gated=a.release_of(router)
@@ -150,7 +151,7 @@ def publish(remote,commit,report):
             report['rollbackRestoredPreviousEntry']=True
         except Exception:report['manualRecoveryRequired']=True
         raise
-    finally:remote.parents(lock);remote.s.rmdir(lock)
+    finally:locks.release(remote, lock)
 
 def main():
     report={'status':'failed','checkedAt':datetime.now(timezone.utc).isoformat()};resources=[]
@@ -170,6 +171,7 @@ def main():
         client=paramiko.SFTPClient.from_transport(t);resources.append(client);client.get_channel().settimeout(30)
         publish(VerifiedTransferRemote(client),commit,report)
     except Exception as exc:
+        report['status'] = 'failed'
         report['errorType']=type(exc).__name__
         if isinstance(exc,d.Stop):report['reason']=str(exc)
     finally:

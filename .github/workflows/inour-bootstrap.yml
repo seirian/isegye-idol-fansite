@@ -82,9 +82,8 @@ jobs:
               remote.directory(d.MIR)
               report['distinct_real_directories'] = client.normalize(d.ROOT) != client.normalize(d.MIR)
               report['root_mode'] = oct(stat.S_IMODE(remote.info(d.ROOT).st_mode))
-              lock_path = d.ROOT + '/.deploy-lock'
-              remote.mkdir(lock_path)
-              lock = lock_path
+              import production_lock
+              lock = production_lock.acquire(remote, purpose='bootstrap', report=report)
               stage = 'prove_domain_mapping'
               name = 'isegye-probe-' + os.urandom(16).hex() + '.txt'
               data = ('isegye-root-proof:' + os.urandom(32).hex()).encode()
@@ -128,8 +127,7 @@ jobs:
                       report['preservation_check_failed'] = True
               if remote and lock:
                   try:
-                      remote.parents(lock)
-                      client.rmdir(lock)
+                      production_lock.release(remote, lock)
                   except Exception:
                       report['lock_cleanup_failed'] = True
                       report['status'] = 'failed'
