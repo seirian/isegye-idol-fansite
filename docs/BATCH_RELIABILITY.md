@@ -1,5 +1,63 @@
 # 배치 누락 및 배포 복구 (2026-11-13)
 
+## 2026-11-24 조회 범위와 외부 기동 보완
+
+사용자는 공식 제한 검토 뒤, 운영 안전장치를 유지하며 권고안을 순차 적용하고
+실제 수집·게시·배포까지 검증하도록 승인했다. 2,000건은 GitHub의 보편적인 제한이
+아니라 이 저장소의 워크플로별 100건 × 20페이지 검사 예산이다. GitHub 공식 문서는
+페이지당 최대 100건과 branch/status/created 등의 필터 검색당 최대 1,000건을 구분한다.
+현재 내부 제어기는 워크플로별 전체 이력을 검사한다. 외부 점검의 저장소 전체
+2,282건을 내부 공지 291건·앨범 186건(11월 24일 13:22 KST 검사)과 혼동하지 않는다.
+
+외부 연결 도구가 워크플로별 목록 경로를 지원하지 않아, 고정 목적의
+`batch-watchdog-wakeup.yml`을 사용한다. 이는 임의 API 프록시가 아니다. 외부는
+검증된 이 작업의 job만 점검당 최대 한 번 재실행할 수 있고, 작업 내부에서
+`batch-watchdog.yml` 전체 이력과 정확한 최신 attempt 산출물을 확인한다. 두 번의
+새 조회, 활성 실행 없음, 15분 쿨다운, 현재 main·중지·회차 검사 뒤에만 고정 main의
+기존 watchdog을 한 번 dispatch한다. 개별 배치/Production을 실행하거나 취소할 수
+없고 SFTP·계정·시크릿을 받지 않는다. 원래 배치의 5분 유예·15분 쿨다운·rolling
+1시간 2회 보충과 게시 검증은 기존 watchdog에서 다시 적용한다.
+
+새 기동 작업에도 rolling 1시간의 controller workflow_dispatch run 2개 상한을
+추가한다. 해당 시간에 생성됐거나 최신 attempt가 시작된 run의 합집합을 센다.
+`request_unknown`은 요청 결과 미확인이다. 같은 실행 안에서 재전송하지 않으며,
+외부 점검도 결과를 대조하기 전에는 다음 회차에 다시 요청하지 않는다.
+
+추가 cron은 없다. 자신의 코드 변경 push와 기존 일일 콘텐츠 작업의 완료 이벤트는
+조회 전용 첫 실행을 만들어 재실행 가능한 작업을 갱신한다. 자동 첫 실행은 API
+계층에서도 POST를 금지한다. 명시적 수동 실행 또는 재실행만 apply를 요청할 수
+있으며, apply도 동일한 안전 검사를 통과해야 한다. 기동 전용 concurrency는
+`isegye-watchdog-wakeup`으로 분리하여 기존 watchdog 대기 작업을 밀어내지 않는다.
+기동 작업에는 후속 needs job이 없다. 재실행 원본의 head SHA와 실제 checkout main
+코드의 policyRevision은 별도로 기록한다.
+
+`read_workflow_runs`는 runs와 inspection을 반환한다. 모든 페이지의 전체 건수,
+고유 ID·출처·attempt·상태·시각을 검사하고 불완전 결과는 부분 목록으로 반환하지
+않는다. 정상/실패 보고서에 조회 범위·페이지 수·예상/확인 건수·완전성을 남긴다.
+API 실패는 허용된 숫자 HTTP/rate-limit 정보와 고정 reasonCode만 기록한다.
+토큰, 원문 응답, stderr, 쿠키와 서명 URL은 기록하지 않는다.
+
+최신 생성 이력과 활성 상태만 조합해 오래된 완료 재실행을 제외하지 않는다.
+현재 전체 이력 검사와 마지막 재검사가 실행 권한의 근거다. 시간 분할/증분/캐시는
+별도 조회 전용 비교를 통과하기 전에는 이 판단을 대체할 수 없다. 정상 프로세스
+종료·기동 요청 수락·active/cooldown은 게시 완료가 아니다.
+
+`batch_watchdog_shadow.py`는 자동 audit seed에서만 전체 조회와 생성 시각 분할
+조회 결과를 비교한다. 1,000건에 도달한 검색은 분할하고, 동일 경계 ID는 attempt와
+상태가 같은 경우만 합친다. 비교용 조회도 전체 기준 최대 20페이지와 후보 최대
+20회·깊이 16, 기동 작업의 전체 80회/300초 예산 안에 있다. 결과는
+matched/changed/incomplete이며 항상 authorizesDispatch=false다. apply 모드에서는
+분할 조회 자체를 허용하지 않는다. matched는 두 관측의 일치이며 원자적 스냅샷이나
+오래된 이력 생략을 승인하는 증명이 아니다.
+
+외부 점검 절차와 미확인 요청의 보관 기준은 `docs/BATCH_EXTERNAL_MONITOR.md`를 따른다.
+
+공식 근거:
+- https://docs.github.com/en/rest/actions/workflow-runs
+- https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api
+- https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
+- https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+
 ## 현재 회차 기준 (2026-11-17 사용자 변경)
 
 - 공지·일정: 한국시간 짝수 시각 05분(00:05·02:05·…·22:05), 하루 12회. 복구 판단도 최근 도래한 2시간 슬롯을 사용한다. 홀수 시각은 새 회차가 아니므로 직전 정상 게시를 다시 수집하지 않는다. 실패·누락 회차의 제한된 보충만 유지한다.

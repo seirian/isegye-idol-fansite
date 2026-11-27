@@ -1,0 +1,60 @@
+name: Batches - guarded external watchdog wakeup
+on:
+  workflow_dispatch:
+  # Seed a rerunnable, fixed-purpose job without adding a clock schedule.
+  # First attempts from these automatic events are audit-only.
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/batch-watchdog-wakeup.yml
+      - scripts/batch_watchdog_wakeup.py
+  workflow_run:
+    workflows: [Content - verified channel video catalog]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: isegye-watchdog-wakeup
+  cancel-in-progress: false
+jobs:
+  guarded-wakeup:
+    if: >-
+      github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {ref: main, persist-credentials: false}
+      - name: Verify guarded inspection and dispatch boundaries
+        run: python -m unittest discover -s tests -p 'test_batch_watchdog*.py' -v
+      - name: Inspect complete controller history before any wakeup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_ALBUMS_PAUSED: ${{ vars.ISEGYE_ALBUMS_PAUSED }}
+          ISEGYE_MUSIC_PAUSED: ${{ vars.ISEGYE_MUSIC_PAUSED }}
+          ISEGYE_SCHEDULE_PAUSED: ${{ vars.ISEGYE_SCHEDULE_PAUSED }}
+          ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
+          ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
+          ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || [ "$GITHUB_RUN_ATTEMPT" -gt 1 ]; then
+            python scripts/batch_watchdog_wakeup.py --apply
+          else
+            python scripts/batch_watchdog_wakeup.py
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: batch-watchdog-wakeup-${{ github.run_id }}-${{ github.run_attempt }}
+          path: batch-watchdog-wakeup.json
+          retention-days: 30

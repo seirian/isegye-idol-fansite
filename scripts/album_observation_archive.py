@@ -161,6 +161,13 @@ def main():
                     report['conflicts'] += conflicts
                 except Exception as exc:
                     report['errors'].append({'artifactId': item['id'], 'error': type(exc).__name__})
+            # Recover from lightweight complete-chart evidence when the
+            # full album/publication workflow missed an earlier source hour.
+            try:
+                from album_capture_recovery import recover as recover_captures
+                recover_captures(current, report, token, deadline, request)
+            except Exception as exc:
+                report['errors'].append({'source': 'melon-chart-capture', 'error': type(exc).__name__})
             if report['addedPoints']:
                 validate(current)
                 (ROOT/'albums/snapshot.json').write_text(json.dumps(current, ensure_ascii=False, separators=(',', ':'))+'\n')
