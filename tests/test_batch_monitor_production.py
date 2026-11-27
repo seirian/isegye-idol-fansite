@@ -32,7 +32,7 @@ class MemoryRemote:
     def directory(self,p):store.d.require(p in self.dirs,'Missing directory')
     def read(self,p):return self.files.get(p)
     def parents(self,p):store.d.write_path(p)
-    def mkdir(self,p):
+    def mkdir(self,p,mode=0o755):
         self.parents(p);store.d.require(self.info(p) is None,'Existing directory');self.dirs.add(p);self.tick+=1;self.times[p]=self.tick
     def new(self,p,raw):
         self.parents(p);store.d.require(p not in self.files,'Existing file');self.files[p]=raw;self.writes.append(p)
@@ -50,6 +50,14 @@ class MemoryRemote:
         from deploy_google_access import upload_tree
         name,files,point=deploy.release_payload(doc);upload_tree(self,store.FOLDER+'/releases/'+name,files,private=True)
         return name,point
+
+    def rename(self, old, new):
+        if self.info(new) is not None: raise RuntimeError('Rename replacement refused')
+        if old not in self.dirs: raise FileNotFoundError(old)
+        self.dirs.remove(old); self.dirs.add(new)
+        for path in list(self.files):
+            if path.startswith(old+'/'):
+                self.files[new+path[len(old):]] = self.files.pop(path)
 
 
 class ProductionPolicy(unittest.TestCase):
@@ -110,13 +118,20 @@ class ProductionPolicy(unittest.TestCase):
 class StorageTransactions(unittest.TestCase):
     def run_refresh(self,r,v,report=None,gate=None):
         report={} if report is None else report
-        with patch.object(store,'current_runtime',return_value=('g123456abcdef',b'fixture-entry')),patch.object(store,'verify_anonymous',side_effect=gate),patch.object(store.d,'http',return_value=(403,b'Forbidden')):
+        # Use a local identity only for the in-memory writer transaction.
+        with patch.dict(os.environ,GITHUB_ACTIONS='false'),patch.object(store,'current_runtime',return_value=('g123456abcdef',b'fixture-entry')),patch.object(store,'verify_anonymous',side_effect=gate),patch.object(store.d,'http',return_value=(403,b'Forbidden')):
             store.refresh(r,v,'a'*40,report,ROOT)
         return report
     def test_refresh_writes_only_owned_snapshot_paths(self):
         r=MemoryRemote();before=dict(r.files);report=self.run_refresh(r,document())
         self.assertEqual(report['status'],'monitor_snapshot_verified')
-        self.assertTrue(all(p.startswith(store.FOLDER+'/') for p in r.writes))
+        # The only extra writes are the attributable common writer lock and
+        # its nonce-scoped retirement; operating data/auth paths remain barred.
+        import re
+        self.assertTrue(all(p.startswith(store.FOLDER+'/') or
+            p == store.d.ROOT+'/.deploy-lock/owner.json' or
+            re.fullmatch(re.escape(store.d.ROOT)+r'/\.deploy-lock\.released-[0-9a-f]{48}/owner\.json',p)
+            for p in r.writes))
         self.assertTrue(all(r.files[p]==raw for p,raw in before.items()))
         self.assertNotIn(store.d.ROOT+'/.deploy-lock',r.dirs)
         self.assertTrue(report['authenticationRuntimeUnchanged'])

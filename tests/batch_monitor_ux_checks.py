@@ -6,6 +6,7 @@ MESSAGE='관리자 계정만 해당 사이트에 접근이 가능합니다.'
 
 
 def verify(check, owner, member, op, url, new, token, out):
+    expected_batches = len(owner.request.get(url+'/ops/batches/data.json').json()['batches'])
     visitor, page = new()
     response=visitor.request.get(url+'/ops/batches/?next=https://evil.test/&role=admin',max_redirects=0)
     check('monitor document fixed login redirect',response.status==303 and response.headers.get('location')==LOGIN)
@@ -47,19 +48,19 @@ def verify(check, owner, member, op, url, new, token, out):
     page.locator('#fixture-signin').wait_for()
     check('monitor explicit logout returns to login notice',page.url==url+LOGIN and not visitor.request.get(url+'/auth/status').json()['authenticated'])
     sign_in('owner-subject','owner.fixture@gmail.com');page.wait_for_url(url+'/ops/batches/')
-    expect(page.locator('#rows tr')).to_have_count(8)
+    expect(page.locator('#rows tr')).to_have_count(expected_batches)
     check('monitor administrator sign-in reaches dashboard',visitor.request.get(url+'/ops/batches/data.json').status==200)
     check('monitor context cannot redirect administrator externally',owner.request.get(url+LOGIN+'&next=https://evil.test/',max_redirects=0).headers.get('location')=='/ops/batches/')
     visitor.close()
 
     # Use the actual running administrator page, not a visual mock.
-    op.goto(url+'/ops/batches/');expect(op.locator('#rows tr')).to_have_count(8)
+    op.goto(url+'/ops/batches/');expect(op.locator('#rows tr')).to_have_count(expected_batches)
     op.locator('#theme').select_option('light')
     for mode in ('light','dark'):
         op.locator('#theme').select_option(mode)
         expect(op.locator('html')).to_have_attribute('data-theme',mode)
         check('monitor theme control reflects '+mode,op.locator('#theme').input_value()==mode)
-        op.reload();expect(op.locator('#rows tr')).to_have_count(8)
+        op.reload();expect(op.locator('#rows tr')).to_have_count(expected_batches)
         check('monitor persisted theme '+mode,op.locator('html').get_attribute('data-theme')==mode)
         check('monitor readable body '+mode,op.locator('body').evaluate('(e)=>parseFloat(getComputedStyle(e).fontSize)')>=16)
         check('monitor readable status badges '+mode,op.locator('.badge').first.evaluate('(e)=>parseFloat(getComputedStyle(e).fontSize)')>=13)

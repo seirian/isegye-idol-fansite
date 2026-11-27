@@ -189,6 +189,8 @@ def patch_remote(remote):
         candidate = (json.dumps(data, ensure_ascii=False, separators=(',', ':')) + '\n').encode()
         (ROOT/'rebels-backfill-before.json').write_bytes(raw)
         (ROOT/'rebels-backfill-after.json').write_bytes(candidate)
+        from production_lock import assert_no_recovery
+        assert_no_recovery(remote)
         d.require(remote.read(d.ROOT+'/.htaccess') == router and remote.info(d.ROOT+'/.deploy-lock') is None,
                   'Release changed during historical repair')
         d.require(remote.read(runtime.path('current.json')) == raw, 'Feed changed; refusing stale overwrite')

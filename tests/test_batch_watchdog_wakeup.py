@@ -42,6 +42,7 @@ def report(checked=None):
         row = {'batch': kind, 'workflow': filename, 'state': 'healthy', 'checkedAt': checked.isoformat()}
         if kind == 'production':
             row['expectedHead'] = SHA
+            row['publicationVerified'] = True
         else:
             due = policy.due_slot(kind, AT)
             row['dueAt'] = due.isoformat() if due else None
@@ -127,6 +128,18 @@ class Wakeup(unittest.TestCase):
         self.assertEqual(self.recover(fake)['state'], 'healthy')
         self.assertEqual(fake.posts, [])
 
+    def test_pre_capture_rollout_report_cannot_deadlock_upgrade(self):
+        doc = report()
+        doc['batches'] = [row for row in doc['batches'] if row['batch'] != 'capture']
+        fake = Fake(report_doc=doc)
+        self.assertEqual(self.recover(fake)['state'], 'dispatched')
+        self.assertEqual(len(fake.posts), 1)
+
+    def test_production_green_without_publication_verification_is_not_current(self):
+        doc = report()
+        next(row for row in doc['batches'] if row['batch']=='production').pop('publicationVerified')
+        self.assertFalse(wake.report_is_current(doc, run(), AT, SHA, wake.slots(AT)))
+
     def test_failed_controller_or_incident_error_is_never_healthy(self):
         for problem in ('conclusion', 'incident', 'state'):
             doc = report()
@@ -150,6 +163,7 @@ class Wakeup(unittest.TestCase):
         schedule.update(state='healthy', dueAt=(policy.due_slot('schedule', at)-timedelta(hours=2)).isoformat())
         albums = next(row for row in doc['batches'] if row['batch'] == 'albums')
         albums['checkedAt'] = (at-timedelta(minutes=1)).isoformat()
+        next(row for row in doc['batches'] if row['batch'] == 'capture')['checkedAt'] = albums['checkedAt']
         self.assertTrue(wake.report_is_current(doc, source, at, SHA, wake.slots(at)))
         self.assertFalse(wake.report_is_current(doc, source, at+timedelta(minutes=3), SHA, wake.slots(at+timedelta(minutes=3))))
 

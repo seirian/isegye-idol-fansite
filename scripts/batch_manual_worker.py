@@ -16,8 +16,10 @@ from deploy_verified_albums import VerifiedTransferRemote
 
 ROOT=Path(__file__).resolve().parents[1]
 REPO=policy.REPO
-TARGETS={k:v[0] for k,v in policy.SPECS.items()} | {'watchdog':'batch-watchdog.yml'}
-PAUSES={k:v[2] for k,v in policy.SPECS.items()} | {'watchdog':'PRODUCTION_PAUSED'}
+# Independent capture is a read-only monitor row with guarded internal recovery;
+# adding it to watchdog inspection must not create a ninth manual capability.
+TARGETS={k:v[0] for k,v in policy.SPECS.items() if k != 'capture'} | {'watchdog':'batch-watchdog.yml'}
+PAUSES={k:v[2] for k,v in policy.SPECS.items() if k != 'capture'} | {'watchdog':'PRODUCTION_PAUSED'}
 ACTIVE=('queued','pending','in_progress','waiting','requested')
 FOLDER=d.ROOT+'/.batch-monitoring/control'
 MARKER=b'isegye-batch-manual:v1\n'

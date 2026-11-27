@@ -1,5 +1,9 @@
 # 배포 및 경로 격리
 
+현재 production의 준비·게시·모니터 단계 및 부분 재실행 근거는
+[운영 파이프라인](PRODUCTION_PIPELINE.md), 공통 잠금 회수 조건은
+[운영 잠금 복구](PRODUCTION_LOCK_RECOVERY.md)를 함께 확인한다.
+
 ## 고정 구조
 
 | 대상 | 브랜치 | 공개 주소 | SFTP 기준 경로 |

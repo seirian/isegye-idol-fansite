@@ -213,8 +213,8 @@ class Remote:
     def deploy(self, payload, commit):
         before = self.snapshot()
         self.initialize()
-        lock = ROOT + '/.deploy-lock'
-        self.mkdir(lock)
+        import production_lock as locks
+        lock = locks.acquire(self, purpose='isolated_release', commit=commit)
         try:
             self.prove_mapping()
             parent = ROOT + '/_isegye_releases'
@@ -253,8 +253,7 @@ class Remote:
             return {'status': 'deployed', 'release': release, 'root': ROOT, 'protected_files_unchanged': True,
                     'file_count': len(payload), 'mapping_proved': True}
         finally:
-            self.parents(lock)
-            self.s.rmdir(lock)
+            locks.release(self, lock)
 
 def main():
     require(os.environ.get('GITHUB_REF') == 'refs/heads/main', 'Deployment is main-only')

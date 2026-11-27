@@ -10,6 +10,7 @@ import socket
 import sys
 from datetime import datetime, timezone
 import inour_sftp as d
+import production_lock as locks
 
 EXISTING = ('https://mir.yeop.net/', 'https://mir.yeop.net/band/',
             'https://mir.yeop.net/songbook', 'https://yeop.net/')
@@ -18,8 +19,7 @@ EXISTING = ('https://mir.yeop.net/', 'https://mir.yeop.net/band/',
 def deploy_verified(remote, payload, commit, verify, report):
     """Only use Remote's fixed-root write methods; preserve the shared router."""
     remote.initialize()
-    lock = d.ROOT + '/.deploy-lock'
-    remote.mkdir(lock)
+    lock = locks.acquire(remote, purpose='production_release', report=report, commit=commit)
     previous = new = None
     router_path = d.ROOT + '/.htaccess'
     activated = False
@@ -93,9 +93,8 @@ def deploy_verified(remote, payload, commit, verify, report):
                 report['manual_recovery_required'] = True
         raise
     finally:
-        remote.parents(lock)
-        remote.s.rmdir(lock)
-        report['lock_removed'] = True
+        locks.release(remote, lock)
+        report['lock_removed'] = lock.released
 
 
 def verify_live(commit):

@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import hashlib, json, re, stat, urllib.error, urllib.request
 import inour_sftp as d
+import production_lock as locks
 
 FOLDER = d.ROOT+'/.batch-monitoring'
 MARKER = b'isegye-batch-monitoring:v1\n'
@@ -157,7 +158,7 @@ def refresh(remote, doc, commit, report, root):
     remote.directory('/web');remote.directory(d.ROOT)
     for path in ('/web/.yeop-migration-lock',d.ROOT+'/.auth-stage-lock'):
         d.require(remote.info(path) is None,'Other maintenance in progress')
-    lock=d.ROOT+'/.deploy-lock';remote.mkdir(lock)
+    lock = locks.acquire(remote, purpose='monitor_refresh', report=report, commit=commit)
     previous=pointer=None;changed=False
     try:
         owned_folder(remote)
@@ -214,4 +215,4 @@ def refresh(remote, doc, commit, report, root):
         except Exception as exc:
             report['retentionError']=type(exc).__name__
     finally:
-        remote.parents(lock);remote.s.rmdir(lock)
+        locks.release(remote, lock)

@@ -9,7 +9,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import hashlib, io, json, os, re, stat, subprocess, sys, zipfile
 from batch_monitor_health import inspection_health, preserve_verified
+from batch_slot_ledger import merge_slot_ledger
 import batch_watchdog as policy
+from batch_publication_evidence import (read_json_artifact, read_capture_evidence,
+                                        production_evidence_ok, read_production_evidence)
 
 ROOT = Path(__file__).resolve().parents[1]
 UTC = timezone.utc
@@ -24,6 +27,7 @@ META = {
     'history': ('활동기록', '매주 일요일 00:00'),
     'production': ('운영 배포', '현재 main 커밋 · 배포 이벤트'),
     'watchdog': ('배치 복구 점검', '매시 12/32/52분 · 일부 완료 이벤트'),
+    'capture': ('멜론 독립 관측', '00시 및 07~23시 · 11/37분 예약 · 게시와 별도 검증'),
 }
 SPECS = dict(policy.SPECS, watchdog=('batch-watchdog.yml', 'batch-watchdog', 'PRODUCTION_PAUSED'))
 ALLOWED_WORKFLOWS = {v[0] for v in SPECS.values()}
@@ -65,6 +69,7 @@ class ReadOnlyGitHub:
         allowed |= bool(match and match[1] in ALLOWED_WORKFLOWS)
         allowed |= bool(re.fullmatch(r'actions/runs/[1-9][0-9]*/artifacts\?per_page=100(?:&page=[1-9][0-9]*)?', path))
         allowed |= bool(re.fullmatch(r'actions/runs/[1-9][0-9]*/attempts/[1-9][0-9]*/jobs\?per_page=100', path))
+        allowed |= bool(re.fullmatch(r'actions/runs/[1-9][0-9]*/attempts/[1-9][0-9]*', path))
         allowed |= bool(re.fullmatch(r'actions/artifacts/[1-9][0-9]*/zip', path))
         if not allowed:
             raise ValueError('Endpoint not permitted')
@@ -125,50 +130,8 @@ def listing(getter, filename):
 
 
 def extra_artifact(getter, run, prefix, filename):
-    """Read a single bounded JSON member, validating run/attempt/archive identity."""
-    expected = f"{prefix}-{run['id']}-{run['run_attempt']}"
-    entries, seen, total = [], set(), None
-    for page in range(1, 11):
-        result = getter(f"actions/runs/{run['id']}/artifacts?per_page=100"+(f'&page={page}' if page > 1 else ''))
-        batch = result.get('artifacts')
-        if not isinstance(batch, list) or len(batch) > 100:
-            raise ValueError('Invalid artifact list')
-        if total is not None and total != result.get('total_count'):
-            raise ValueError('Artifact list changed')
-        total = result.get('total_count')
-        for artifact in batch:
-            aid = artifact.get('id')
-            if type(aid) is not int or aid <= 0 or aid in seen:
-                raise ValueError('Invalid artifact identity')
-            seen.add(aid)
-            if artifact.get('name') == expected and not artifact.get('expired'):
-                entries.append(artifact)
-        if len(batch) < 100:
-            if type(total) is not int or total != len(seen):
-                raise ValueError('Incomplete artifact list')
-            break
-    else:
-        raise ValueError('Artifact budget exceeded')
-    if not entries:
-        raise policy.EvidenceUnavailable('Current attempt evidence unavailable')
-    if len(entries) != 1:
-        raise ValueError('Ambiguous attempt evidence')
-    artifact = entries[0]
-    provenance = artifact.get('workflow_run', {})
-    if (provenance.get('id') != run['id'] or provenance.get('head_sha') != run['head_sha'] or
-        provenance.get('head_branch') != 'main' or not 0 < artifact.get('size_in_bytes', 0) <= 48_000_000):
-        raise ValueError('Artifact provenance mismatch')
-    raw = getter(f"actions/artifacts/{artifact['id']}/zip", binary=True)
-    if len(raw) != artifact['size_in_bytes'] or artifact.get('digest') != 'sha256:'+hashlib.sha256(raw).hexdigest():
-        raise ValueError('Artifact digest mismatch')
-    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-        selected = [v for v in archive.infolist() if v.filename == filename]
-        if len(selected) != 1 or selected[0].file_size > 2_000_000 or stat.S_ISLNK(selected[0].external_attr >> 16):
-            raise ValueError('Invalid evidence member')
-        doc = json.loads(archive.read(selected[0]))
-        if not isinstance(doc, dict):
-            raise ValueError('Invalid evidence JSON')
-        return doc
+    """The same provenance/digest verifier is used by monitoring and recovery."""
+    return read_json_artifact(getter, run, prefix, filename)
 
 
 def run_view(run):
@@ -229,6 +192,8 @@ def row_state(row):
     run = row.get('run') or {}
     if run.get('status') in policy.ACTIVE:
         return 'running'
+    if row.get('key') == 'production' and row.get('publicationVerified') is True:
+        return 'healthy'
     if run.get('conclusion') in FAILURES:
         return 'attention'
     if row.get('growth',{}).get('alerts'):
@@ -244,7 +209,7 @@ def inspect(kind, at, head, getter):
            'dataState': 'unknown', 'state': 'unknown', 'run': None, 'sources': [], 'steps': [],
            'evidence': {}, 'note': '', 'history': [], 'listingComplete': False,
            'paused': os.getenv('PRODUCTION_PAUSED') == 'true' or os.getenv(pause) == 'true' or
-                     (kind == 'albums' and due is None)}
+                     (kind in ('albums', 'capture') and due is None)}
     stage = 'execution_query'
     try:
         runs, complete = listing(getter, filename)
@@ -288,7 +253,32 @@ def inspect(kind, at, head, getter):
             row['dataState'] = 'running'
             row['note'] = '현재 main 배포가 진행 중입니다. 해당 커밋의 서버 반영 및 검증을 기다립니다.'
             return row
+        if kind == 'capture':
+            row['readOnly'] = True
+            row['observationOnly'] = True
+            if row['paused']:
+                row['dataState'] = 'paused'
+                return row
+            candidate = next((r for r in runs if r.get('status') == 'completed'), None)
+            if candidate:
+                stage = 'observation_evidence'
+                candidate, capture = policy.current_capture_evidence(runs, due, at, getter)
+                row['evidenceRun'] = run_view(candidate)
+                row['evidence'] = capture
+                row['sourceTimes'] = capture['sourceTimes']
+                row['counts'] = {'chartsComplete': capture['chartsComplete'], 'requiredCharts': 2}
+                row['lastVerifiedAt'] = capture['checkedAt'] if capture['currentComplete'] else None
+                row['dataState'] = 'healthy' if capture['currentComplete'] else 'attention'
+                row['note'] = '원문 시각과 두 차트 100개 순위를 검증한 독립 관측입니다. 사이트 게시 완료와 별도입니다.'
+            else:
+                row['dataState'] = 'attention'
+                row['note'] = '현재 독립 관측 증거가 없습니다. 미관측 시간의 순위는 생성하지 않습니다.'
+            return row
         success = next((r for r in runs if r.get('status') == 'completed' and r.get('conclusion') == 'success'), None)
+        if kind == 'production':
+            success = next((r for r in runs if r.get('status') == 'completed' and r.get('head_sha') == head), None)
+        elif kind == 'music':
+            success = next((r for r in runs if r.get('status') == 'completed'), None)
         if not success:
             row['note'] = '검증 가능한 성공 실행이 없습니다.'
             row['dataState'] = 'attention' if runs else 'unknown'
@@ -304,13 +294,18 @@ def inspect(kind, at, head, getter):
                 for item in report.get('batches', []) if isinstance(item, dict) and item.get('batch') in policy.SPECS]
             row['note'] = '복구 점검 결과이며 개별 배치 게시 완료를 의미하지 않습니다.'
         elif kind == 'production':
-            report = extra_artifact(getter, success, 'isegye-production-evidence', 'auth-deployment.json')
-            good = (report.get('status') == 'deployed_and_verified' and report.get('commit') == head == success['head_sha']
-                    and report.get('browserVerified') is True and report.get('privatePathsBlocked') is True)
+            report, evidence_run, lineage = read_production_evidence(getter, success, at)
+            good = production_evidence_ok(report, evidence_run, head, at)
+            row['evidenceRun'] = run_view(evidence_run)
+            row['publicationLineage'] = lineage
+            row['publicationVerified'] = good
+            row['ancillaryFailure'] = bool(good and success.get('conclusion') != 'success')
+            row['lastVerifiedAt'] = safe_time(report.get('verifiedAt')) if good else None
             row['dataState'] = 'healthy' if good else 'attention'
             row['evidence'] = {'status': report.get('status'), 'checkedAt': safe_time(report.get('checkedAt')),
                                'commit': report.get('commit'), 'currentMain': head, 'browserVerified': report.get('browserVerified') is True}
-            row['note'] = '배포 보고서와 현재 main 커밋을 대조합니다. 실제 계정 로그인 검증과는 다릅니다.'
+            row['note'] = ('운영 배포·재조회는 검증됐지만 같은 실행의 후속 작업이 실패/취소됐습니다. 전체 재배포와 구분합니다.'
+                           if row['ancillaryFailure'] else '현재 main의 배포·재조회·접근 차단·쓰기 잠금 반환 증거를 대조했습니다.')
         elif kind == 'catalog':
             row['dataState'] = 'unknown'
             row['note'] = '수집 실행과 사이트 배포는 별개입니다. 콘텐츠 전용 게시 증거가 없어 반영 완료로 표시하지 않습니다.'
@@ -327,8 +322,14 @@ def inspect(kind, at, head, getter):
             if kind == 'schedule' and pub.get('verifiedReadback') is not True:
                 good = False
             row['dataState'] = 'healthy' if good else 'attention'
-            row['evidence'] = {k: pub[k] for k in ('status','generatedAt','publishedAt','readbackAt','verifiedReadback','evidenceVersion') if k in pub}
+            row['evidence'] = {k: pub[k] for k in ('status','sourceAt','generatedAt','publishedAt','readbackAt','verifiedReadback','evidenceVersion') if k in pub}
             row['lastVerifiedAt'] = safe_time(pub.get('readbackAt')) if pub.get('verifiedReadback') is True else None
+            if kind == 'music':
+                proof = policy.music_evidence(files, due, at)
+                row['officialPublicationVerified'] = proof['officialPublicationVerified']
+                row['backupAvailability'] = proof['backupAvailability']
+                row['recoverySatisfied'] = proof['recoverySatisfied']
+                row['dataState'] = proof['state']
             sources = pub.get('collectionHealth', {}).get('sources', {}) if kind == 'schedule' else pub.get('sourceStates', {})
             for key, value in sources.items():
                 row['sources'].append({'name': str(key)[:80], 'state': str(value.get('state', 'unknown') if isinstance(value, dict) else value)[:40],
@@ -360,6 +361,14 @@ def inspect(kind, at, head, getter):
                 row['note'] = '과거 관측 공백은 현재 회차 장애와 별도로 표시합니다. 미관측 순위는 생성하지 않습니다.'
             elif not good:
                 row['note'] = '현재 예정 회차의 수집·게시·서버 재조회 증거가 모두 충족되지 않았습니다.'
+            if kind == 'music':
+                backup = row['backupAvailability']
+                row['note'] = ('공식 채널의 현재 회차 수집·게시·재조회를 검증했습니다. '
+                               if row['officialPublicationVerified'] else '공식 채널의 현재 회차 수집·게시 증거가 불완전합니다. ')
+                row['note'] += (f"승인 링크 {backup['available']}/{backup['selected']}개 확인, 백업 {backup['unavailable']}개 가용성 미확인·부분 상태를 별도로 보존합니다."
+                                if backup['verified'] and backup['state'] == 'partial'
+                                else f"선택된 승인 링크 {backup['selected']}개의 감사를 모두 확인했습니다."
+                                if backup['verified'] else '승인 링크 감사가 완전하게 검증되지 않았습니다.')
             if at-due < timedelta(minutes=5) and not good:
                 row['dataState'] = 'running'
                 row['note'] = '예정 시각 직후 5분 유예 중입니다. 아직 누락으로 판정하지 않습니다.'
@@ -403,6 +412,7 @@ def merge_observations(previous, current):
                 'checkedAt':current['checkedAt'],'state':row['dataState'],
                 'runId':(row.get('evidenceRun') or {}).get('id')}
     current['observations'] = sorted(observations.values(), key=lambda v:v['dueAt'])[-30000:]
+    merge_slot_ledger(previous, current, policy.due_slot)
     return preserve_verified(previous, current)
 
 
@@ -426,8 +436,17 @@ def attach_catalog_publication(doc, at, getter):
     evidence=production.get('evidenceRun') or {}
     try:
         run={'id':evidence['id'],'run_attempt':evidence['attempt'],'head_sha':evidence['commit']}
-        pub=extra_artifact(getter,run,'isegye-production-evidence','auth-deployment.json')
-        catalog=extra_artifact(getter,run,'isegye-production-evidence','catalog-publication.json')
+        lineage=production.get('publicationLineage') or {}
+        if lineage.get('viaReference'):
+            # Reassert the immutable source artifact binding for catalog content
+            # rather than resolving the same name to a replacement artifact.
+            expected={'expected_artifact_id':lineage['sourceArtifactId'],
+                      'expected_artifact_digest':lineage['sourceArtifactDigest']}
+            pub=read_json_artifact(getter,run,'isegye-production-evidence','auth-deployment.json',**expected)
+            catalog=read_json_artifact(getter,run,'isegye-production-evidence','catalog-publication.json',**expected)
+        else:
+            pub=extra_artifact(getter,run,'isegye-production-evidence','auth-deployment.json')
+            catalog=extra_artifact(getter,run,'isegye-production-evidence','catalog-publication.json')
         raw=(json.dumps(catalog,ensure_ascii=False,sort_keys=True)+'\n').encode()
         if (pub.get('catalogBundleVerified') is not True or pub.get('catalogEvidenceSha256')!=hashlib.sha256(raw).hexdigest()
             or catalog.get('schemaVersion')!=1 or catalog.get('mode')!='production'
@@ -448,6 +467,8 @@ def attach_catalog_publication(doc, at, getter):
         row['sources']=[{'name':c['name'],'state':c.get('state','unknown'),
             'lastSuccessAt':safe_time(c.get('lastSuccessAt'))} for c in sources]
         row['evidenceRun']=evidence
+        if lineage:
+            row['publicationLineage']=lineage
         row['lastVerifiedAt']=iso(verified)
         row['evidence']={'status':'deployed_and_verified','generatedAt':safe_time(catalog['sourceAt']),
             'readbackAt':iso(verified),'verifiedReadback':True,'commit':catalog['buildCommit']}

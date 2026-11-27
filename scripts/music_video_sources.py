@@ -52,13 +52,16 @@ def apply_video_sources(music, config=None, rows=None):
         config, rows = selections()
     if set(rows) != {s['id'] for s in music['songs']}:
         raise ValueError('Every catalogue song needs an explicit reviewed selection')
+    from music_source_availability import load_candidate, public_evidence
+    availability = load_candidate(config, rows)
+    unavailable = {r['songId']: r for r in availability['unavailableSelections']} if availability else {}
     result = deepcopy(music)
     for song in result['songs']:
         row = rows[song['id']]
         original = song.get('videoId')
-        if original:
+        if original and not song.get('originalVideoId'):
             song['originalVideoId'] = original
-        if row['videoId']:
+        if row['videoId'] and song['id'] not in unavailable:
             song['videoId'] = row['videoId']
             song['url'] = 'https://www.youtube.com/watch?v=' + row['videoId']
         else:
@@ -68,8 +71,16 @@ def apply_video_sources(music, config=None, rows=None):
         song['videoSource'] = {'kind': row['kind'], 'checkedAt': config['checkedAt'],
                                'channel': c.get('name'), 'channelUrl': c.get('url'),
                                'note': config['notes'].get(song['id'], '')}
+        if availability and row['videoId']:
+            song['videoSource'].update(availability='unavailable' if song['id'] in unavailable else 'available',
+                availabilityCheckedAt=availability['checkedAt'], reviewedVideoId=row['videoId'],
+                availabilityStage=unavailable[song['id']]['stage'] if song['id'] in unavailable else None,
+                availabilityReason=unavailable[song['id']]['reasonCode'] if song['id'] in unavailable else None)
     result['videoAudit'] = {'checkedAt': config['checkedAt'], 'songs': len(rows),
-                            'linked': sum(bool(x['videoId']) for x in rows.values()),
+                            'selected': sum(bool(x['videoId']) for x in rows.values()),
+                            'linked': sum(bool(x.get('videoId')) for x in result['songs']),
                             'kinds': dict(Counter(x['kind'] for x in rows.values())),
                             'refresh': 'reviewed-snapshot', 'fullPlaybackVerified': False}
+    if availability:
+        result['videoAudit']['availability'] = public_evidence(availability)
     return result

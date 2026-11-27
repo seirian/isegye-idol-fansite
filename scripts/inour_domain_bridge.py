@@ -58,6 +58,7 @@ def band_redirect(d) -> tuple[int, str]:
 def apply(report: dict) -> None:
     import paramiko
     import inour_sftp as d
+    import production_lock as production_locks
     require(os.environ.get('GITHUB_REPOSITORY') == 'seirian/isegye-idol-fansite', 'Wrong repository')
     require(os.environ.get('GITHUB_REF') == 'refs/heads/develop', 'Infrastructure change restricted to develop')
     require(os.environ.get('ISEGYE_ALLOW_SHARED_ROUTER_APPEND') == 'true', 'Explicit shared-router consent required')
@@ -65,6 +66,7 @@ def apply(report: dict) -> None:
     require(bool(password), 'Production environment secret missing')
     require(d.ROOT == ROOT, 'Isolated-root contract changed')
     resources, locks = [], []
+    production_lock = None
     r = s = probe = proof = None
     stage = 'connection'
     before = baseline = old = candidate = None
@@ -100,7 +102,8 @@ def apply(report: dict) -> None:
         require(d.managed_router(site_router), 'ISEGYE site router is unmanaged')
         require(s.normalize(ROOT) != s.normalize(d.MIR), 'Site directories alias each other')
         report['distinct_real_directories'] = True
-        for path in (ROOT + '/.deploy-lock', SHARED_LOCK):
+        production_lock = production_locks.acquire(r, purpose='domain_bridge', report=report)
+        for path in (SHARED_LOCK,):
             require(r.info(path) is None, 'Another deployment holds a lock; no changes made')
             s.mkdir(path, 0o700)
             locks.append(path)
@@ -237,6 +240,12 @@ def apply(report: dict) -> None:
             try:
                 r.directory(path)
                 s.rmdir(path)
+            except Exception:
+                report['lock_cleanup_failed'] = True
+                report['status'] = 'failed'
+        if r and production_lock is not None:
+            try:
+                production_locks.release(r, production_lock)
             except Exception:
                 report['lock_cleanup_failed'] = True
                 report['status'] = 'failed'

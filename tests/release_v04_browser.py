@@ -34,7 +34,8 @@ try:
             current=c.request.get(URL+'assets/soop-profiles/'+channel+'.webp').body()
             check('lower and main profile files differ '+channel,old!=current)
         check('group illustration preserved',page.locator('.hm-group').evaluate('(e)=>e.complete&&e.naturalWidth===800'))
-        check('music/history included',meta['catalog']['songs']==154 and meta['musicVideoAudit']['linked']==151 and meta['visualHistory']['historyItems']==55)
+        music_audit=meta['musicVideoAudit'];unavailable=music_audit.get('availability',{}).get('unavailable',0)
+        check('music/history included and unavailable selections explicitly counted',meta['catalog']['songs']==154 and music_audit.get('selected',music_audit['linked'])==151 and music_audit['linked']+unavailable==151 and meta['visualHistory']['historyItems']==55)
         check('21 channel sections',meta['catalog']['channels']==21)
         check('robots metadata',page.locator('meta[name=robots]').get_attribute('content')==('index,follow' if MODE=='production' else 'noindex,nofollow'))
         if MODE=='production':
