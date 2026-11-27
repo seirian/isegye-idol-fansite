@@ -252,6 +252,12 @@ run/attempt binding. Never expose its full original 100-song tables in the UI.
 
 
 def read_capture_evidence(getter, run, due, at):
-    data = read_json_artifact(getter, run, 'melon-chart-capture', 'melon-chart-capture.json',
-                              fixed_name=True, max_archive=150_000, max_member=100_000)
+    try:
+        data = read_json_artifact(getter, run, 'melon-chart-capture', 'melon-chart-capture.json',
+                                 max_archive=150_000, max_member=100_000)
+    except ArtifactUnavailable:
+        # An existing malformed/expired exact-attempt artifact cannot be hidden
+        # by an older fixed-name copy. Legacy JSON still binds the exact attempt.
+        data = read_json_artifact(getter, run, 'melon-chart-capture', 'melon-chart-capture.json',
+                                 fixed_name=True, max_archive=150_000, max_member=100_000)
     return capture_summary(data, run, due, at)
