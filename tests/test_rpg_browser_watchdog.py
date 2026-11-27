@@ -55,7 +55,7 @@ class BrowserWatchdog(unittest.TestCase):
             def running():
                 try:
                     return Path(f'/proc/{child}/stat').read_text().split()[2] != 'Z'
-                except FileNotFoundError:
+                except (FileNotFoundError, ProcessLookupError):
                     return False
             for _ in range(20):
                 if not running():
