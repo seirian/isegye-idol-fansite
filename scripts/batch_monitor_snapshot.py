@@ -277,6 +277,8 @@ def inspect(kind, at, head, getter):
         success = next((r for r in runs if r.get('status') == 'completed' and r.get('conclusion') == 'success'), None)
         if kind == 'production':
             success = next((r for r in runs if r.get('status') == 'completed' and r.get('head_sha') == head), None)
+        elif kind == 'music':
+            success = next((r for r in runs if r.get('status') == 'completed'), None)
         if not success:
             row['note'] = '검증 가능한 성공 실행이 없습니다.'
             row['dataState'] = 'attention' if runs else 'unknown'
@@ -320,8 +322,14 @@ def inspect(kind, at, head, getter):
             if kind == 'schedule' and pub.get('verifiedReadback') is not True:
                 good = False
             row['dataState'] = 'healthy' if good else 'attention'
-            row['evidence'] = {k: pub[k] for k in ('status','generatedAt','publishedAt','readbackAt','verifiedReadback','evidenceVersion') if k in pub}
+            row['evidence'] = {k: pub[k] for k in ('status','sourceAt','generatedAt','publishedAt','readbackAt','verifiedReadback','evidenceVersion') if k in pub}
             row['lastVerifiedAt'] = safe_time(pub.get('readbackAt')) if pub.get('verifiedReadback') is True else None
+            if kind == 'music':
+                proof = policy.music_evidence(files, due, at)
+                row['officialPublicationVerified'] = proof['officialPublicationVerified']
+                row['backupAvailability'] = proof['backupAvailability']
+                row['recoverySatisfied'] = proof['recoverySatisfied']
+                row['dataState'] = proof['state']
             sources = pub.get('collectionHealth', {}).get('sources', {}) if kind == 'schedule' else pub.get('sourceStates', {})
             for key, value in sources.items():
                 row['sources'].append({'name': str(key)[:80], 'state': str(value.get('state', 'unknown') if isinstance(value, dict) else value)[:40],
@@ -353,6 +361,14 @@ def inspect(kind, at, head, getter):
                 row['note'] = '과거 관측 공백은 현재 회차 장애와 별도로 표시합니다. 미관측 순위는 생성하지 않습니다.'
             elif not good:
                 row['note'] = '현재 예정 회차의 수집·게시·서버 재조회 증거가 모두 충족되지 않았습니다.'
+            if kind == 'music':
+                backup = row['backupAvailability']
+                row['note'] = ('공식 채널의 현재 회차 수집·게시·재조회를 검증했습니다. '
+                               if row['officialPublicationVerified'] else '공식 채널의 현재 회차 수집·게시 증거가 불완전합니다. ')
+                row['note'] += (f"승인 링크 {backup['available']}/{backup['selected']}개 확인, 백업 {backup['unavailable']}개 가용성 미확인·부분 상태를 별도로 보존합니다."
+                                if backup['verified'] and backup['state'] == 'partial'
+                                else f"선택된 승인 링크 {backup['selected']}개의 감사를 모두 확인했습니다."
+                                if backup['verified'] else '승인 링크 감사가 완전하게 검증되지 않았습니다.')
             if at-due < timedelta(minutes=5) and not good:
                 row['dataState'] = 'running'
                 row['note'] = '예정 시각 직후 5분 유예 중입니다. 아직 누락으로 판정하지 않습니다.'

@@ -33,7 +33,7 @@ jobs:
       - name: Audit the existing approved links (do not delete on transient outages)
         id: audit
         continue-on-error: true
-        run: /tmp/music-tools/bin/python scripts/check_music_video_sources.py
+        run: /tmp/music-tools/bin/python scripts/check_music_video_sources.py --allow-reviewed-backup-unavailable
       - name: Publish only validated cumulative music data and verify by readback
         run: /tmp/music-tools/bin/python scripts/publish_daily_music.py
         env:
@@ -44,17 +44,7 @@ jobs:
         if: always()
         env:
           AUDIT_OUTCOME: ${{ steps.audit.outcome }}
-        run: |
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          def load(n):return json.loads(Path(n).read_text()) if Path(n).exists() else {}
-          p=load('music-publication.json');d=load('music-discovery.json');a=load('test-results/music-sources/source-audit.json');s=d.get('sources',{});bad=[k for k,v in s.items() if v['state']!='ok'];pending=sum(len(x['review']) for x in s.values())
-          summary=f"Music: {p.get('status','not published')}; new {p.get('added','—')}, total auto {p.get('totalAuto','—')}; fully checked channels {len(s)-len(bad)}/{len(s)}, needs review {pending}; reviewed links {a.get('passed','—')}/{a.get('selected','—')}."
-          print(summary);open(os.environ['GITHUB_STEP_SUMMARY'],'a').write(summary+'\n')
-          if bad:print('::warning::Incomplete source coverage: '+','.join(bad))
-          if os.environ['AUDIT_OUTCOME']=='failure':raise SystemExit('Reviewed link audit incomplete. No reviewed link was removed.')
-          PY
+        run: /tmp/music-tools/bin/python scripts/batch_music_evidence.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -62,5 +52,7 @@ jobs:
           path: |
             music-discovery.json
             music-publication.json
+            music-batch-result.json
             test-results/music-sources/source-audit.json
+            test-results/music-sources/source-availability.json
           retention-days: 30

@@ -20,6 +20,7 @@ import zipfile
 from batch_publication_evidence import (EvidenceUnavailable, read_json_artifact,
                                         read_capture_evidence, production_evidence_ok,
                                         read_production_evidence)
+from batch_music_evidence import ArtifactFiles, AUDIT, AVAILABILITY, music_evidence
 
 REPO = 'seirian/isegye-idol-fansite'
 ROOT = Path(__file__).resolve().parents[1]
@@ -216,10 +217,7 @@ def evidence_ok(kind, files, due, at):
     if kind == 'playground':
         return (pub.get('bankVerified') is True and pub.get('questionCount',0)>=32 and recent(pub.get('readbackAt'),due,at))
     if kind == 'music':
-        states = pub.get('sourceStates', {})
-        audit = files.get('test-results/music-sources/source-audit.json', {})
-        return (len(states) == 9 and all(v == 'ok' for v in states.values())
-                and audit.get('selected', 0) > 0 and audit.get('passed') == audit.get('selected'))
+        return music_evidence(files, due, at)['recoverySatisfied']
     return (pub.get('cadence') == 'weekly'
             and pub.get('through') == (due.astimezone(KST)-timedelta(days=1)).date().isoformat()
             and not pub.get('coverage', {}).get('partial', True))
@@ -323,8 +321,8 @@ def artifact_files(run, prefix, filename, getter=api):
         raise ValueError('Evidence checksum mismatch')
     allowed = {'albums/snapshot.json','albums-restore.json','albums-publication.json',
                'schedule-publication.json','schedule-health.json','music-publication.json',
-               'test-results/music-sources/source-audit.json','history-publication.json','playground-publication.json'}
-    files = {}
+               AUDIT,AVAILABILITY,'history-publication.json','playground-publication.json'}
+    files = ArtifactFiles(run)
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         if sum(info.file_size for info in z.infolist() if info.filename in allowed) > MAX_ARCHIVE:
             raise ValueError('Oversized expanded evidence')
@@ -333,10 +331,13 @@ def artifact_files(run, prefix, filename, getter=api):
                 if (info.filename in files or info.file_size > MAX_ARCHIVE
                         or stat.S_ISLNK(info.external_attr >> 16)):
                     raise ValueError('Duplicate or oversized evidence')
-                value = json.loads(z.read(info))
+                member = z.read(info)
+                value = json.loads(member)
                 if not isinstance(value, dict):
                     raise ValueError('Evidence must be a JSON object')
                 files[info.filename] = value
+                if info.filename == AUDIT:
+                    files.audit_bytes = member
     return files
 
 def started(run):
@@ -661,7 +662,7 @@ def inspect_batch(kind, at, getter=None):
         # ancillary monitor failure/cancellation after deployment was verified.
         success = next((r for r in runs if r.get('status') == 'completed'
                         and r.get('head_sha') == head), None)
-    elif kind == 'capture':
+    elif kind in ('capture', 'music'):
         # Failed/partial captures are observed failures, not absent evidence.
         success = next((r for r in runs if r.get('status') == 'completed'), None)
     if success:
@@ -708,7 +709,13 @@ def inspect_batch(kind, at, getter=None):
                              'music':'music-publication.json',
                              'history':'history-publication.json','playground':'playground-publication.json'}[kind], {})
             row['publicationEvidence'] = {key:pub[key] for key in
-                ('status','generatedAt','publishedAt','verifiedReadback','readbackAt','evidenceVersion') if key in pub}
+                ('status','sourceAt','generatedAt','publishedAt','verifiedReadback','readbackAt','evidenceVersion') if key in pub}
+            if kind == 'music':
+                proof = music_evidence(files, due, at)
+                row['officialPublicationVerified'] = proof['officialPublicationVerified']
+                row['backupAvailability'] = proof['backupAvailability']
+                row['recoverySatisfied'] = proof['recoverySatisfied']
+                row['healthScope'] = 'official_collection_and_publication_with_separate_backup_availability'
             if kind == 'schedule':
                 row['readbackEvidence'] = ('explicit' if pub.get('verifiedReadback') is True
                                            else 'legacy_report' if 'verifiedReadback' not in pub
