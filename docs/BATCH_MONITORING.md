@@ -36,10 +36,41 @@ UI를 게시할 때 기존 production 공통 대기열과 `.deploy-lock`, SFTP �
 
 ## 실행과 반영 구분
 
-수집 6개, 운영 배포와 복구 점검을 포함한 8개 항목이다. 실행 상태, 소요·대기,
+수집 6개, 독립 멜론 관측, 운영 배포와 복구 점검을 포함한 9개 항목이다. 실행 상태, 소요·대기,
 다음 회차, 출처별 결과, 검증 시각, 원본 실행 링크, 복구 제어기 판단을 구분한다.
 성공 배지만으로 정상 처리하지 않으며 현재 KST 회차 및 게시·재조회 근거를 대조한다.
 과거 차트 공백과 현재 회차 장애, 새벽 중지는 각각 별도로 표시한다.
+
+독립 관측은 읽기 전용 9번째 행이다. 기존 8개 수동 실행 허용 목록은 늘리지 않는다.
+두 원본 차트와 정확한 sourceAt/run/attempt를 확인하며 기존 배치의 게시와 별도
+결과를 표시한다. 9/9 점검과 9개 모두 정상이라는 뜻도 구분한다.
+
+`slotLedger`는 도래한 필수 회차를 먼저 만들고 확인한 결과를 연결한다. 실행이 없거나
+증거를 읽지 못한 회차도 `unverified`로 남기며 임의 성공/실패로 채우지 않는다.
+첫 실패·취소·부분 결과, 이후 검증, 복구 확인 시각과 원래 readback 시각을 별도로
+보존한다. 점검 장애가 이전 검증을 지우지 않는다. 원장 적용 전의 과거 회차 성과를
+소급 생성하지 않으며 범위를 `observed_snapshots_only`로 표시한다. 기존 비공개
+스냅샷 안에서 최대 90일/5,000회차/회차당 최근 4개 상태 변경을 보관한다.
+보관 시에는 `schemaVersion: 2`, `encoding: gzip+base64`로 원장 전체를 압축한다.
+`sha256`은 해제된 JSON의 해시이며 `uncompressedBytes`, `entryCount`,
+`coverageStartAt`, `coverageEndAt`, `checkedAt`, `retentionDays`를 함께 검증한다.
+해제는 최대 12MB/5,000회차, base64 본문은 최대 3MB로 제한한다. 손상·크기 초과·
+해시/범위 불일치는 실패 처리하며 보관 중인 실패나 회차를 지워 맞추지 않는다.
+기존 schema 1 원장도 읽는다. 전체 게시 JSON의 4MB 제한은 유지하고 화면은
+압축 원장 대신 각 배치의 `slotSummary`를 읽는다. 91일째에는 보존 범위의 시작만
+하루 이동하며 오늘만 남기도록 초기화하지 않는다.
+
+승인된 비공개 스냅샷의 원장을 로컬에서 읽는 helper는 다음과 같다. 압축 방식은
+보존 내용과 접근 권한을 바꾸지 않는다.
+
+```python
+import json, sys
+from pathlib import Path
+sys.path.insert(0, 'scripts')
+from batch_slot_ledger import unpack_slot_ledger
+snapshot = json.loads(Path('monitoring-dist/data.json').read_text())
+ledger = unpack_slot_ledger(snapshot['slotLedger'])
+```
 
 운영 배포는 새 소형 `isegye-production-evidence-{run}-{attempt}` 산출물의
 `auth-deployment.json`을 사용한다. 기존 대형 스크린샷·소스 묶음을 반복 내려받지

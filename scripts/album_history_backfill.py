@@ -191,6 +191,8 @@ def patch_remote(remote):
         validate(data,exact=True);candidate=(json.dumps(data,ensure_ascii=False,separators=(',',':'))+'\n').encode()
         d.require(len(candidate)<=runtime.MAX_BYTES,'Historical feed exceeds transport budget')
         (ROOT/'album-history-before.json').write_bytes(raw);(ROOT/'album-history-after.json').write_bytes(candidate)
+        from production_lock import assert_no_recovery
+        assert_no_recovery(remote)
         d.require(remote.read(d.ROOT+'/.htaccess')==router and remote.info(d.ROOT+'/.deploy-lock') is None,'Release changed during repair')
         d.require(remote.read(runtime.path('current.json'))==raw,'Live feed changed; refusing overwrite')
         if report['changed']:

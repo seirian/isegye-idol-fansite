@@ -12,6 +12,7 @@ COMPLETIONS = {
     'History - weekly verified activity refresh':'history-monthly.yml',
     'Production - isolated inour SFTP deployment':'production.yml',
     'Batches - verified outcome recovery watchdog':'batch-watchdog.yml',
+    'Melon charts - independent lightweight evidence capture':'melon-chart-capture.yml',
 }
 
 

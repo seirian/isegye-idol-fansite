@@ -10,7 +10,7 @@ import batch_monitor_snapshot as m
 
 def fixture_snapshot(at=None):
     at=at or datetime.now(timezone.utc)
-    states=['healthy','running','attention','unknown','healthy','paused','healthy','healthy']
+    states=['healthy','running','attention','unknown','healthy','paused','healthy','healthy','healthy']
     rows=[]
     for i,(key,(name,schedule)) in enumerate(m.META.items()):
         due=m.policy.due_slot(key,at) if key not in ('production','watchdog') else None

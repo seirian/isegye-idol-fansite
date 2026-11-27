@@ -8,6 +8,7 @@ on:
   workflow_run:
     workflows:
       - Albums - hourly verified metadata and chart refresh
+      - Melon charts - independent lightweight evidence capture
       - Schedule - every 2 hours permitted-source refresh
       - Production - isolated inour SFTP deployment
     types: [completed]

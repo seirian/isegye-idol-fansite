@@ -56,6 +56,8 @@ def patch_remote(remote):
         validate(data, exact=True)
         candidate = (json.dumps(data, ensure_ascii=False, separators=(',', ':'))+'\n').encode()
         (ROOT/'guyso-peak-dates-before.json').write_bytes(raw)
+        from production_lock import assert_no_recovery
+        assert_no_recovery(remote)
         d.require(remote.read(d.ROOT+'/.htaccess') == router and remote.info(d.ROOT+'/.deploy-lock') is None,
                   'Release changed before peak-date migration')
         d.require(remote.read(runtime.path('current.json')) == raw, 'Feed changed; refuse stale write')

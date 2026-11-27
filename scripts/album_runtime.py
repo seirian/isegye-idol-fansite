@@ -29,6 +29,8 @@ def path(name):
 def active(remote):
     remote.directory('/web'); remote.directory(d.ROOT)
     d.require(remote.read(d.ROOT+'/.isegye-owner') == d.OWNER, 'Wrong site owner')
+    from production_lock import assert_no_recovery
+    assert_no_recovery(remote)
     d.require(remote.info(d.ROOT+'/.deploy-lock') is None, 'Production deployment in progress')
     router = remote.read(d.ROOT+'/.htaccess'); rid, gated = routing.release_of(router)
     d.require(gated, 'Existing access gate required')
@@ -126,6 +128,8 @@ def publish(remote, data, transaction=None, progress=None):
             remote.s.chmod(name, 0o600)
             d.require(remote.read(name) == content, 'Album asset read-back failed')
         d.require(remote.read(d.ROOT+'/.htaccess') == router, 'Active release changed before publication')
+        from production_lock import assert_no_recovery
+        assert_no_recovery(remote)
         d.require(remote.info(d.ROOT+'/.deploy-lock') is None, 'Production deployment started')
         progress['stage'] = 'atomic_publish'
         if old is not None and old != raw:

@@ -8,12 +8,13 @@ from pathlib import Path
 from datetime import datetime, timezone
 import argparse, base64, hashlib, json, os, re, socket, stat, sys
 import inour_sftp as d
+import production_lock as locks
 import auth_routing as a
 from albums_composer import preserved_root_metadata, runtime_id
 from deploy_google_access import upload_tree
 from deploy_verified_albums import VerifiedTransferRemote
 from build_batch_monitor_host import patched, readonly_patched, previous_patched, baseline
-from batch_monitor_snapshot import merge_observations
+from batch_monitor_snapshot import META, merge_observations
 
 ROOT = Path(__file__).resolve().parents[1]
 FOLDER = d.ROOT+'/.batch-monitoring'
@@ -26,7 +27,10 @@ def encoded(value):
 
 
 def release_payload(doc):
-    if doc.get('schemaVersion') != 1 or doc.get('readOnly') is not True or len(doc.get('batches', [])) != 8:
+    batches = doc.get('batches', [])
+    if (doc.get('schemaVersion') != 1 or doc.get('readOnly') is not True or
+            not isinstance(batches, list) or len(batches) != len(META) or
+            {row.get('key') for row in batches if isinstance(row, dict)} != set(META)):
         raise ValueError('Invalid monitoring snapshot')
     files = {name:(ROOT/'monitoring'/name).read_bytes() for name in NAMES if name != 'data.json'}
     files['data.json'] = encoded(doc)
@@ -69,7 +73,7 @@ def publish(remote, doc, commit, report):
     d.require(remote.read(d.ROOT+'/.isegye-owner') == d.OWNER, 'Wrong isolated owner')
     for lock in ('/web/.yeop-migration-lock', d.ROOT+'/.auth-stage-lock'):
         d.require(remote.info(lock) is None, 'Other maintenance in progress')
-    lock = d.ROOT+'/.deploy-lock'; remote.mkdir(lock)
+    lock = locks.acquire(remote, purpose='deploy_batch_monitor', report=report, commit=commit)
     entry_path = d.ROOT+'/access.php'
     old_entry = new_entry = old_pointer = pointer = None
     entry_changed = pointer_changed = False
@@ -192,7 +196,7 @@ def publish(remote, doc, commit, report):
             report['manualRecoveryRequired'] = True
         raise
     finally:
-        remote.parents(lock); remote.s.rmdir(lock)
+        locks.release(remote, lock)
 
 
 def main():
@@ -227,6 +231,7 @@ def main():
         else:
             publish(VerifiedTransferRemote(client),doc,commit,report)
     except Exception as exc:
+        report['status'] = 'failed'
         report['errorType']=type(exc).__name__
         if isinstance(exc,d.Stop):report['reason']=str(exc)
     finally:

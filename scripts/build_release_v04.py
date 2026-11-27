@@ -12,10 +12,20 @@ def validate(meta, approval):
     expected=[(meta.get('verifiedPortraitCount'),6),(meta.get('profileSource'),'Genie Music'),
               (meta.get('groupHero',{}).get('sha256'),approval['groupImageSha256']),
               (meta.get('live',{}).get('members'),6),(meta.get('catalog',{}).get('songs'),154),
-              (meta.get('catalog',{}).get('channels'),21),(meta.get('musicVideoAudit',{}).get('linked'),151),
+              (meta.get('catalog',{}).get('channels'),21),
               (meta.get('visualHistory',{}).get('historyItems'),55),
               (meta.get('visualHistory',{}).get('navigationCount'),7)]
     if any(a!=b for a,b in expected):raise RuntimeError('Approved review content is incomplete')
+    music = meta.get('musicVideoAudit', {})
+    if music.get('availability') is not None or os.getenv('MUSIC_SOURCE_AUDIT_REQUIRED') == 'true':
+        from music_video_sources import selections
+        from music_source_availability import load_candidate, public_evidence
+        candidate = load_candidate(*selections())
+        if (candidate is None or music.get('availability') != public_evidence(candidate)
+                or music.get('selected') != 151 or music.get('linked') != candidate['available']):
+            raise RuntimeError('Music availability is not bound to the verified source audit')
+    elif music.get('linked') != 151:
+        raise RuntimeError('Approved reviewed music selection is incomplete')
     if meta.get('live',{}).get('failureMeansOffline') is not False:raise RuntimeError('LIVE error safety contract changed')
 
 def production_text(text):

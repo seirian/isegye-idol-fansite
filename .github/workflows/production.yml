@@ -6,18 +6,22 @@ on:
 permissions:
   contents: read
   actions: read
+# Preparation no longer occupies the shared server-writing queue.
 concurrency:
-  group: isegye-inour-production
+  group: isegye-production-release
   cancel-in-progress: false
   queue: max
 jobs:
-  deploy:
+  prepare:
+    name: Prepare verified production candidate
     if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://isegye-idol.kr/
+    environment: production
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 35
+    outputs:
+      candidate-id: ${{ steps.upload.outputs.artifact-id }}
+      candidate-sha256: ${{ steps.candidate.outputs.sha256 }}
+      candidate-attempt: ${{ steps.candidate.outputs.attempt }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -42,7 +46,7 @@ jobs:
           php tests/auth/jwt_test.php
       - name: Validate source, isolation and rollback
         run: |
-          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0
+          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0 PyYAML==6.0.3
           npm test
           GITHUB_REF=refs/heads/feature/playground DEPLOY_ENV=preview python scripts/build_playground.py
           GITHUB_REF=refs/heads/feature/fanmade DEPLOY_ENV=preview python scripts/build_fanmade.py
@@ -60,7 +64,9 @@ jobs:
       - name: Refresh public data and verify reviewed music sources
         run: |
           /tmp/archive-browser-tests/bin/python scripts/refresh_catalog_videos.py
-          /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py
+          /tmp/archive-browser-tests/bin/python scripts/check_music_video_sources.py --allow-reviewed-backup-unavailable
+          echo "MUSIC_SOURCE_AUDIT_REQUIRED=true" >> "$GITHUB_ENV"
+          echo "MUSIC_SOURCE_AUDIT_PATH=test-results/music-sources/source-audit.json" >> "$GITHUB_ENV"
           /tmp/archive-browser-tests/bin/python scripts/schedule_feed.py --previous schedule/snapshot.json
       - name: Restore the exact approved public album snapshot
         run: /tmp/archive-browser-tests/bin/python scripts/prepare_album_release.py
@@ -110,6 +116,94 @@ jobs:
           /tmp/archive-browser-tests/bin/python tests/batch_monitor_host_browser.py
       - name: Record exact catalog evidence from the built application
         run: /tmp/archive-browser-tests/bin/python scripts/batch_monitor_catalog.py
+      - name: Verify unavailable-link presentation in the exact final bundle
+        run: /tmp/archive-browser-tests/bin/python scripts/verify_music_source_availability.py --bundle dist
+      - name: Pack only the verified candidate with run and source provenance
+        id: candidate
+        run: python scripts/production_candidate.py pack
+      - name: Preserve immutable candidate for publication jobs
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: production-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: production-candidate.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record classified preparation failure without hiding collection results
+        if: always()
+        run: python scripts/batch_failure_evidence.py --workflow production.yml --stage prepare
+      - name: Preserve bounded preparation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-prepare-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            batch-failure.json
+            test-results/music-sources/source-audit.json
+            test-results/music-sources/source-availability.json
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: warn
+  deploy:
+    name: Publish verified production candidate
+    needs: prepare
+    outputs:
+      evidence-id: ${{ steps.evidence.outputs.artifact-id }}
+      evidence-digest: ${{ steps.evidence.outputs.artifact-digest }}
+      evidence-attempt: ${{ steps.evidence-origin.outputs.attempt }}
+      evidence-prepare-attempt: ${{ steps.evidence-origin.outputs.prepare-attempt }}
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+      url: https://isegye-idol.kr/
+    timeout-minutes: 40
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    env:
+      MUSIC_SOURCE_AUDIT_REQUIRED: 'true'
+      MUSIC_SOURCE_AUDIT_PATH: test-results/music-sources/source-audit.json
+      MUSIC_SOURCE_AUDIT_ORIGIN_ATTEMPT: ${{ needs.prepare.outputs.candidate-attempt }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Recheck exact main and existing pause before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.candidate-id }}
+          path: candidate-download
+          merge-multiple: true
+      - name: Validate archive digest and every candidate byte before use
+        env:
+          CANDIDATE_SHA256: ${{ needs.prepare.outputs.candidate-sha256 }}
+          CANDIDATE_ATTEMPT: ${{ needs.prepare.outputs.candidate-attempt }}
+        run: python scripts/production_candidate.py unpack --archive candidate-download/production-candidate.tar.gz --sha256 "$CANDIDATE_SHA256" --source-attempt "$CANDIDATE_ATTEMPT"
+      - name: Install isolated publication and live verification tools
+        timeout-minutes: 12
+        run: |
+          python -m venv /tmp/archive-browser-tests
+          /tmp/archive-browser-tests/bin/pip install playwright==1.56.0 paramiko==5.0.0 pillow==11.3.0 tinycss2==1.4.0 beautifulsoup4==4.14.3 cryptography
+          bash scripts/ci_browser_install.sh /tmp/archive-browser-tests/bin/python
+      - name: Revalidate selected video availability in the downloaded bundle
+        run: /tmp/archive-browser-tests/bin/python scripts/verify_music_source_availability.py --bundle dist
+      - name: Recheck main immediately before acquiring the server lock
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
       - name: Activate Google access without pre-registering the administrator
         run: /tmp/archive-browser-tests/bin/python -u scripts/deploy_verified_albums.py
         env:
@@ -117,8 +211,94 @@ jobs:
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
           ISEGYE_GOOGLE_CLIENT_ID: ${{ vars.ISEGYE_GOOGLE_CLIENT_ID || secrets.ISEGYE_GOOGLE_CLIENT_ID }}
+      - name: Record classified publication failure
+        if: always()
+        run: python scripts/batch_failure_evidence.py --workflow production.yml --stage deploy
+      - name: Record the actual publication evidence producer
+        if: always()
+        id: evidence-origin
+        env:
+          CANDIDATE_ATTEMPT: ${{ needs.prepare.outputs.candidate-attempt }}
+        run: |
+          echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          echo "prepare-attempt=$CANDIDATE_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Preserve independently verified production evidence
+        id: evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            auth-deployment.json
+            catalog-publication.json
+            production-candidate-verified.json
+            batch-failure.json
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Preserve sanitized live verification report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isegye-production-live-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/google-access-live/result.json
+          retention-days: 30
+          if-no-files-found: warn
+  install-monitor:
+    name: Install protected monitor
+    needs: [prepare, deploy]
+    if: github.repository == 'seirian/isegye-idol-fansite' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 20
+    concurrency:
+      group: isegye-inour-production
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Preserve the original deployment lineage on monitor-only reruns
+        env:
+          SOURCE_ARTIFACT_ID: ${{ needs.deploy.outputs.evidence-id }}
+          SOURCE_ARTIFACT_DIGEST: ${{ needs.deploy.outputs.evidence-digest }}
+          SOURCE_ATTEMPT: ${{ needs.deploy.outputs.evidence-attempt }}
+          SOURCE_PREPARE_ATTEMPT: ${{ needs.deploy.outputs.evidence-prepare-attempt }}
+          CURRENT_PREPARE_ATTEMPT: ${{ needs.prepare.outputs.candidate-attempt }}
+        run: >-
+          python scripts/batch_publication_reference.py
+          --source-artifact-id "$SOURCE_ARTIFACT_ID"
+          --source-artifact-digest "sha256:$SOURCE_ARTIFACT_DIGEST"
+          --source-attempt "$SOURCE_ATTEMPT"
+          --source-prepare-attempt "$SOURCE_PREPARE_ATTEMPT"
+          --current-prepare-attempt "$CURRENT_PREPARE_ATTEMPT"
+          --output production-publication-reference.json
+      - name: Recheck exact main and monitor policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
+          ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
+        run: |
+          test "$PRODUCTION_PAUSED" != true
+          test "$ISEGYE_MONITOR_PAUSED" != true
+          test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.candidate-id }}
+          path: candidate-download
+          merge-multiple: true
+      - name: Verify the same prepared authentication runtime
+        env:
+          CANDIDATE_SHA256: ${{ needs.prepare.outputs.candidate-sha256 }}
+          CANDIDATE_ATTEMPT: ${{ needs.prepare.outputs.candidate-attempt }}
+        run: python scripts/production_candidate.py unpack --archive candidate-download/production-candidate.tar.gz --sha256 "$CANDIDATE_SHA256" --source-attempt "$CANDIDATE_ATTEMPT"
+      - name: Install isolated monitor transport
+        run: |
+          python -m venv /tmp/batch-monitor-tools
+          /tmp/batch-monitor-tools/bin/pip install pillow==11.3.0 paramiko==5.0.0
       - name: Collect initial production monitoring snapshot without batch actions
-        run: /tmp/archive-browser-tests/bin/python scripts/batch_monitor_snapshot.py
+        id: inspection
+        continue-on-error: true
+        run: /tmp/batch-monitor-tools/bin/python scripts/batch_monitor_snapshot.py
         env:
           GH_TOKEN: ${{ github.token }}
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
@@ -128,37 +308,27 @@ jobs:
           ISEGYE_HISTORY_PAUSED: ${{ vars.ISEGYE_HISTORY_PAUSED }}
           ISEGYE_PLAYGROUND_PAUSED: ${{ vars.ISEGYE_PLAYGROUND_PAUSED }}
           ISEGYE_VIDEO_CATALOG_PAUSED: ${{ vars.ISEGYE_VIDEO_CATALOG_PAUSED }}
-      - name: Install verified private monitor without changing operating UI or feeds
-        run: /tmp/archive-browser-tests/bin/python scripts/deploy_batch_monitor.py
+      - name: Recheck main immediately before monitor installation
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: test "$(gh api --method GET repos/seirian/isegye-idol-fansite/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+      - name: Install verified private monitor with its own time budget
+        run: /tmp/batch-monitor-tools/bin/python scripts/deploy_batch_monitor.py
         env:
           MONITOR_PRODUCTION_ENABLED: 'true'
           PRODUCTION_PAUSED: ${{ vars.PRODUCTION_PAUSED }}
           ISEGYE_MONITOR_PAUSED: ${{ vars.ISEGYE_MONITOR_PAUSED }}
           ISEGYE_SFTP_PASSWORD: ${{ secrets.ISEGYE_SFTP_PASSWORD }}
-      - name: Preserve small verified production evidence for read-only monitoring
+      - name: Keep inspection failure visible after publishing diagnostics
+        if: always() && steps.inspection.outcome != 'success'
+        run: exit 1
+      - name: Preserve independent monitor installation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: isegye-production-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: isegye-production-monitor-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            auth-deployment.json
-            catalog-publication.json
             batch-monitor-deployment.json
+            batch-monitor-inspection.json
+            production-publication-reference.json
           retention-days: 90
           if-no-files-found: warn
-      - name: Archive deployed source
-        if: always()
-        run: git archive HEAD -o release-source.tar
-      - name: Save credential-free release report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: isegye-production-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            auth-deployment.json
-            release-source.tar
-            dist/build-info.json
-            schedule/snapshot.json
-            test-results/
-          if-no-files-found: warn
-          retention-days: 30

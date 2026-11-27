@@ -211,7 +211,7 @@ class CompletionTrust(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.file=Path(self.tmp.name)/'event.json'
-        name=next(iter(w.COMPLETION_WORKFLOWS))
+        name='Albums - hourly verified metadata and chart refresh'
         self.source={'id':42,'name':name,'head_branch':'main','head_repository':{'full_name':w.REPO}}
         self.metadata=run(42,kind='albums',name=name,status='completed',event='workflow_dispatch')
         self.event={'action':'completed','workflow_run':self.source}

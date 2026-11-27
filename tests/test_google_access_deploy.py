@@ -22,7 +22,7 @@ class Remote:
         return SimpleNamespace(st_mode=(stat.S_IFDIR if p in self.dirs else stat.S_IFREG)|self.mode.get(p,0o600))
     def directory(self,p):d.require(p in self.dirs,'Missing directory')
     def read(self,p):return self.files.get(p)
-    def mkdir(self,p):d.write_path(p);d.require(self.info(p) is None,'Existing lock or folder');self.dirs.add(p);self.mode[p]=0o755
+    def mkdir(self,p,mode=0o755):d.write_path(p);d.require(self.info(p) is None,'Existing lock or folder');self.dirs.add(p);self.mode[p]=0o755
     def chmod(self,p,mode):self.mode[p]=mode
     def new(self,p,b):d.write_path(p);d.require(p not in self.files,'Existing file');self.files[p]=b;self.mode[p]=0o644;self.writes.append(p)
     def replace(self,p,b,expected):d.write_path(p);d.require(self.files.get(p)==expected,'Concurrent change');self.files[p]=b;self.writes.append(p)
@@ -30,12 +30,24 @@ class Remote:
     def prove_mapping(self):pass
     def parents(self,p):d.write_path(p)
     def rmdir(self,p):self.dirs.remove(p)
+    def rename(self, old, new):
+        if self.info(new) is not None: raise RuntimeError('Rename replacement refused')
+        if old not in self.dirs: raise FileNotFoundError(old)
+        self.dirs.remove(old); self.dirs.add(new)
+        for path in list(self.files):
+            if path.startswith(old+'/'):
+                self.files[new+path[len(old):]] = self.files.pop(path)
+    def remove_own(self, path, expected):
+        if self.read(path) != expected: raise RuntimeError('Foreign file')
+        del self.files[path]
+
 class AccessDeployTests(unittest.TestCase):
     def run_deploy(self,r,fail=False):
         report={};payload={'index.html':b'<head></head>APP','src/app.js':b'APP_DATA'}
         def http(url):return (200,b'EXISTING') if url in m.EXISTING else (404,b'NOT_FOUND')
         browser={'googleButtonRendered':True,'googleAccountChooserReached':True}
-        with patch.dict(os.environ,GITHUB_RUN_ID='test',GITHUB_RUN_ATTEMPT='1'),patch.object(a,'bundle',return_value=('g000000000002',{'access.php.template':TEMPLATE})),patch.object(d,'http',side_effect=http),patch.object(m,'verify_public'),patch.object(m,'verify_browser',side_effect=RuntimeError('Synthetic failure') if fail else None,return_value=browser),patch.object(m,'status',return_value={'maintenance':False}):
+        # In-memory deployment uses a local identity even when CI runs on a pull ref.
+        with patch.dict(os.environ,GITHUB_ACTIONS='false',GITHUB_RUN_ID='123456',GITHUB_RUN_ATTEMPT='1'),patch.object(a,'bundle',return_value=('g000000000002',{'access.php.template':TEMPLATE})),patch.object(d,'http',side_effect=http),patch.object(m,'verify_public'),patch.object(m,'verify_browser',side_effect=RuntimeError('Synthetic failure') if fail else None,return_value=browser),patch.object(m,'status',return_value={'maintenance':False}):
             if fail:
                 with self.assertRaises(RuntimeError):m.deploy(r,payload,'a'*40,CLIENT,report)
             else:m.deploy(r,payload,'a'*40,CLIENT,report)

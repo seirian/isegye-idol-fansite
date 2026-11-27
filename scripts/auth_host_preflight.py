@@ -30,6 +30,8 @@ def main():
         d.require(r.read(d.ROOT+'/.isegye-owner')==d.OWNER,'Ownership mismatch')
         before=r.snapshot();router=r.read(d.ROOT+'/.htaccess')
         d.require(d.managed_router(router),'Unknown router; stopped')
+        from production_lock import assert_no_recovery
+        assert_no_recovery(r)
         d.require(r.info(d.ROOT+'/.deploy-lock') is None,'Deployment in progress')
         folder=d.ROOT+'/_isegye_releases/r'+os.urandom(6).hex()
         r.mkdir(folder)

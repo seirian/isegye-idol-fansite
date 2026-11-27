@@ -24,7 +24,7 @@ jobs:
           node-version: '22'
       - name: Validate content, release and rollback boundaries
         run: |
-          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0
+          python -m pip install tinycss2==1.4.0 beautifulsoup4==4.14.3 pillow==11.3.0 PyYAML==6.0.3
           npm test
           GITHUB_REF=refs/heads/feature/playground DEPLOY_ENV=preview python scripts/build_playground.py
           GITHUB_REF=refs/heads/feature/fanmade DEPLOY_ENV=preview python scripts/build_fanmade.py
@@ -46,7 +46,9 @@ jobs:
       - name: Refresh public channel snapshots and verify selected music links
         run: |
           /tmp/release-tools/bin/python scripts/refresh_catalog_videos.py
-          /tmp/release-tools/bin/python scripts/check_music_video_sources.py
+          /tmp/release-tools/bin/python scripts/check_music_video_sources.py --allow-reviewed-backup-unavailable
+          echo "MUSIC_SOURCE_AUDIT_REQUIRED=true" >> "$GITHUB_ENV"
+          echo "MUSIC_SOURCE_AUDIT_PATH=test-results/music-sources/source-audit.json" >> "$GITHUB_ENV"
           /tmp/release-tools/bin/python scripts/schedule_feed.py --previous schedule/snapshot.json
       - name: Build approved simple-home release
         env:
@@ -70,6 +72,8 @@ jobs:
           /tmp/release-tools/bin/python tests/external_videos_browser.py
           /tmp/release-tools/bin/python tests/music_beginning_browser.py
           /tmp/release-tools/bin/python tests/admin_visibility_browser.py
+      - name: Verify reviewed unavailable videos in the final candidate
+        run: /tmp/release-tools/bin/python scripts/verify_music_source_availability.py --bundle dist
       - name: Verify album feed uses the unchanged access gate
         run: |
           python scripts/build_albums_host.py
