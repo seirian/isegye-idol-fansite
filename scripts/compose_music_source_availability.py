@@ -1,8 +1,14 @@
 """Operating UI adapter; preserve byte-pinned historical review sources."""
 from pathlib import Path
-from review_2nd_polish import one
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def one(text, old, new):
+    # Album batch imports this adapter without presentation-build dependencies.
+    if text.count(old) != 1:
+        raise ValueError('Polish anchor changed: ' + old[:80])
+    return text.replace(old, new, 1)
 
 
 def adapt_app(code):
