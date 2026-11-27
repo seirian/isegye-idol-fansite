@@ -2,7 +2,8 @@
 
 This is a narrow publication policy, not a network-error bypass. Only the
 already-reviewed registry below may quarantine a fan backup whose metadata
-endpoint returned 404. Every other failed/unknown inspection remains blocking.
+endpoint returned 404, or whose verified uploader metadata was followed by a
+thumbnail 404. Every other failed/unknown inspection remains blocking.
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ REPOSITORY = 'seirian/isegye-idol-fansite'
 # Exact config + song/video/kind/uploader mappings reviewed before this change.
 # A new mapping requires a separate source review; 404 never approves it.
 REVIEWED_SELECTION_SHA256 = '5663e8f2d1d4a4af38d3beb0cd77ec44e7a3239c630ec78da497e6ce3a53e2aa'
-POLICY = 'reviewed-fan-backup-metadata-404-v1'
+POLICY = 'reviewed-fan-backup-availability-404-v2'
 MAX_AGE = timedelta(hours=24)
 
 
@@ -68,16 +69,23 @@ def classify(result, row, config, allow_unavailable=False):
             or result.get('channelKey') != row['channelKey']):
         raise ValueError('Source audit selection identity mismatch')
     expected = config['channels'][row['channelKey']]['url'].rstrip('/').lower()
+    author_url = result.get('authorUrl')
+    identity_verified = (result.get('metadataStatus') == 200
+                         and isinstance(author_url, str)
+                         and author_url.rstrip('/').lower() == expected)
     if (result.get('ok') is True and result.get('stage') == 'complete'
-            and result.get('metadataStatus') == 200 and not result.get('error')
-            and result.get('authorUrl', '').rstrip('/').lower() == expected
+            and identity_verified and not result.get('error')
             and type(result.get('thumbnailWidth')) is int and result['thumbnailWidth'] >= 320
             and type(result.get('thumbnailHeight')) is int and result['thumbnailHeight'] >= 180):
         return 'available'
-    if (allow_unavailable and row['kind'] == 'fan_backup' and result.get('ok') is False
-            and result.get('stage') == 'metadata' and result.get('metadataStatus') == 404
-            and result.get('reasonCode') == 'metadata_http_404'):
-        return 'unavailable'
+    if allow_unavailable and row['kind'] == 'fan_backup' and result.get('ok') is False:
+        metadata_missing = (result.get('stage') == 'metadata' and result.get('metadataStatus') == 404
+                            and result.get('reasonCode') == 'metadata_http_404')
+        verified_thumbnail_missing = (identity_verified and result.get('stage') == 'thumbnail'
+                                      and result.get('thumbnailStatus') == 404
+                                      and result.get('reasonCode') == 'thumbnail_http_404')
+        if metadata_missing or verified_thumbnail_missing:
+            return 'unavailable'
     return 'blocked'
 
 
@@ -96,6 +104,7 @@ def summarize(results, config, rows, allow_unavailable=False):
 
 def availability_candidate(report, report_bytes, config, rows):
     states, counts = summarize(report['results'], config, rows, True)
+    results = {result['songId']: result for result in report['results']}
     return {'schemaVersion': 1, 'policy': POLICY, 'checkedAt': report['checkedAt'],
             'provenance': report['provenance'], 'selectionSha256': selection_digest(config, rows),
             'sourceAuditSha256': digest(report_bytes), 'selected': len(states),
@@ -103,7 +112,9 @@ def availability_candidate(report, report_bytes, config, rows):
             'blocked': counts['blocked'], 'unresolved': sorted(sid for sid, r in rows.items() if not r['videoId']),
             'state': 'blocked' if counts['blocked'] else 'partial' if counts['unavailable'] else 'complete',
             'deploymentAllowed': counts['blocked'] == 0,
-            'unavailableSelections': [{'songId': sid, **rows[sid], 'reasonCode': 'metadata_http_404'}
+            'unavailableSelections': [{'songId': sid, **rows[sid],
+                                       'stage': results[sid]['stage'],
+                                       'reasonCode': results[sid]['reasonCode']}
                                       for sid in sorted(states) if states[sid] == 'unavailable']}
 
 

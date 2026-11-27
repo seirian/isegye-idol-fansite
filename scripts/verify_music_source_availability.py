@@ -32,7 +32,7 @@ def verify_bundle(directory):
         raise ValueError('Final bundle source-audit provenance mismatch')
     data = extract(directory/'src/data.js', 'REVIEW_DATA')
     legacy = extract(directory/'src/production-ui.js', 'CATALOG')
-    unavailable = {row['songId'] for row in candidate['unavailableSelections']}
+    unavailable = {row['songId']: row for row in candidate['unavailableSelections']}
     for name, songs in [('rendered catalogue', data['songs']), ('runtime feed baseline', legacy['music']['songs'])]:
         by_id = {song['id']: song for song in songs}
         if len(by_id) != len(songs) or not set(rows) <= set(by_id):
@@ -54,6 +54,9 @@ def verify_bundle(directory):
                         or source.get('availability') != ('unavailable' if sid in unavailable else 'available')
                         or source.get('availabilityCheckedAt') != candidate['checkedAt']):
                     raise ValueError('Availability state changed in ' + name)
+                if sid in unavailable and (source.get('availabilityStage') != unavailable[sid]['stage']
+                        or source.get('availabilityReason') != unavailable[sid]['reasonCode']):
+                    raise ValueError('Availability failure stage or reason changed in ' + name)
     app = (directory/'src/app.js').read_text()
     if 'function sourceAvailabilityAction(' not in app or 'sourceAvailabilityNotice(s)' not in app:
         raise ValueError('Final UI lacks the source availability adapter')

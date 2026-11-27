@@ -54,7 +54,7 @@ def apply_video_sources(music, config=None, rows=None):
         raise ValueError('Every catalogue song needs an explicit reviewed selection')
     from music_source_availability import load_candidate, public_evidence
     availability = load_candidate(config, rows)
-    unavailable = {r['songId'] for r in availability['unavailableSelections']} if availability else set()
+    unavailable = {r['songId']: r for r in availability['unavailableSelections']} if availability else {}
     result = deepcopy(music)
     for song in result['songs']:
         row = rows[song['id']]
@@ -74,7 +74,8 @@ def apply_video_sources(music, config=None, rows=None):
         if availability and row['videoId']:
             song['videoSource'].update(availability='unavailable' if song['id'] in unavailable else 'available',
                 availabilityCheckedAt=availability['checkedAt'], reviewedVideoId=row['videoId'],
-                availabilityReason='metadata_http_404' if song['id'] in unavailable else None)
+                availabilityStage=unavailable[song['id']]['stage'] if song['id'] in unavailable else None,
+                availabilityReason=unavailable[song['id']]['reasonCode'] if song['id'] in unavailable else None)
     result['videoAudit'] = {'checkedAt': config['checkedAt'], 'songs': len(rows),
                             'selected': sum(bool(x['videoId']) for x in rows.values()),
                             'linked': sum(bool(x.get('videoId')) for x in result['songs']),

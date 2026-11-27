@@ -47,6 +47,15 @@ class MusicSourceAvailabilityTests(unittest.TestCase):
         self.replace(sid, result)
         return result
 
+    def thumbnail_unavailable(self, sid=None):
+        sid = sid or self.backup
+        row = self.rows[sid]
+        response = json.dumps({'author_url': self.config['channels'][row['channelKey']]['url']}).encode()
+        with patch.object(audit, 'get', side_effect=[response, HTTPError('https://i.ytimg.com', 404, '', {}, None)]):
+            result = audit.inspect((sid, row), self.config)
+        self.replace(sid, result)
+        return result
+
     def candidate(self):
         report = audit.make_report(self.config, self.rows, self.results, True, self.at.isoformat())
         raw = json.dumps(report).encode()
@@ -108,14 +117,69 @@ class MusicSourceAvailabilityTests(unittest.TestCase):
         self.replace(self.backup, result)
         self.assertFalse(self.candidate()[2]['deploymentAllowed'])
 
-    def test_thumbnail_404_does_not_use_metadata_exception(self):
+    def test_verified_backup_thumbnail_404_is_quarantined_with_its_actual_reason(self):
+        result = self.thumbnail_unavailable()
+        self.assertEqual(result['reasonCode'], 'thumbnail_http_404')
+        self.assertEqual(result['metadataStatus'], 200)
+        report, raw, candidate = self.candidate()
+        self.validate(report, raw, candidate)
+        self.assertEqual((report['state'], report['unavailable'], report['blockingFailures']), ('partial', 1, 0))
+        quarantined = candidate['unavailableSelections'][0]
+        self.assertEqual((quarantined['stage'], quarantined['reasonCode']), ('thumbnail', 'thumbnail_http_404'))
+        with patch.object(policy, 'load_candidate', return_value=candidate):
+            song = next(song for song in apply_video_sources(self.base)['songs'] if song['id'] == self.backup)
+        self.assertNotIn('videoId', song)
+        self.assertNotIn('url', song)
+        self.assertEqual(song['videoSource']['availabilityReason'], 'thumbnail_http_404')
+        self.assertEqual(song['videoSource']['availabilityStage'], 'thumbnail')
+        self.assertEqual(song['videoSource']['kind'], 'fan_backup')
+
+    def test_mixed_metadata_and_thumbnail_incident_keeps_both_failure_reasons(self):
+        ids = [sid for sid, row in self.rows.items() if row['channelKey'] in {'c3', 'c6', 'c16'}]
+        for sid in ids:
+            self.unavailable(sid)
+        self.thumbnail_unavailable('cover-eEPmx_JZCkY')
+        report, raw, candidate = self.candidate()
+        self.validate(report, raw, candidate)
+        self.assertEqual((report['passed'], report['failed'], report['unavailable'], report['blockingFailures']), (72, 79, 79, 0))
+        self.assertEqual(sum(r['reasonCode'] == 'metadata_http_404' for r in candidate['unavailableSelections']), 78)
+        self.assertEqual(sum(r['reasonCode'] == 'thumbnail_http_404' for r in candidate['unavailableSelections']), 1)
+
+    def test_default_strict_mode_still_blocks_thumbnail_404(self):
+        self.thumbnail_unavailable()
+        report = audit.make_report(self.config, self.rows, self.results)
+        self.assertEqual(report['blockingFailures'], 1)
+        self.assertFalse(report['deploymentAllowed'])
+
+    def test_thumbnail_404_cannot_hide_unverified_or_changed_uploader(self):
+        result = self.thumbnail_unavailable()
+        for author, status in [('https://www.youtube.com/@wrong-uploader', 200), (None, 200),
+                               (result['authorUrl'], 404), (result['authorUrl'], None)]:
+            with self.subTest(author=author, status=status):
+                self.replace(self.backup, {**result, 'authorUrl': author, 'metadataStatus': status})
+                candidate = self.candidate()[2]
+                self.assertEqual(candidate['unavailable'], 0)
+                self.assertFalse(candidate['deploymentAllowed'])
+
+    def test_official_thumbnail_404_remains_hard_failure(self):
+        self.thumbnail_unavailable(self.official)
+        self.assertFalse(self.candidate()[2]['deploymentAllowed'])
+
+    def test_new_selection_with_thumbnail_404_requires_review(self):
+        self.rows[self.backup]['videoId'] = 'NEWVIDEO123'
+        self.thumbnail_unavailable()
+        with self.assertRaisesRegex(ValueError, 'Unreviewed'):
+            self.candidate()
+
+    def test_thumbnail_errors_other_than_404_remain_hard_failures(self):
         row = self.rows[self.backup]
         response = json.dumps({'author_url': self.config['channels'][row['channelKey']]['url']}).encode()
-        with patch.object(audit, 'get', side_effect=[response, HTTPError('https://i.ytimg.com', 404, '', {}, None)]):
-            result = audit.inspect((self.backup, row), self.config)
-        self.replace(self.backup, result)
-        self.assertEqual(result['reasonCode'], 'thumbnail_http_404')
-        self.assertFalse(self.candidate()[2]['deploymentAllowed'])
+        errors = [URLError('timed out')] + [HTTPError('url', code, '', {}, None) for code in (401, 403, 429, 500, 503)]
+        for error in errors:
+            with self.subTest(error=str(error)), patch.object(audit, 'get', side_effect=[response, error]):
+                self.replace(self.backup, audit.inspect((self.backup, row), self.config))
+                self.assertEqual(self.candidate()[2]['unavailable'], 0)
+                self.assertFalse(self.candidate()[2]['deploymentAllowed'])
 
     def test_timeout_forbidden_and_server_error_stay_unknown_or_blocked(self):
         for error in (URLError('timed out'), HTTPError('url', 403, '', {}, None), HTTPError('url', 503, '', {}, None)):
@@ -233,6 +297,11 @@ class MusicSourceAvailabilityTests(unittest.TestCase):
             with patch('verify_music_source_availability.load_candidate', return_value=candidate):
                 self.assertTrue(verify_bundle(out)['verified'])
                 song = next(s for s in legacy['music']['songs'] if s['id'] == self.backup)
+                song['videoSource']['availabilityReason'] = 'thumbnail_http_404'
+                (out/'src/production-ui.js').write_text('const CATALOG='+json.dumps(legacy)+';\n')
+                with self.assertRaisesRegex(ValueError, 'failure stage or reason'):
+                    verify_bundle(out)
+                song['videoSource']['availabilityReason'] = 'metadata_http_404'
                 song['videoId'] = self.rows[self.backup]['videoId']
                 (out/'src/production-ui.js').write_text('const CATALOG='+json.dumps(legacy)+';\n')
                 with self.assertRaisesRegex(ValueError, 'reintroduced.*runtime'):

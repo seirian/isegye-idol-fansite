@@ -1,6 +1,6 @@
 """Inspect selected links, explicit attribution and real preview images without mocking media."""
 from datetime import datetime,timezone
-import json,os,subprocess,time
+import json,os,re,subprocess,time
 from pathlib import Path
 from urllib.request import urlopen
 from playwright.sync_api import sync_playwright
@@ -23,6 +23,9 @@ try:
   if os.getenv('CHROMIUM_PATH'):opts['executable_path']=os.environ['CHROMIUM_PATH']
   b=p.chromium.launch(**opts);c=b.new_context(viewport={'width':1440,'height':1000},locale='ko-KR',timezone_id='Asia/Seoul',reduced_motion='reduce');page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
   info=c.request.get(URL+'build-info.json').json()
+  catalog_match=re.search(r'^const CATALOG=(.+);$',c.request.get(URL+'src/app.js').text(),re.M)
+  check('public bundle includes reviewed catalogue data',catalog_match is not None)
+  catalog_songs=json.loads(catalog_match.group(1))['music']['songs']
   check('selected commit matches',info['commit']==os.environ.get('GITHUB_SHA',info['commit']))
   music_audit=info['musicVideoAudit'];availability=music_audit.get('availability')
   check('all 154 reviewed; 151 selections retained',music_audit['songs']==154 and music_audit.get('selected',music_audit['linked'])==151)
@@ -46,15 +49,15 @@ try:
    if sid in ('rewind','cover-TYB9ScXvq34','cover-buJjUHSalVA'):page.screenshot(path=str(OUT/(kind+'-desktop.png')),full_page=True)
   for sid in ('cover-WItY2T5zz1A','cover-7E_cZ9eU3ZE','cover-q8iiUYJsOUM'):
    page.goto(URL+'#/song/'+sid,wait_until='networkidle');check(sid+' no wrong substitution',page.locator('.catalog-song-detail-visual .music-video-art').count()==0 and page.locator('.music-source-info[data-video-kind=unavailable]').count()==1)
-  unavailable_examples=page.evaluate("CATALOG.music.songs.filter(s=>s.videoSource?.availability==='unavailable').slice(0,3).map(s=>({id:s.id,videoId:s.videoSource.reviewedVideoId}))")
+  unavailable_examples=[{'id':s['id'],'videoId':s['videoSource']['reviewedVideoId']} for s in catalog_songs if s.get('videoSource',{}).get('availability')=='unavailable'][:3]
   for row in unavailable_examples:
    page.goto(URL+'#/song/'+row['id'],wait_until='networkidle')
    check(row['id']+' unavailable record remains readable',page.locator('.catalog-song-detail h1').count()==1 and page.locator('.music-source-info[data-video-availability=unavailable]').count()==1)
    check(row['id']+' known failed playback and thumbnail disabled',page.locator('.catalog-song-detail button[disabled]').count()==1 and page.locator('.catalog-song-detail-visual .music-video-art').count()==0 and page.locator('a[href="https://www.youtube.com/watch?v='+row['videoId']+'"]').count()==0)
   page.goto(URL+'#/music?type=original',wait_until='networkidle');page.screenshot(path=str(OUT/'originals-desktop.png'),full_page=True)
-  expected_originals=page.evaluate("CATALOG.music.songs.filter(s=>s.type==='original'&&s.videoId).length")
+  expected_originals=sum(s['type']=='original' and bool(s.get('videoId')) for s in catalog_songs)
   check('available originals linked; unavailable records retained',page.locator('.music-video-art').count()==expected_originals and page.locator('.catalog-song').count()==20)
-  expected_backups=page.evaluate("CATALOG.music.songs.filter(s=>s.type==='original'&&s.videoId&&s.videoSource?.kind==='fan_backup').length")
+  expected_backups=sum(s['type']=='original' and bool(s.get('videoId')) and s.get('videoSource',{}).get('kind')=='fan_backup' for s in catalog_songs)
   check('available unofficial originals labelled',page.locator('.music-video-label').filter(has_text='팬 백업').count()==expected_backups)
   for theme in ('light','dark'):
    page.evaluate('(t)=>document.documentElement.dataset.theme=t',theme)

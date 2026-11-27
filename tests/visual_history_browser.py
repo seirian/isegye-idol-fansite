@@ -4,6 +4,7 @@ The optional real-source pass uses a separate context with no interception.
 from datetime import datetime, timezone, timedelta
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import time
@@ -48,6 +49,9 @@ try:
   page.route('https://i.ytimg.com/**',lambda r:r.fulfill(status=200,content_type='image/svg+xml',body=SVG))
   page.goto(URL+'#/live',wait_until='networkidle');wait(page)
   meta=c.request.get(URL+'build-info.json').json()
+  catalog_match=re.search(r'^const CATALOG=(.+);$',c.request.get(URL+'src/app.js').text(),re.M)
+  check('public bundle includes reviewed catalogue data',catalog_match is not None)
+  catalog_songs={s['id']:s for s in json.loads(catalog_match.group(1))['music']['songs']}
   check('artifact commit matches',meta['commit']==os.environ.get('GITHUB_SHA',meta['commit']))
   check('visual history build marker',meta['visualHistory']['historyItems']==55)
   check('six menus and no video menu',page.locator('[data-nav]').count()==6 and page.locator('[data-nav=videos]').count()==0)
@@ -71,7 +75,8 @@ try:
    page.goto(URL+'#/record/'+mid,wait_until='networkidle')
    check(mid+' has only original wiki citation',page.locator('.catalog-profile a[href*="namu.wiki"]').count()==1 and page.locator('.catalog-profile a[href*="namu.moe"]').count()==0 and '확인본(미러)' not in page.locator('#main').inner_text())
   page.goto(URL+'#/music?type=cover',wait_until='networkidle')
-  expected_cover_images=page.locator('[data-song]').evaluate_all('(xs)=>xs.filter(x=>catalogSongs.get(x.dataset.song)?.videoId).length')
+  visible_cover_ids=page.locator('[data-song]').evaluate_all('(xs)=>xs.map(x=>x.dataset.song)')
+  expected_cover_images=sum(bool(catalog_songs[sid].get('videoId')) for sid in visible_cover_ids)
   check('24 cover records retained and only available thumbnails shown',page.locator('[data-song]').count()==24 and page.locator('.music-video-art>img').count()==expected_cover_images)
   check('song image URL matches safe video id',page.locator('.music-video-art>img').evaluate_all('(xs)=>xs.every(x=>/^https:\/\/i.ytimg.com\/vi\/[A-Za-z0-9_-]{11}\/hqdefault.jpg$/.test(x.src))'))
   page.goto(URL+'#/song/cover-PkrRbTpzPFs',wait_until='networkidle')
