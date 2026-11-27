@@ -19,16 +19,27 @@
 - 기존 `video-sources.json` 및 `video-sources.tsv`를 해석한 전체 매핑의 SHA-256이
   `music_source_availability.REVIEWED_SELECTION_SHA256`과 일치한다.
 - 같은 곡·선택 영상 ID·분류·업로더에 대한 `fan_backup` 검사다.
-- 실패가 **메타데이터 조회 단계의 HTTP 404**다. 썸네일 404와 혼동하지 않는다.
+- 실패가 **메타데이터 조회 단계의 HTTP 404**이거나, **메타데이터 HTTP 200과
+  기존 업로더 identity 일치를 확인한 뒤 썸네일 조회가 HTTP 404**인 경우다.
+  두 경우를 각각 `metadata_http_404`와 `thumbnail_http_404`로 구분한다.
 - 나머지 모든 선택 영상을 빠짐없이 검사했고, 그 외 차단 오류는 없다.
 - 게시 후보에서 해당 곡의 `videoId`와 재생 `url`이 제거됐다.
 - `videoSource.reviewedVideoId`와 원래 영상 ID, 곡 ID·제목·발매일·참여자·출처는 남긴다.
+  실패 단계와 원인은 `availabilityStage`·`availabilityReason`으로 보존한다.
 - 목록·곡 상세에 `영상 확인 불가`를 표시하고 실제 재생 버튼·썸네일을 비활성화한다.
   같은 실패 ID를 원본 링크라는 이름으로 다시 노출하지 않는다.
 
-공식 영상의 404, 업로더 불일치, 새로운 선택, 변조된 매핑, 썸네일 오류,
-403/429/5xx/시간초과·기타 미확인 오류는 계속 게시를 막는다.
+공식 영상의 메타데이터·썸네일 404, 업로더 불일치 또는 미확인, 새로운 선택,
+변조된 매핑, 404 이외의 썸네일 오류, 401/403/429/5xx/시간초과·기타 미확인 오류는
+계속 게시를 막는다.
 새 영상을 검색하거나 자동으로 다른 영상으로 대체하지 않는다.
+
+이 정책은 `reviewed-fan-backup-availability-404-v2`로 식별한다. 2026-11-27
+[22:45 KST CI](https://github.com/seirian/isegye-idol-fansite/actions/runs/46009574499/job/140541345276)에서는
+`ZQR6D07NMkY`가 메타데이터 200·기존 업로더 일치 후 썸네일
+404였고, 22:47 KST 개별 재관측에서는 메타데이터 404·썸네일 200이었다.
+두 endpoint의 응답 일치를 가정하거나 이를 영상 삭제의 증거로 해석하지 않는다.
+어느 허용 경우든 원래 선택의 재생과 썸네일을 모두 차단하며 가용성 성공으로 세지 않는다.
 
 ## 증거와 상태
 
@@ -40,6 +51,7 @@
 
 `source-availability.json`은 감사 원본 바이트의 SHA-256, 선택 매핑 SHA-256,
 저장소·전체 커밋 SHA·run ID·attempt, 검사 시각, 비활성화할 정확한 곡·영상 ID를 묶는다.
+각 비활성화 항목에는 원본 감사의 실패 단계와 이유도 포함한다.
 두 파일은 같은 후보 아카이브에 보관한다. 빌드·게시 전 재검증은 다음을 요구한다.
 
 1. 같은 저장소, 같은 커밋, 같은 run, 같은 준비 attempt.
@@ -83,6 +95,8 @@ python scripts/verify_music_source_availability.py --bundle dist
 `tests/test_music_source_availability.py`는 당시 3개 채널의 79건 패턴을 재현한
 합성 fixture, 업로더 변경·공식 영상 실패·미확인 오류, 매핑 변조, 누락/중복,
 stale/다른 실행/해시 불일치, 최종 데이터·런타임 기준의 재생 링크 재유입을 검사한다.
+썸네일 404를 격리하는 경우에도 업로더 확인 없는 응답·공식 영상·새 선택은 차단하며,
+metadata 404 78개와 identity 확인 후 thumbnail 404 1개의 혼합 패턴을 별도로 검증한다.
 `tests/music-source-availability.test.js`는 비활성·미확인 버튼과 일일 피드 반영 후
 기존 차단 유지 여부를 검사한다. fixture 결과는 새로운 운영 관측으로 기록하지 않는다.
 
