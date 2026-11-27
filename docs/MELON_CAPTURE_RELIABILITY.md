@@ -16,7 +16,10 @@
 ## 검증과 상태
 
 - `python -m unittest tests/test_album_chart_capture.py -v` 또는 `python -m unittest discover -s tests -p 'test_*.py' -v`로 수집 시각, 원본 100순위, SHA·실행 시도 바인딩, 위조된 출처, 동일 시간 중복·충돌·차트 밖, 야간 중지, 운영 비밀값 분리를 검사한다.
-- `melon-chart-capture` 아티팩트의 `status`, `sourceAt`, `errors`와 `daily-albums-*`의 `albums-recovery.json` (`sourceType: melon_public_full_chart`, `addedPoints`, `captureMissingAfter`)를 확인한다.
+- 아티팩트 이름은 `melon-chart-capture-{runId}-{attempt}`다. 같은 run 재실행도 새 attempt의 증거를 따로 남기며 overwrite로 이전 증거를 지우지 않는다. watchdog·모니터는 정확한 현재 attempt 이름을 우선하고, 그 이름 자체가 없을 때만 legacy `melon-chart-capture`를 JSON의 동일 run/attempt 검증 아래 읽는다. 새 이름의 증거가 손상·중복·만료됐으면 legacy로 바꾸어 정상 처리하지 않는다.
+- 원본 `melon-chart-capture.json`의 `status`, `charts[*].sourceAt`, `errors`와 `daily-albums-*`의 `albums-recovery.json` (`sourceType: melon_public_full_chart`, `addedPoints`, `captureMissingAfter`)를 확인한다. 앨범 병합은 새 이름과 legacy를 모두 읽고 원본 attempt API로 검증하므로, 이전 attempt의 실제 원문 시각도 보존할 수 있다. 같은 attempt의 새 이름이 존재하면 legacy 사본으로 실패를 숨기지 않는다.
+- 복구 소비자는 새 이름을 찾기 위해 저장소 artifact 목록을 최대 12페이지 조회한다. 기존 전체 복구 deadline 120초와 후보 80개 상한을 유지한다. `captureInspection`에 요청한 원시각 범위(`targetSourceWindow*`)·호출 수·페이지/후보 예산·확인 건수·목록 완전성을 남기며, 상한에서 끝난 목록은 `CaptureListingIncomplete`와 남은 `captureMissingAfter`로 보고한다. `listingScope=repository_artifacts`의 `listingComplete`는 목록 열거의 완전성으로, 48시간 전체 증거 확보나 모든 차트 공백 해소를 뜻하지 않는다.
+- 저장소 목록이 불완전하면 후보 run의 artifact 목록을 추가로 완전히 확인한 뒤 검증된 일부만 병합한다. 이 목록은 run당 최대 100개 한 페이지로 제한하고, 확인된 결과는 그 검사 안에서만 재사용한다. 목록 미확인·이름 중복·명시된 새 이름 존재 시 legacy 채택을 거부하며 고정 `reason`을 보존한다. 추가 요청도 `apiCalls`와 `runArtifactQueries`에 포함한다.
 - 녹색 워크플로·캡처 아티팩트만으로 운영 반영 완료가 아니다. `albums-publication.json`의 `status=published`, `verifiedReadback=true`, 현재 시각 원본, 실제 사이트 그래프의 원본 시간 기록 및 앞선 누락 해소 여부를 함께 대조한다.
 - 기준 지표는 정상 발표 대상 슬롯 중 **양쪽 차트+등록 곡 전체가 검증된 비율**이다. 목표 99.5%를 설정할 수 있지만 실제 측정 전 달성했다고 주장하지 않는다.
 - 보존 기간은 차트 관측 최근 30일, 캡처 아티팩트 30일이며, 확인되지 않은 순위는 계속 공백으로 표시한다.
