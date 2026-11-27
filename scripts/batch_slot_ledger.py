@@ -102,6 +102,13 @@ def clean_event(item, at):
         result[name] = item.get(name) if item.get(name) in allowed else None
     for name in ('sourceAt', 'generatedAt', 'publishedAt', 'readbackAt'):
         result[name] = time_or_none(item.get(name), at)
+    if type(item.get('officialPublicationVerified')) is bool:
+        result['officialPublicationVerified'] = item['officialPublicationVerified']
+    backup = item.get('backupAvailability')
+    if isinstance(backup, dict) and backup.get('state') in ('complete', 'partial', 'unverified'):
+        result['backupAvailability'] = {'state': backup['state'], 'verified': backup.get('verified') is True,
+            **{key: value for key in ('available', 'selected', 'unavailable', 'blocked', 'unresolved')
+               if type(value := backup.get(key)) is int and 0 <= value <= 10_000}}
     return result
 
 
@@ -135,6 +142,10 @@ def observed_outcome(row, due, at):
         return 'unverified'
     if row.get('dataState') == 'healthy':
         return 'verified'
+    if (row['key'] == 'music' and row.get('officialPublicationVerified') is True
+            and (row.get('backupAvailability') or {}).get('verified') is True
+            and row['backupAvailability'].get('state') == 'partial'):
+        return 'partial'
     evidence = row.get('evidence') or {}
     if row['key'] == 'capture' and evidence.get('status') == 'partial':
         if any(time_or_none(value, at) == due.isoformat() for value in (evidence.get('sourceTimes') or {}).values()):
@@ -206,7 +217,9 @@ def merge_slot_ledger(previous, current, due_slot):
             'executionState': run.get('status'), 'executionConclusion': run.get('conclusion'),
             'sourceAt': source[0] if source and len(set(source)) == 1 else evidence.get('sourceAt'),
             'generatedAt': evidence.get('generatedAt'), 'publishedAt': evidence.get('publishedAt'),
-            'readbackAt': evidence.get('readbackAt') or row.get('lastVerifiedAt')}, at)
+            'readbackAt': evidence.get('readbackAt') or row.get('lastVerifiedAt'),
+            'officialPublicationVerified': row.get('officialPublicationVerified'),
+            'backupAvailability': row.get('backupAvailability')}, at)
         # Repeated checks of the same outcome/attempt update evidence without
         # consuming the bounded event history or erasing the first failure.
         signature = lambda value: (value['outcome'], value.get('runId'), value.get('attempt'))

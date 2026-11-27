@@ -35,8 +35,10 @@ def publish(remote,review):
         if old and raw!=old:
             backup=remote.read(path('previous.json'));remote.replace(path('previous.json'),old,backup);remote.s.chmod(path('previous.json'),0o600)
         if raw!=old:remote.replace(path('current.json'),raw,old);remote.s.chmod(path('current.json'),0o600)
+        published_at=datetime.now(timezone.utc).isoformat() if raw!=old else None
         d.require(remote.read(path('current.json'))==raw,'Publication read-back mismatch')
-        return {'status':'published','release':rid,'generatedAt':value['generatedAt'],'added':len(added),'totalAuto':len(rows),'newItems':added,'waktaverseIds':[r['videoId'] for r in rows if r['channelKey']=='c1'],'waktaverseHistory':review['sources']['c1'].get('historical'),'sha256':d.digest(raw),'sourceStates':{k:v['state'] for k,v in review['sources'].items()},'verifiedReadback':True}
+        readback_at=datetime.now(timezone.utc).isoformat()
+        return {'status':'published','release':rid,'evidenceVersion':2,'publicationAction':'written' if raw!=old else 'unchanged_verified','sourceAt':None,'generatedAt':value['generatedAt'],'publishedAt':published_at,'readbackAt':readback_at,'added':len(added),'totalAuto':len(rows),'newItems':added,'waktaverseIds':[r['videoId'] for r in rows if r['channelKey']=='c1'],'waktaverseHistory':review['sources']['c1'].get('historical'),'sha256':d.digest(raw),'sourceStates':{k:v['state'] for k,v in review['sources'].items()},'verifiedReadback':True}
     finally:remote.remove_own(path('.lock'),lock)
 
 def main():

@@ -51,6 +51,13 @@ UI를 게시할 때 기존 production 공통 대기열과 `.deploy-lock`, SFTP �
 보존한다. 점검 장애가 이전 검증을 지우지 않는다. 원장 적용 전의 과거 회차 성과를
 소급 생성하지 않으며 범위를 `observed_snapshots_only`로 표시한다. 기존 비공개
 스냅샷 안에서 최대 90일/5,000회차/회차당 최근 4개 상태 변경을 보관한다.
+음악은 `officialPublicationVerified`와 `backupAvailability`를 분리한다. 공식 수집·
+게시가 검증돼도 승인된 백업 가용성 일부가 실패하면 행은 attention, 원장은 partial로
+남고 원래 가용/미확인 수량을 함께 보관한다. 같은 수집을 반복하지 않는 복구 판단과
+전체 링크 정상 판정을 혼동하지 않는다. `generatedAt`는 결과 생성 시각이며 단일
+원문 기준시각이 없는 일일 피드의 `sourceAt`는 null이다. 실제 쓰기 직후 publishedAt,
+바이트 재조회 성공 직후 readbackAt를 기록한다. 변경 없는 검증은 publishedAt를 새로
+만들지 않고 `unchanged_verified`와 실제 readbackAt를 남긴다.
 보관 시에는 `schemaVersion: 2`, `encoding: gzip+base64`로 원장 전체를 압축한다.
 `sha256`은 해제된 JSON의 해시이며 `uncompressedBytes`, `entryCount`,
 `coverageStartAt`, `coverageEndAt`, `checkedAt`, `retentionDays`를 함께 검증한다.

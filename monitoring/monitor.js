@@ -96,6 +96,7 @@
       const pub=node('td');
       const expired=rowExpired(row);
       pub.append(badge(expired?'unknown':row.dataState,resultLabel(row)));
+      if(row.key==='music' && row.backupAvailability){const a=row.backupAvailability;pub.append(node('small',row.officialPublicationVerified?'공식 수집·게시·재조회 검증':'공식 게시 증거 미완료'));pub.append(badge(a.state==='complete'?'healthy':'attention',a.verified?`승인 링크 ${a.available}/${a.selected} · 백업 미확인 ${a.unavailable}`:'승인 링크 감사 미확인'));}
       const [checkState,checkText]=freshness(row);pub.append(node('small',checkText,'freshness '+checkState));
       const last=row.lastVerifiedResult;
       if(last) pub.append(node('small',(last.kind==='inspection'?'정상 점검 확인 ':last.kind==='observation'?'정상 관측 확인 ':'정상 반영 확인 ')+date(last.observedAt),'last-verified'));
@@ -157,6 +158,7 @@
       for(const [key,label] of Object.entries(names)){const value=g.candidateCounts?.[key];if(Number.isInteger(value)&&value>=0)body.append(node('p',`${label}: ${value}건`,'muted'));}
     }
     if(row.publicationLineage?.viaReference){const p=row.publicationLineage;body.append(node('p',`현재 ${p.executionAttempt}차 실행은 ${p.sourcePrepareAttempt}차 준비 후보의 ${p.sourceAttempt}차 운영 배포 증거를 명시적으로 참조합니다. 원본 게시·재조회 시각을 유지합니다.`,'muted'));}
+    if(row.key==='music' && row.backupAvailability){const a=row.backupAvailability;body.append(node('h3','공식 게시와 승인 링크 가용성','subhead'),node('p',row.officialPublicationVerified?'공식 수집·게시·서버 재조회는 검증됐습니다.':'공식 수집·게시 증거가 불완전합니다.','muted'),node('p',a.verified?`가용성 ${a.state} · 확인 ${a.available}/${a.selected}개 · 백업 미확인 ${a.unavailable}개 · 기존 미연결 ${a.unresolved}개`:'감사 원본·실행 출처·전체 선택 검사를 확정할 수 없습니다.','warning'));}
     if(row.evidenceRun && (row.evidenceRun.id!==row.run?.id || row.evidenceRun.attempt!==row.run?.attempt)){body.append(node('p','자료 반영은 아래 실행의 게시 검증 증거를 사용합니다.','muted'),safeLink(row.evidenceRun.url,'게시 검증 근거 실행 ↗'));}
     if(row.sourceTimes){body.append(node('h3','원본 차트 기준 시각','subhead'));for(const [key,value] of Object.entries(row.sourceTimes)){const line=node('div',undefined,'source-row');line.append(node('span',key),node('span',date(value)));body.append(line);}}
     if(row.counts&&Object.keys(row.counts).length){body.append(node('h3','실제 처리·보유 건수','subhead'));const names={questionCount:'문제 수',added:'추가',updated:'수정',collectedCount:'수집',channelCount:'채널 수',videoCount:'영상 수',todayAdded:'오늘 신규 문제',readyCount:'검수 완료 대기 문제',consecutiveZeroDays:'연속 추가 0일 수',chartsComplete:'검증한 차트',requiredCharts:'필수 차트'};for(const [key,value] of Object.entries(row.counts)){const line=node('div',undefined,'source-row');line.append(node('span',names[key]||key),node('span',value+(key==='consecutiveZeroDays'?'일':'건')));body.append(line);}}

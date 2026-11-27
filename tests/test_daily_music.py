@@ -34,6 +34,15 @@ class Music(unittest.TestCase):
         r=remote();p.publish(r,doc([record()]));raw=r.read(p.path('current.json'));failed=doc([]);failed['sources']={k:{'state':'error'} for k in m.CHANNELS}
         with self.assertRaises(d.Stop):p.publish(r,failed)
         self.assertEqual(r.read(p.path('current.json')),raw)
+    def test_actual_publication_and_readback_clocks_keep_source_time_unknown(self):
+        r=remote();first=p.publish(r,doc([]));second=p.publish(r,doc([]))
+        self.assertEqual(first['publicationAction'],'written')
+        self.assertIsNone(first['sourceAt'])
+        self.assertLessEqual(m.clock(first['generatedAt']),m.clock(first['publishedAt']))
+        self.assertLessEqual(m.clock(first['publishedAt']),m.clock(first['readbackAt']))
+        self.assertEqual(second['publicationAction'],'unchanged_verified')
+        self.assertIsNone(second['publishedAt'])
+        self.assertLessEqual(m.clock(first['readbackAt']),m.clock(second['readbackAt']))
     def test_owned_paths_and_locked_state(self):
         r=remote();p.publish(r,doc([]));r.files[p.path('.lock')]=b'not-our-lock'
         with self.assertRaises(d.Stop):p.publish(r,doc([record()]))
