@@ -35,8 +35,9 @@ def production_adapter(baseline):
     visuals=between(src,'function visualLiveThumbnail(', 'const HISTORY_TYPES=')
     visuals+=between(src,'function visualLiveArt(', 'function historyLink(')
     labels=next(l for l in src.splitlines() if l.startswith('const MUSIC_VIDEO_LABELS='))
+    blocked_fn=next(l for l in src.splitlines() if l.startswith('function musicVideoBlocked('))
     label_fn=next(l for l in src.splitlines() if l.startswith('function musicVideoLabel('))
-    chunks=[plain((baseline/'src/lib.js').read_text()),plain((baseline/'src/data.js').read_text()),plain((baseline/'src/portraits.js').read_text()),'const e=escapeHtml;',top,plain((ROOT/'live/core.js').read_text()),live,'const CATALOG='+first.script_json(catalog)+';',plain((ROOT/'catalog/core.js').read_text()),labels,label_fn,catalog_ui,visuals]
+    chunks=[plain((baseline/'src/lib.js').read_text()),plain((baseline/'src/data.js').read_text()),plain((baseline/'src/portraits.js').read_text()),'const e=escapeHtml;',top,plain((ROOT/'live/core.js').read_text()),live,'const CATALOG='+first.script_json(catalog)+';',plain((ROOT/'catalog/core.js').read_text()),labels,blocked_fn,label_fn,catalog_ui,visuals]
     code='\n'.join(chunks)
     # The same approved portrait bytes are embedded for the gated single-file preview.
     code=code.replace('./assets/portraits/${m.id}.webp?v=${PORTRAITS[m.id].version}','${REVIEW_DATA.assets.portraits[m.id]}')
